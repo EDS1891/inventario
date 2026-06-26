@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { supabase } from './supabase.js'
 
 const TALLE_ORDER = ['Único','S','M','L','XL','XXL','XXXL']
 const RECEPTORES = ['3° División','Juveniles','Captación','Femenino','Juveniles Femenino','Fútbol Sala Masculino','Fútbol Sala Femenino','Basket','Deportes Anexos','Funcionarios','Protocolo']
@@ -6,7 +7,39 @@ const CATEGORIAS = ['Entrenamiento','Juego','Casual']
 const ESTANTES = ['0','1','2','3','4','5','6','7','8','9','10']
 const ALTURAS = ['A','B','C','D','E','O']
 
-const STORAGE_KEY = 'deposito_peniarol_v3'
+const EMPTY_DB = { articles:[], deliveries:[], movimientos:[], nextId:1, nextDel:1, nextMov:1 }
+
+async function loadFromSupabase() {
+  const { data, error } = await supabase
+    .from('deposito_state')
+    .select('*')
+    .eq('id', 1)
+    .single()
+  if (error || !data) return EMPTY_DB
+  return {
+    articles: (data.articles || []).map(a => ({
+      ...a, sizes: (a.sizes || []).map(s => ({ talle: s.talle, qty: Number(s.qty)||0, min: Number(s.min)||0 }))
+    })),
+    deliveries: data.deliveries || [],
+    movimientos: data.movimientos || [],
+    nextId: data.next_id || 1,
+    nextDel: data.next_del || 1,
+    nextMov: data.next_mov || 1,
+  }
+}
+
+async function saveToSupabase(db) {
+  await supabase.from('deposito_state').upsert({
+    id: 1,
+    articles: db.articles,
+    deliveries: db.deliveries,
+    movimientos: db.movimientos,
+    next_id: db.nextId,
+    next_del: db.nextDel,
+    next_mov: db.nextMov,
+    updated_at: new Date().toISOString(),
+  })
+}
 
 function fmt(n) { return Number(n).toLocaleString('es-UY') }
 function total(a) { return a.sizes.reduce((s,x) => s + x.qty, 0) }
@@ -28,37 +61,22 @@ function today() {
 }
 function isLow(a) { return a.sizes.some(s => (s.min||0) > 0 && s.qty < (s.min||0)) }
 
-const initState = () => {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if(saved) {
-      const d = JSON.parse(saved)
-      return {
-        articles: (d.articles||[]).map(a => ({...a, sizes: (a.sizes||[]).map(s => ({talle:s.talle,qty:Number(s.qty)||0,min:Number(s.min)||0}))})),
-        deliveries: d.deliveries||[],
-        movimientos: d.movimientos||[],
-        nextId: d.nextId||1,
-        nextDel: d.nextDel||1,
-        nextMov: d.nextMov||1,
-      }
-    }
-  } catch(e) { console.warn('load error',e) }
-  return { articles:[], deliveries:[], movimientos:[], nextId:1, nextDel:1, nextMov:1 }
-}
 
 export default function App() {
-  const [db, setDb] = useState(initState)
+  const [db, setDb] = useState(EMPTY_DB)
+  const [loading, setLoading] = useState(true)
   const [view, setView] = useState('panel')
   const [selectedId, setSelectedId] = useState(null)
   const [search, setSearch] = useState('')
   const [cat, setCat] = useState('Todas')
-  const [modal, setModal] = useState(null)  // null | 'entrega' | 'articulo' | 'reponer' | 'ajuste' | 'edit'
+  const [modal, setModal] = useState(null)
   const [confirm, setConfirm] = useState(null)
   const [editing, setEditing] = useState(null)
   const [movFilter, setMovFilter] = useState('Todos')
   const [toast, setToast] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const toastTimer = useRef(null)
+  const saveTimer = useRef(null)
 
   // delivery/devolución form
   const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', cCode:'', cTalle:'', cQty:'', lines:[] })
@@ -69,12 +87,20 @@ export default function App() {
   // ajuste form
   const [aj, setAj] = useState({ talle:'', cantidad:'' })
 
-  // Persist to localStorage whenever data changes
+  // Load from Supabase on mount
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(db))
-    } catch(e) { console.warn('save error',e) }
-  }, [db])
+    loadFromSupabase().then(data => {
+      setDb(data)
+      setLoading(false)
+    })
+  }, [])
+
+  // Save to Supabase whenever data changes (debounced 800ms)
+  useEffect(() => {
+    if (loading) return
+    clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => saveToSupabase(db), 800)
+  }, [db, loading])
 
   const showToast = useCallback((msg) => {
     setToast(msg)
@@ -320,6 +346,13 @@ export default function App() {
   const ajTalleOptions = selA ? selA.sizes.map(s => ({value:s.talle, label:s.talle+' (sistema: '+s.qty+')'})) : []
 
   const ndIsDev = nd.mode === 'devolucion'
+
+  if (loading) return (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',flexDirection:'column',gap:16,background:'#121212'}}>
+      <img src="/escudo.png" alt="Peñarol" style={{height:64,opacity:.9}} />
+      <div style={{color:'#FFD200',fontFamily:'Archivo Black,sans-serif',fontSize:14,letterSpacing:'.1em'}}>CARGANDO…</div>
+    </div>
+  )
 
   return (
     <div className="app-shell">
