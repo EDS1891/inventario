@@ -87,10 +87,10 @@ export default function App() {
   // ajuste form
   const [aj, setAj] = useState({ talle:'', cantidad:'' })
 
-  // Load from Supabase on mount
+  // Load from Supabase on mount (filter out articles with no stock)
   useEffect(() => {
     loadFromSupabase().then(data => {
-      setDb(data)
+      setDb({...data, articles: data.articles.filter(a => total(a) > 0)})
       setLoading(false)
     })
   }, [])
@@ -101,6 +101,13 @@ export default function App() {
     clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => saveToSupabase(db), 800)
   }, [db, loading])
+
+  // Redirect to inventario if selected article was deleted (reached stock 0)
+  useEffect(() => {
+    if (view === 'detalle' && selectedId !== null && !db.articles.find(a => a.id === selectedId)) {
+      setView('inventario')
+    }
+  }, [db.articles, view, selectedId])
 
   const showToast = useCallback((msg) => {
     setToast(msg)
@@ -146,14 +153,15 @@ export default function App() {
         const a = articles.find(x => x.code === l.code); const z = a && a.sizes.find(x => x.talle === l.talle)
         if(z) z.qty = esDev ? z.qty + l.qty : Math.max(0, z.qty - l.qty)
         if(esDev) {
-          movimientos.unshift({id:mid++, code:l.code, tipo:'entrada', fecha, talle:l.talle, qty:l.qty, detalle:'Devolución de '+nd.persona+' ('+nd.receptor+')'})
+          movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'entrada', fecha, talle:l.talle, qty:l.qty, detalle:'Devolución de '+nd.persona+' ('+nd.receptor+')'})
         } else {
-          movimientos.unshift({id:mid++, code:l.code, tipo:'salida', fecha, talle:l.talle, qty:l.qty, detalle:'Entrega a '+nd.persona+' ('+nd.receptor+')', delId:s.nextDel})
+          movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'salida', fecha, talle:l.talle, qty:l.qty, detalle:'Entrega a '+nd.persona+' ('+nd.receptor+')', delId:s.nextDel})
         }
       })
-      if(esDev) return { ...s, articles, movimientos, modal:null, nextMov:mid }
+      const activeArticles = articles.filter(a => total(a) > 0)
+      if(esDev) return { ...s, articles:activeArticles, movimientos, modal:null, nextMov:mid }
       const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, lines:[...nd.lines]}, ...s.deliveries]
-      return { ...s, articles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid }
+      return { ...s, articles:activeArticles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid }
     })
     setModal(null)
     setView(nd.mode === 'devolucion' ? 'inventario' : 'entregas')
@@ -198,7 +206,8 @@ export default function App() {
         if(a.code !== code) return a
         return {...a, sizes: a.sizes.map(z => z.talle===rep.talle ? {...z, qty:z.qty+q} : z)}
       })
-      const movimientos = [{id:s.nextMov, code, tipo:'entrada', fecha, talle:rep.talle, qty:q, detalle:'Ingreso de stock'}, ...s.movimientos]
+      const artName = (s.articles.find(a => a.code === code)||{}).name || code
+      const movimientos = [{id:s.nextMov, code, name:artName, tipo:'entrada', fecha, talle:rep.talle, qty:q, detalle:'Ingreso de stock'}, ...s.movimientos]
       return { ...s, articles, movimientos, nextMov:s.nextMov+1 }
     })
     setModal(null)
@@ -216,9 +225,11 @@ export default function App() {
     const delta = q - cur
     if(delta === 0) { showToast('Sin cambios: el stock ya es '+q+'.'); setModal(null); return }
     setDb(s => {
+      const artName = (s.articles.find(a => a.code === code)||{}).name || code
       const articles = s.articles.map(a => { if(a.code!==code) return a; return {...a, sizes:a.sizes.map(z => z.talle===aj.talle?{...z,qty:Math.max(0,q)}:z)} })
-      const movimientos = [{id:s.nextMov, code, tipo:(delta>0?'entrada':'salida'), fecha, talle:aj.talle, qty:Math.abs(delta), detalle:'Ajuste por recuento (de '+cur+' a '+q+')'}, ...s.movimientos]
-      return { ...s, articles, movimientos, nextMov:s.nextMov+1 }
+      const activeArticles = articles.filter(a => total(a) > 0)
+      const movimientos = [{id:s.nextMov, code, name:artName, tipo:(delta>0?'entrada':'salida'), fecha, talle:aj.talle, qty:Math.abs(delta), detalle:'Ajuste por recuento (de '+cur+' a '+q+')'}, ...s.movimientos]
+      return { ...s, articles:activeArticles, movimientos, nextMov:s.nextMov+1 }
     })
     setModal(null)
     showToast('Stock ajustado: '+aj.talle+' = '+q+' ('+(delta>0?'+':'')+delta+').')
@@ -612,7 +623,7 @@ export default function App() {
                     <div key={m.id} className="table-row mov-cols">
                       <div className="mono" style={{fontSize:12.5,color:'#6a6a62'}}>{m.fecha}</div>
                       <div style={{minWidth:0}}>
-                        <div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{codeName[m.code]||m.code}</div>
+                        <div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.name||codeName[m.code]||m.code}</div>
                         <div style={{fontSize:11.5,color:'#8a8a82',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.detalle}</div>
                       </div>
                       <div className="mov-col-tipo"><span className={`badge ${kindClass}`}>{kindLabel}</span></div>
