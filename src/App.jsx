@@ -83,7 +83,7 @@ export default function App() {
   // new article form
   const [na, setNa] = useState({ code:'', name:'', cat:'Entrenamiento', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' })
   // reponer form
-  const [rep, setRep] = useState({ talle:'', qty:'' })
+  const [rep, setRep] = useState({ qtys:{} })
   // ajuste form
   const [aj, setAj] = useState({ talle:'', cantidad:'' })
 
@@ -196,22 +196,26 @@ export default function App() {
   }
 
   // ---- Reponer ----
-  const openReponer = () => { setRep({ talle:'', qty:'' }); setModal('reponer') }
+  const openReponer = () => { setRep({ qtys:{} }); setModal('reponer') }
   const repConfirm = () => {
-    const q = parseInt(rep.qty, 10)
-    if(!rep.talle || !q || q <= 0) { showToast('Elegí talle y cantidad.'); return }
+    const entries = selA.sizes
+      .map(s => ({ talle:s.talle, q:parseInt(rep.qtys[s.talle]||0, 10) }))
+      .filter(e => e.q > 0)
+    if(entries.length === 0) { showToast('Ingresá al menos una cantidad.'); return }
     const code = curCode(); const fecha = today()
     setDb(s => {
+      let nextMov = s.nextMov
+      const artName = (s.articles.find(a => a.code === code)||{}).name || code
       const articles = s.articles.map(a => {
         if(a.code !== code) return a
-        return {...a, sizes: a.sizes.map(z => z.talle===rep.talle ? {...z, qty:z.qty+q} : z)}
+        return {...a, sizes: a.sizes.map(z => { const e=entries.find(e=>e.talle===z.talle); return e ? {...z, qty:z.qty+e.q} : z })}
       })
-      const artName = (s.articles.find(a => a.code === code)||{}).name || code
-      const movimientos = [{id:s.nextMov, code, name:artName, tipo:'entrada', fecha, talle:rep.talle, qty:q, detalle:'Ingreso de stock'}, ...s.movimientos]
-      return { ...s, articles, movimientos, nextMov:s.nextMov+1 }
+      const newMovs = entries.map(e => ({id:nextMov++, code, name:artName, tipo:'entrada', fecha, talle:e.talle, qty:e.q, detalle:'Ingreso de stock'}))
+      return { ...s, articles, movimientos:[...newMovs,...s.movimientos], nextMov }
     })
     setModal(null)
-    showToast('Entrada registrada: +'+q+' ('+rep.talle+').')
+    const total = entries.reduce((s,e)=>s+e.q, 0)
+    showToast('Entrada registrada: +'+total+' u. en '+entries.length+' talle'+(entries.length>1?'s':'')+'.')
   }
 
   // ---- Ajuste ----
@@ -850,18 +854,20 @@ export default function App() {
             </div>
             <div className="modal-body">
               <div style={{fontSize:13,color:'#8a8a82',marginBottom:16}}>{selA.name} <span className="mono">· {selA.code}</span></div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
-                <div className="form-group">
-                  <label className="field-label">Talle</label>
-                  <select className="field-input" value={rep.talle} onChange={e => setRep(p=>({...p,talle:e.target.value}))}>
-                    <option value="">Talle…</option>
-                    {repTalleOptions.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
+              <div style={{border:'1px solid #E7E7E3',borderRadius:8,overflow:'hidden'}}>
+                <div style={{display:'grid',gridTemplateColumns:'56px 1fr 1fr',background:'#FAFAF8',padding:'8px 12px',borderBottom:'1px solid #E7E7E3'}}>
+                  <div style={{fontSize:11,fontWeight:700,color:'#8a8a82'}}>TALLE</div>
+                  <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',textAlign:'center'}}>STOCK ACTUAL</div>
+                  <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',textAlign:'center'}}>AGREGAR</div>
                 </div>
-                <div className="form-group">
-                  <label className="field-label">Cantidad</label>
-                  <input type="number" min="1" className="field-input" value={rep.qty} onChange={e => setRep(p=>({...p,qty:e.target.value}))} placeholder="0" />
-                </div>
+                {selA.sizes.map(s => (
+                  <div key={s.talle} style={{display:'grid',gridTemplateColumns:'56px 1fr 1fr',gap:8,padding:'8px 12px',borderBottom:'1px solid #F0F0EC',alignItems:'center'}}>
+                    <div style={{fontWeight:700,fontSize:13}}>{s.talle}</div>
+                    <div style={{textAlign:'center',fontSize:13,color:'#8a8a82'}}>{s.qty}</div>
+                    <input type="number" min="0" className="field-input" style={{textAlign:'center',padding:'4px 8px'}}
+                      value={rep.qtys[s.talle]||''} onChange={e => setRep(p=>({...p,qtys:{...p.qtys,[s.talle]:e.target.value}}))} placeholder="0" />
+                  </div>
+                ))}
               </div>
             </div>
             <div className="modal-footer">
