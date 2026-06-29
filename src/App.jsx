@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from './supabase.js'
 
 const TALLE_ORDER = ['Único','S','M','L','XL','XXL','XXXL']
-const RECEPTORES = ['3° División','Juveniles','Captación','Femenino','Juveniles Femenino','Fútbol Sala Masculino','Fútbol Sala Femenino','Basket','Deportes Anexos','Funcionarios','Protocolo']
+const RECEPTORES = ['PRIMERA DIVISION','3° División','Juveniles','Captación','Femenino','Juveniles Femenino','Fútbol Sala Masculino','Fútbol Sala Femenino','Basket','Deportes Anexos','Funcionarios','Protocolo']
 const CATEGORIAS = ['Entrenamiento','Juego','Casual']
 const ESTANTES = ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20']
 const ALTURAS = ['A','B','C','D','E','O']
