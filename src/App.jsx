@@ -292,6 +292,17 @@ export default function App() {
   let filtered = articles.filter(a => cat==='Todas' || a.cat===cat)
   if(q) filtered = filtered.filter(a => a.name.toLowerCase().includes(q) || a.code.toLowerCase().includes(q))
 
+  const parseUbic = u => {
+    if(!u || u==='—') return { n: Infinity, l: '' }
+    const m = u.match(/^(\d+)(.*)$/)
+    return m ? { n: parseInt(m[1], 10), l: m[2] } : { n: Infinity, l: u }
+  }
+  filtered = [...filtered].sort((a, b) => {
+    const ua = parseUbic(a.ubic), ub = parseUbic(b.ubic)
+    if(ua.n !== ub.n) return ua.n - ub.n
+    return ua.l.localeCompare(ub.l)
+  })
+
   const invRows = filtered.map(a => ({
     ...a,
     totalFmt: fmt(total(a)),
