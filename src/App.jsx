@@ -79,7 +79,7 @@ export default function App() {
   const saveTimer = useRef(null)
 
   // delivery/devolución form
-  const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', cCode:'', cTalle:'', cQty:'', lines:[] })
+  const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', lines:[] })
   // new article form
   const [na, setNa] = useState({ code:'', name:'', cat:'Entrenamiento', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' })
   // reponer form
@@ -123,10 +123,10 @@ export default function App() {
   const openDetail = (id) => { setSelectedId(id); setView('detalle'); setSidebarOpen(false) }
 
   // ---- Entregas / Devoluciones ----
-  const openEntrega = () => { setNd({ mode:'entrega', persona:'', receptor:'', cCode:'', cTalle:'', cQty:'', lines:[] }); setModal('entrega') }
-  const openDevolucion = () => { setNd({ mode:'devolucion', persona:'', receptor:'', cCode:'', cTalle:'', cQty:'', lines:[] }); setModal('entrega') }
-  const openEntregaFromDetail = () => { const a = byCode(curCode()); setNd({ mode:'entrega', persona:'', receptor:'', cCode:a?a.code:'', cTalle:'', cQty:'', lines:[] }); setModal('entrega') }
-  const openDevolucionFromDetail = () => { const a = byCode(curCode()); setNd({ mode:'devolucion', persona:'', receptor:'', cCode:a?a.code:'', cTalle:'', cQty:'', lines:[] }); setModal('entrega') }
+  const openEntrega = () => { setNd({ mode:'entrega', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', lines:[] }); setModal('entrega') }
+  const openDevolucion = () => { setNd({ mode:'devolucion', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', lines:[] }); setModal('entrega') }
+  const openEntregaFromDetail = () => { const a = byCode(curCode()); setNd({ mode:'entrega', persona:'', receptor:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', lines:[] }); setModal('entrega') }
+  const openDevolucionFromDetail = () => { const a = byCode(curCode()); setNd({ mode:'devolucion', persona:'', receptor:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', lines:[] }); setModal('entrega') }
 
   const ndAddLine = () => {
     const qty = parseInt(nd.cQty, 10)
@@ -136,7 +136,7 @@ export default function App() {
       const already = nd.lines.filter(l => l.code === nd.cCode && l.talle === nd.cTalle).reduce((s,l) => s+l.qty, 0)
       if(!sz || qty + already > sz.qty) { showToast('Stock insuficiente ('+(sz?sz.qty-already:0)+' disp.).'); return }
     }
-    setNd(p => ({...p, lines:[...p.lines,{code:nd.cCode,talle:nd.cTalle,qty}], cCode:'', cTalle:'', cQty:''}))
+    setNd(p => ({...p, lines:[...p.lines,{code:nd.cCode,talle:nd.cTalle,qty}], cCode:'', cSearch:'', cTalle:'', cQty:''}))
   }
 
   const ndConfirm = () => {
@@ -697,10 +697,29 @@ export default function App() {
               <div style={{background:'#FAFAF8',border:'1px solid #ECECE8',borderRadius:8,padding:16}}>
                 <div style={{fontSize:12.5,fontWeight:700,color:'#4a4a42',marginBottom:11}}>Agregar artículo</div>
                 <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                  <select className="field-input" value={nd.cCode} onChange={e => setNd(p=>({...p,cCode:e.target.value,cTalle:'',cQty:''}))}>
-                    <option value="">Seleccionar artículo…</option>
-                    {articles.map(a => <option key={a.code} value={a.code}>{a.code} · {a.name}</option>)}
-                  </select>
+                  <div style={{position:'relative'}}>
+                    <input
+                      className="field-input"
+                      placeholder="Buscar prenda por nombre…"
+                      autoComplete="off"
+                      value={nd.cCode ? (ndA ? ndA.name : nd.cCode) : nd.cSearch}
+                      onChange={e => setNd(p=>({...p, cSearch:e.target.value, cCode:'', cTalle:'', cQty:''}))}
+                      onBlur={() => setTimeout(() => setNd(p => p.cCode ? p : {...p, cSearch:''}), 150)}
+                    />
+                    {!nd.cCode && nd.cSearch && (
+                      <div onMouseDown={e => e.preventDefault()} style={{position:'absolute',top:'calc(100% + 4px)',left:0,right:0,background:'#fff',border:'1px solid #ECECE8',borderRadius:8,zIndex:200,maxHeight:220,overflowY:'auto',boxShadow:'0 4px 16px rgba(0,0,0,.12)'}}>
+                        {articles.filter(a => a.name.toLowerCase().includes(nd.cSearch.toLowerCase()) || a.code.toLowerCase().includes(nd.cSearch.toLowerCase())).length === 0
+                          ? <div style={{padding:'10px 14px',fontSize:13,color:'#8a8a82'}}>Sin resultados</div>
+                          : articles.filter(a => a.name.toLowerCase().includes(nd.cSearch.toLowerCase()) || a.code.toLowerCase().includes(nd.cSearch.toLowerCase())).map(a => (
+                            <div key={a.code} style={{padding:'9px 14px',cursor:'pointer',borderBottom:'1px solid #F2F2EE',fontSize:13}} onClick={() => setNd(p=>({...p, cCode:a.code, cSearch:'', cTalle:'', cQty:''}))}>
+                              <span style={{fontWeight:600}}>{a.name}</span>
+                              <span style={{color:'#8a8a82',fontSize:11.5,marginLeft:8}}>{a.code}</span>
+                            </div>
+                          ))
+                        }
+                      </div>
+                    )}
+                  </div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr auto',gap:10}}>
                     <select className="field-input" value={nd.cTalle} onChange={e => setNd(p=>({...p,cTalle:e.target.value}))}>
                       <option value="">Talle…</option>
