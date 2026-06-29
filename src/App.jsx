@@ -296,7 +296,7 @@ export default function App() {
 
   const q = search.trim().toLowerCase()
   let filtered = articles.filter(a => cat==='Todas' || a.cat===cat)
-  if(q) filtered = filtered.filter(a => a.name.toLowerCase().includes(q) || a.code.toLowerCase().includes(q))
+  if(q) filtered = filtered.filter(a => a.name.toLowerCase().includes(q) || a.code.toLowerCase().includes(q) || (a.ubic||'').toLowerCase().includes(q))
 
   const parseUbic = u => {
     if(!u || u==='—') return { n: Infinity, l: '' }
