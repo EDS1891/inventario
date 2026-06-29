@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from './supabase.js'
 
-const TALLE_ORDER = ['Único','S','M','L','XL','XXL','XXXL']
+const TALLE_ORDER = ['2','4','6','8','10','12','14','Único','S','M','L','XL','XXL','XXXL']
+const TALLES_ADULTO = ['S','M','L','XL','XXL','XXXL','Único']
+const TALLES_NINO   = ['2','4','6','8','10','12','14']
 const RECEPTORES = ['1° División','3° División','Juveniles','Captación','Femenino','Juveniles Femenino','Fútbol Sala Masculino','Fútbol Sala Femenino','Basket','Deportes Anexos','Funcionarios','Protocolo']
 const CATEGORIAS = ['Entrenamiento','Juego','Casual']
 const ESTANTES = ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20']
@@ -81,7 +83,7 @@ export default function App() {
   // delivery/devolución form
   const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', lines:[] })
   // new article form
-  const [na, setNa] = useState({ code:'', name:'', cat:'Entrenamiento', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' })
+  const [na, setNa] = useState({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' })
   // reponer form
   const [rep, setRep] = useState({ qtys:{} })
   // ajuste form
@@ -169,7 +171,7 @@ export default function App() {
   }
 
   // ---- Nuevo artículo ----
-  const openArticulo = () => { setNa({ code:'', name:'', cat:'Entrenamiento', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' }); setModal('articulo') }
+  const openArticulo = () => { setNa({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' }); setModal('articulo') }
 
   const naToggleTalle = (t) => {
     setNa(p => {
@@ -789,8 +791,19 @@ export default function App() {
               </div>
               <div className="form-group">
                 <label className="field-label">Talles</label>
+                <div style={{display:'flex',gap:8,marginBottom:10}}>
+                  {['adulto','nino'].map(t => (
+                    <button key={t} style={{flex:1,padding:'7px 0',borderRadius:6,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:13,
+                      background:na.tipo===t?'#FFD200':'#F5F5F0',
+                      borderColor:na.tipo===t?'#b89900':'#E0E0DA',
+                      color:na.tipo===t?'#121212':'#8a8a82'}}
+                      onClick={() => setNa(p=>({...p,tipo:t,tallesArr:[],tallesMins:{},tallesQty:{}}))}>
+                      {t==='adulto'?'ADULTO':'NIÑO'}
+                    </button>
+                  ))}
+                </div>
                 <div className="talle-grid">
-                  {['S','M','L','XL','XXL','XXXL','Único'].map(t => (
+                  {(na.tipo==='nino' ? TALLES_NINO : TALLES_ADULTO).map(t => (
                     <button key={t} className={`talle-btn${na.tallesArr.includes(t)?' active':''}`} onClick={() => naToggleTalle(t)}>{t}</button>
                   ))}
                 </div>
