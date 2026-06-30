@@ -348,9 +348,15 @@ export default function App() {
     return ua.l.localeCompare(ub.l)
   })
 
-  const codeCounts = {}
-  articles.forEach(a => { codeCounts[a.code] = (codeCounts[a.code]||0)+1 })
-  const dupCodes = new Set(Object.keys(codeCounts).filter(c => codeCounts[c] > 1))
+  const codeTalleCounts = {}
+  articles.forEach(a => a.sizes.forEach(s => {
+    const k = a.code + ':' + s.talle
+    codeTalleCounts[k] = (codeTalleCounts[k]||0)+1
+  }))
+  const dupArticleIds = new Set(
+    articles.filter(a => a.sizes.some(s => codeTalleCounts[a.code+':'+s.talle] > 1)).map(a => a.id)
+  )
+  const dupCodes = new Set(articles.filter(a => dupArticleIds.has(a.id)).map(a => a.code))
   const dupList = [...dupCodes].map(code => {
     const entries = articles.filter(a => a.code === code)
     const talleCounts = {}
@@ -365,7 +371,7 @@ export default function App() {
     sizesLabel: sizesLabel(a),
     low: isLow(a),
     ubic: a.ubic||'—',
-    dupUbic: dupCodes.has(a.code),
+    dupUbic: dupArticleIds.has(a.id),
   }))
 
   const lowList = articles.filter(isLow).map(a => ({
@@ -621,7 +627,7 @@ export default function App() {
                       </div>
                     </div>
                   </div>
-                  {dupCodes.has(detail.code) && (() => {
+                  {dupArticleIds.has(detail.id) && (() => {
                     const otros = articles.filter(a => a.code===detail.code && a.id!==detail.id)
                     const thisTalles = new Set(detail.sizes.map(s => s.talle))
                     const lineas = otros.map(a => ({
