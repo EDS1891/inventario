@@ -179,8 +179,8 @@ nav.sidebar-nav {
   margin-bottom: 22px;
 }
 .kpi-card {
-  background: #fff;
-  border: 1px solid #E7E7E3;
+  background: #E7E7E3;
+  border: 1px solid #D0D0CC;
   border-radius: 6px;
   padding: 18px 20px;
 }
