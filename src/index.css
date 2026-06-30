@@ -199,8 +199,8 @@ nav.sidebar-nav {
 
 /* ---- Cards ---- */
 .card {
-  background: #fff;
-  border: 1px solid #E7E7E3;
+  background: #E7E7E3;
+  border: 1px solid #D0D0CC;
   border-radius: 6px;
   overflow: hidden;
 }
