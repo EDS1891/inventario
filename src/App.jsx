@@ -533,12 +533,8 @@ export default function App() {
 
       {/* Sidebar */}
       <aside className={`sidebar${sidebarOpen?' open':''}`}>
-        <div className="sidebar-logo">
-          <img src="/escudo.png" alt="Peñarol" />
-          <div className="sidebar-logo-text">
-            <div className="name">PEÑAROL</div>
-            <div className="sub">DEPÓSITO · INDUMENTARIA</div>
-          </div>
+        <div className="sidebar-logo" style={{background:'#FFD200',justifyContent:'center',padding:'18px 20px'}}>
+          <img src="/escudo.png" alt="Peñarol" style={{height:56,width:'auto'}} />
         </div>
         <nav className="sidebar-nav">
           {[['panel','PANEL'],['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES']].map(([key,label]) => (
@@ -563,7 +559,6 @@ export default function App() {
           <button className="hamburger" onClick={() => setSidebarOpen(o=>!o)} aria-label="Menú">
             <span/><span/><span/>
           </button>
-          <img src="/escudo.png" alt="Peñarol" style={{height:36,width:'auto'}} />
           <div className="topbar-title">
             {{panel:'PANEL',inventario:'INVENTARIO',detalle:'DETALLE',entregas:'ENTREGAS',movimientos:'MOVIMIENTOS',receptores:'RECEPTORES'}[view]}
           </div>
