@@ -533,8 +533,12 @@ export default function App() {
 
       {/* Sidebar */}
       <aside className={`sidebar${sidebarOpen?' open':''}`}>
-        <div className="sidebar-logo" style={{background:'#FFD200',justifyContent:'center',padding:'18px 20px'}}>
-          <img src="/escudo.png" alt="Peñarol" style={{height:56,width:'auto'}} />
+        <div className="sidebar-logo">
+          <img src="/escudo.png" alt="Peñarol" />
+          <div className="sidebar-logo-text">
+            <div className="name">PEÑAROL</div>
+            <div className="sub">DEPÓSITO · INDUMENTARIA</div>
+          </div>
         </div>
         <nav className="sidebar-nav">
           {[['panel','PANEL'],['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES']].map(([key,label]) => (
