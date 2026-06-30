@@ -921,7 +921,7 @@ export default function App() {
                 <input className="field-input" value={na.name} onChange={e => setNa(p=>({...p,name:e.target.value}))} placeholder="Ej. Camiseta Titular 2026" />
               </div>
               <div className="form-group">
-                <label className="field-label">Precio <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional)</span></label>
+                <label className="field-label">Precio Tienda (Socio) <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional)</span></label>
                 <input type="number" min="0" step="0.01" className="field-input" value={na.precio} onChange={e => setNa(p=>({...p,precio:e.target.value}))} placeholder="0.00" />
               </div>
               <div className="form-group">
@@ -1092,7 +1092,7 @@ export default function App() {
                   <input className="field-input mono" value={editing.ubic} onChange={e => setEditing(p=>({...p,ubic:e.target.value}))} placeholder="1A" />
                 </div>
                 <div className="form-group">
-                  <label className="field-label">Precio</label>
+                  <label className="field-label">Precio Tienda (Socio)</label>
                   <input type="number" min="0" step="0.01" className="field-input" value={editing.precio} onChange={e => setEditing(p=>({...p,precio:e.target.value}))} placeholder="0.00" />
                 </div>
               </div>
