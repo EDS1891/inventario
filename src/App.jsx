@@ -449,7 +449,7 @@ export default function App() {
   if(nd.cCode && nd.cTalle && ndA) { const z=ndA.sizes.find(s=>s.talle===nd.cTalle); if(z) stockHint='Disponible: '+z.qty+' u. en talle '+nd.cTalle }
   const ndTotal = nd.lines.reduce((s,l) => s+l.qty, 0)
   const ndMonto = nd.receptor === 'Protocolo' && nd.paga === 'si'
-    ? nd.lines.reduce((s,l) => { const art=articles.find(a=>a.code===l.code); return s+(art?.precio||0)*l.qty }, 0)
+    ? nd.lines.reduce((s,l) => { const art=articles.find(a=>a.code===l.code); return s+(art?.precio||0)*l.qty }, 0) * 0.5
     : 0
   const ndOk = nd.persona && nd.persona.trim() && nd.receptor && nd.lines.length > 0
 
