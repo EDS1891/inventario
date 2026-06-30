@@ -632,30 +632,29 @@ export default function App() {
                   ))}
                 </div>
               </div>
-              {dupList.length > 0 && (
-                <div className="card" style={{marginTop:16}}>
-                  <div className="card-header">
-                    <div className="card-title">⚠ Talles duplicados en múltiples ubicaciones</div>
-                    <div className="card-spacer"/>
-                    <span className="badge" style={{background:'#FFF0C2',color:'#7a5800',border:'1px solid #FFD200'}}>{dupList.length} artículo{dupList.length>1?'s':''}</span>
-                  </div>
-                  {dupList.map(d => (
-                    <div key={d.code} className="table-row clickable" style={{gridTemplateColumns:'1fr auto',cursor:'pointer'}} onClick={() => openDetail(d.code)}>
-                      <div>
-                        <div style={{fontWeight:600,fontSize:13.5}}>{d.name}</div>
-                        <div style={{fontSize:11.5,color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>{d.code}</div>
-                      </div>
-                      <div style={{textAlign:'right',display:'flex',flexDirection:'column',gap:3}}>
-                        {d.tallesDup.map(t => (
-                          <div key={t.talle} style={{fontSize:12,fontWeight:600,color:'#C2473D'}}>
-                            Talle <b>{t.talle}</b>: {t.ubics.join(' · ')}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+              <div className="card" style={{marginTop:16}}>
+                <div className="card-header">
+                  <div className="card-title">⚠ Talles duplicados en múltiples ubicaciones</div>
+                  <div className="card-spacer"/>
+                  {dupList.length > 0 && <span className="badge" style={{background:'#FFF0C2',color:'#7a5800',border:'1px solid #FFD200'}}>{dupList.length} artículo{dupList.length>1?'s':''}</span>}
                 </div>
-              )}
+                {dupList.length === 0 && <div className="empty">No hay artículos en ubicaciones repetidas.</div>}
+                {dupList.map(d => (
+                  <div key={d.code} className="table-row clickable" style={{gridTemplateColumns:'1fr auto',cursor:'pointer'}} onClick={() => openDetail(d.code)}>
+                    <div>
+                      <div style={{fontWeight:600,fontSize:13.5}}>{d.name}</div>
+                      <div style={{fontSize:11.5,color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>{d.code}</div>
+                    </div>
+                    <div style={{textAlign:'right',display:'flex',flexDirection:'column',gap:3}}>
+                      {d.tallesDup.map(t => (
+                        <div key={t.talle} style={{fontSize:12,fontWeight:600,color:'#C2473D'}}>
+                          Talle <b>{t.talle}</b>: {t.ubics.join(' · ')}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </>
           )}
 
