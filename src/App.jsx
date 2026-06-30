@@ -376,8 +376,8 @@ export default function App() {
 
   const lowList = articles.filter(isLow).map(a => ({
     ...a,
-    totalFmt: fmt(total(a)),
-    tallesLow: a.sizes.filter(s => (s.min||0) > 0 && s.qty <= s.min).length,
+    tallesEnMin: a.sizes.filter(s => (s.min||0) > 0 && s.qty === s.min).length,
+    tallesBajo:  a.sizes.filter(s => (s.min||0) > 0 && s.qty < s.min).length,
   }))
 
   const delEnrich = d => {
@@ -513,8 +513,8 @@ export default function App() {
                         <div style={{fontSize:11.5,color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>{a.code}</div>
                       </div>
                       <div style={{textAlign:'right'}}>
-                        <div style={{fontWeight:700,fontSize:14,color:'#C2473D'}}>{a.totalFmt}</div>
-                        <div style={{fontSize:11,color:'#8a8a82'}}>{a.tallesLow} talle(s) bajo mín.</div>
+                        {a.tallesBajo > 0 && <div style={{fontSize:12,color:'#C2473D',fontWeight:600}}>{a.tallesBajo} talle{a.tallesBajo>1?'s':''} por debajo</div>}
+                        {a.tallesEnMin > 0 && <div style={{fontSize:12,color:'#b87000',fontWeight:600}}>{a.tallesEnMin} talle{a.tallesEnMin>1?'s':''} en el mínimo</div>}
                       </div>
                     </div>
                   ))}
