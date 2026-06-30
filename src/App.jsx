@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from './supabase.js'
+import * as XLSX from 'xlsx'
 
 const TALLE_ORDER = ['2','4','6','8','10','12','14','Único','S','M','L','XL','XXL','XXXL']
 const TALLES_ADULTO = ['S','M','L','XL','XXL','XXXL','Único']
@@ -245,6 +246,26 @@ export default function App() {
 
   // ---- Mover talle ----
   const openMover = () => { setMv({ tallesArr:[], estante:'1', altura:'A' }); setModal('mover') }
+
+  const exportExcel = () => {
+    const sorted = [...articles].sort((a, b) => {
+      const pu = u => { if(!u||u==='—') return {n:Infinity,l:''}; const m=u.match(/^(\d+)(.*)/); return m?{n:parseInt(m[1],10),l:m[2]}:{n:Infinity,l:u} }
+      const ua=pu(a.ubic), ub=pu(b.ubic)
+      return ua.n!==ub.n ? ua.n-ub.n : ua.l.localeCompare(ub.l)
+    })
+    const rows = sorted.map(a => {
+      const row = { UBICACIÓN: a.ubic||'—', CÓDIGO: a.code, ARTÍCULO: a.name, CATEGORÍA: a.cat }
+      TALLE_ORDER.forEach(t => { const sz=a.sizes.find(s=>s.talle===t); row[t]=sz?sz.qty:'' })
+      row['TOTAL'] = a.sizes.reduce((s,z)=>s+z.qty,0)
+      return row
+    })
+    const headers = ['UBICACIÓN','CÓDIGO','ARTÍCULO','CATEGORÍA',...TALLE_ORDER,'TOTAL']
+    const ws = XLSX.utils.json_to_sheet(rows, { header: headers })
+    ws['!cols'] = headers.map((h,i) => ({ wch: i<4 ? (i===2?32:14) : 7 }))
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Stock por Ubicación')
+    XLSX.writeFile(wb, 'stock-deposito-peniarol.xlsx')
+  }
   const mvConfirm = () => {
     if(mv.tallesArr.length === 0) { showToast('Seleccioná al menos un talle.'); return }
     const newUbic = mv.estante + mv.altura
@@ -571,10 +592,12 @@ export default function App() {
           {/* INVENTARIO */}
           {view === 'inventario' && (
             <>
-              <div className="chips">
+              <div className="chips" style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                 {['Todas',...CATEGORIAS].map(c => (
                   <button key={c} className={`chip${cat===c?' active':''}`} onClick={() => setCat(c)}>{c}</button>
                 ))}
+                <div style={{flex:1}}/>
+                <button className="btn btn-ghost" style={{fontSize:12.5,padding:'5px 12px'}} onClick={exportExcel}>↓ Exportar Excel</button>
               </div>
               <div className="card table-wrap">
                 <div className="table-header inv-cols">
