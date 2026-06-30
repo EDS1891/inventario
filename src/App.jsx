@@ -61,7 +61,7 @@ function today() {
   const d = new Date()
   return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear()
 }
-function isLow(a) { return a.sizes.some(s => (s.min||0) > 0 && s.qty < (s.min||0)) }
+function isLow(a) { return a.sizes.some(s => (s.min||0) > 0 && s.qty <= (s.min||0)) }
 
 
 export default function App() {
@@ -377,7 +377,7 @@ export default function App() {
   const lowList = articles.filter(isLow).map(a => ({
     ...a,
     totalFmt: fmt(total(a)),
-    tallesLow: a.sizes.filter(s => (s.min||0) > 0 && s.qty < s.min).length,
+    tallesLow: a.sizes.filter(s => (s.min||0) > 0 && s.qty <= s.min).length,
   }))
 
   const delEnrich = d => {
@@ -412,7 +412,7 @@ export default function App() {
     const maxQ = Math.max(1, ...selA.sizes.map(s=>s.qty))
     const ordered = [...selA.sizes].sort((a,b) => TALLE_ORDER.indexOf(a.talle)-TALLE_ORDER.indexOf(b.talle))
     const sizes = ordered.map(s => {
-      const sLow = (s.min||0)>0 && s.qty<(s.min||0)
+      const sLow = (s.min||0)>0 && s.qty<=(s.min||0)
       return {...s, isLow:sLow, pct:Math.round(s.qty/maxQ*100)}
     })
     const movs = movimientos.filter(m => m.code===selA.code)
