@@ -77,12 +77,6 @@ export default function App() {
   const [movFilter, setMovFilter] = useState('Todos')
   const [toast, setToast] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [user, setUser] = useState(null)
-  const [authLoading, setAuthLoading] = useState(true)
-  const [loginEmail, setLoginEmail] = useState('')
-  const [loginPassword, setLoginPassword] = useState('')
-  const [loginError, setLoginError] = useState('')
-  const [loginLoading, setLoginLoading] = useState(false)
   const toastTimer = useRef(null)
   const saveTimer = useRef(null)
 
@@ -94,31 +88,6 @@ export default function App() {
   const [rep, setRep] = useState({ qtys:{} })
   // ajuste form
   const [aj, setAj] = useState({ talle:'', cantidad:'' })
-
-  // Auth: check session on mount, subscribe to changes
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null)
-      setAuthLoading(false)
-    })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-    })
-    return () => subscription.unsubscribe()
-  }, [])
-
-  const handleLogin = async (e) => {
-    e.preventDefault()
-    setLoginLoading(true)
-    setLoginError('')
-    const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password: loginPassword })
-    if (error) setLoginError('Email o contraseña incorrectos.')
-    setLoginLoading(false)
-  }
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-  }
 
   // Load from Supabase on mount (filter out articles with no stock)
   useEffect(() => {
@@ -406,50 +375,6 @@ export default function App() {
 
   const ndIsDev = nd.mode === 'devolucion'
 
-  if (authLoading) return (
-    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',flexDirection:'column',gap:16,background:'#121212'}}>
-      <img src="/escudo.png" alt="Peñarol" style={{height:64,opacity:.9}} />
-      <div style={{color:'#FFD200',fontFamily:'Archivo Black,sans-serif',fontSize:14,letterSpacing:'.1em'}}>CARGANDO…</div>
-    </div>
-  )
-
-  if (!user) return (
-    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',background:'#121212',padding:'24px'}}>
-      <div style={{background:'#fff',borderRadius:12,padding:'40px 36px',width:'100%',maxWidth:380,boxShadow:'0 8px 40px rgba(0,0,0,.35)'}}>
-        <div style={{display:'flex',flexDirection:'column',alignItems:'center',marginBottom:32}}>
-          <img src="/escudo.png" alt="Peñarol" style={{height:56,marginBottom:16}} />
-          <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:18,color:'#121212',letterSpacing:'.02em'}}>PEÑAROL</div>
-          <div style={{fontSize:11,color:'#8a8a82',letterSpacing:'.16em',marginTop:3}}>DEPÓSITO · INDUMENTARIA</div>
-        </div>
-        <form onSubmit={handleLogin} style={{display:'flex',flexDirection:'column',gap:14}}>
-          <div>
-            <label style={{fontSize:12,fontWeight:700,color:'#555',display:'block',marginBottom:5}}>EMAIL</label>
-            <input
-              type="email" required autoFocus
-              value={loginEmail} onChange={e => setLoginEmail(e.target.value)}
-              placeholder="usuario@capenarol.com.uy"
-              style={{width:'100%',border:'1.5px solid #E7E7E3',borderRadius:6,padding:'10px 14px',fontSize:14,outline:'none',background:'#FAFAFA'}}
-            />
-          </div>
-          <div>
-            <label style={{fontSize:12,fontWeight:700,color:'#555',display:'block',marginBottom:5}}>CONTRASEÑA</label>
-            <input
-              type="password" required
-              value={loginPassword} onChange={e => setLoginPassword(e.target.value)}
-              placeholder="••••••••"
-              style={{width:'100%',border:'1.5px solid #E7E7E3',borderRadius:6,padding:'10px 14px',fontSize:14,outline:'none',background:'#FAFAFA'}}
-            />
-          </div>
-          {loginError && <div style={{fontSize:13,color:'#C2473D',background:'#FBEAE8',borderRadius:6,padding:'9px 12px'}}>{loginError}</div>}
-          <button type="submit" disabled={loginLoading}
-            style={{background:'#FFD200',color:'#121212',fontWeight:800,fontSize:14,border:'none',borderRadius:6,padding:'12px',cursor:'pointer',letterSpacing:'.04em',marginTop:4,opacity:loginLoading?.6:1}}>
-            {loginLoading ? 'INGRESANDO…' : 'INGRESAR'}
-          </button>
-        </form>
-      </div>
-    </div>
-  )
-
   if (loading) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',flexDirection:'column',gap:16,background:'#121212'}}>
       <img src="/escudo.png" alt="Peñarol" style={{height:64,opacity:.9}} />
@@ -479,17 +404,12 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <div className="sidebar-user" style={{flexDirection:'column',alignItems:'flex-start',gap:10}}>
-          <div style={{display:'flex',alignItems:'center',gap:11,width:'100%'}}>
-            <div className="user-avatar">{(user?.email||'').slice(0,2).toUpperCase()}</div>
-            <div style={{minWidth:0}}>
-              <div className="user-name" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:140}}>{user?.email}</div>
-              <div className="user-role">Depósito · Indumentaria</div>
-            </div>
+        <div className="sidebar-user">
+          <div className="user-avatar">CP</div>
+          <div>
+            <div className="user-name">COMPRAS PEÑAROL</div>
+            <div className="user-role">Gestión de depósito</div>
           </div>
-          <button onClick={handleSignOut} style={{width:'100%',background:'#1e1e1e',border:'1px solid #333',color:'#8a8a82',borderRadius:5,padding:'7px 0',fontSize:12,cursor:'pointer',fontFamily:'Archivo,sans-serif'}}>
-            Cerrar sesión
-          </button>
         </div>
       </aside>
 
