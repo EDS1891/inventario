@@ -594,7 +594,7 @@ export default function App() {
                     <div className="inv-col-sizes" style={{color:'#6a6a62'}}>{r.sizesLabel}</div>
                     <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{r.totalFmt}</div>
                     <div style={{textAlign:'right',display:'flex',gap:4,justifyContent:'flex-end',flexWrap:'wrap'}}>
-                      {r.dupUbic && <span className="badge" style={{background:'#FFF0C2',color:'#7a5800',border:'1px solid #FFD200'}}>⚠ Ubic. duplicada</span>}
+                      {r.dupUbic && <span className="badge" style={{background:'#FFF0C2',color:'#7a5800',border:'1px solid #FFD200'}}>⚠ Art. duplicado</span>}
                       {r.low && <span className="badge low">Bajo mín.</span>}
                     </div>
                   </div>
