@@ -312,6 +312,13 @@ export default function App() {
   const codeCounts = {}
   articles.forEach(a => { codeCounts[a.code] = (codeCounts[a.code]||0)+1 })
   const dupCodes = new Set(Object.keys(codeCounts).filter(c => codeCounts[c] > 1))
+  const dupList = [...dupCodes].map(code => {
+    const entries = articles.filter(a => a.code === code)
+    const talleCounts = {}
+    entries.forEach(a => a.sizes.forEach(s => { talleCounts[s.talle] = (talleCounts[s.talle]||0)+1 }))
+    const tallesDup = Object.keys(talleCounts).filter(t => talleCounts[t] > 1)
+    return { code, name: entries[0].name, entries, tallesDup }
+  })
 
   const invRows = filtered.map(a => ({
     ...a,
@@ -489,6 +496,30 @@ export default function App() {
                   ))}
                 </div>
               </div>
+              {dupList.length > 0 && (
+                <div className="card" style={{marginTop:16}}>
+                  <div className="card-header">
+                    <div className="card-title">Artículos en ubicaciones múltiples</div>
+                    <div className="card-spacer"/>
+                    <span className="badge" style={{background:'#FFF0C2',color:'#7a5800',border:'1px solid #FFD200'}}>{dupList.length} artículo{dupList.length>1?'s':''}</span>
+                  </div>
+                  {dupList.map(d => (
+                    <div key={d.code} className="table-row clickable" style={{gridTemplateColumns:'1fr auto'}} onClick={() => openDetail(d.entries[0].id)}>
+                      <div>
+                        <div style={{fontWeight:600,fontSize:13.5}}>{d.name}</div>
+                        <div style={{fontSize:11.5,color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>{d.code}</div>
+                        <div style={{fontSize:12,color:'#6a6a62',marginTop:3}}>Ubicaciones: <b>{d.entries.map(a=>a.ubic||'—').join(' · ')}</b></div>
+                      </div>
+                      {d.tallesDup.length > 0 && (
+                        <div style={{textAlign:'right',flexShrink:0}}>
+                          <div style={{fontSize:11,color:'#8a8a82',marginBottom:2}}>Talle{d.tallesDup.length>1?'s':''} duplicado{d.tallesDup.length>1?'s':''}</div>
+                          <div style={{fontWeight:700,fontSize:13,color:'#C2473D'}}>{d.tallesDup.join(', ')}</div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           )}
 
