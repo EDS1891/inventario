@@ -184,9 +184,9 @@ nav.sidebar-nav {
   border-radius: 6px;
   padding: 18px 20px;
 }
-.kpi-label { font-size: 12px; color: #8a8a82; font-weight: 600; letter-spacing: .02em; }
-.kpi-value { font-family: 'Archivo Black', sans-serif; font-size: 34px; color: #1a1a1a; margin-top: 6px; line-height: 1; }
-.kpi-sub { font-size: 12px; color: #8a8a82; margin-top: 7px; }
+.kpi-label { font-size: 12px; color: #121212; font-weight: 600; letter-spacing: .02em; }
+.kpi-value { font-family: 'Archivo Black', sans-serif; font-size: 34px; color: #121212; margin-top: 6px; line-height: 1; }
+.kpi-sub { font-size: 12px; color: #121212; margin-top: 7px; }
 .kpi-sub.green { color: #2e9b5e; }
 .kpi-sub.red { color: #C2473D; }
 
