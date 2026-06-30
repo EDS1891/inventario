@@ -165,7 +165,7 @@ export default function App() {
       })
       const activeArticles = articles.filter(a => total(a) > 0)
       if(esDev) return { ...s, articles:activeArticles, movimientos, modal:null, nextMov:mid }
-      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, paga:nd.receptor==='Protocolo'?nd.paga:null, lines:[...nd.lines]}, ...s.deliveries]
+      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, lines:[...nd.lines]}, ...s.deliveries]
       return { ...s, articles:activeArticles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid }
     })
     setModal(null)
@@ -448,6 +448,9 @@ export default function App() {
   let stockHint = ''
   if(nd.cCode && nd.cTalle && ndA) { const z=ndA.sizes.find(s=>s.talle===nd.cTalle); if(z) stockHint='Disponible: '+z.qty+' u. en talle '+nd.cTalle }
   const ndTotal = nd.lines.reduce((s,l) => s+l.qty, 0)
+  const ndMonto = nd.receptor === 'Protocolo' && nd.paga === 'si'
+    ? nd.lines.reduce((s,l) => { const art=articles.find(a=>a.code===l.code); return s+(art?.precio||0)*l.qty }, 0)
+    : 0
   const ndOk = nd.persona && nd.persona.trim() && nd.receptor && nd.lines.length > 0
 
   const repTalleOptions = selA ? selA.sizes.map(s => ({value:s.talle, label:s.talle})) : []
@@ -743,7 +746,7 @@ export default function App() {
                       <div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.persona}</div>
                       <div style={{fontSize:11.5,color:'#8a8a82'}}>
                         {d.receptor}
-                        {d.paga !== null && d.paga !== undefined && <span style={{marginLeft:6,fontWeight:600,color:d.paga==='si'?'#2e9b5e':'#C2473D'}}>· Paga: {d.paga==='si'?'Sí':'No'}</span>}
+                        {d.paga !== null && d.paga !== undefined && <span style={{marginLeft:6,fontWeight:600,color:d.paga==='si'?'#2e9b5e':'#C2473D'}}>· Paga: {d.paga==='si'?'Sí':'No'}{d.paga==='si'&&d.monto>0?' — $ '+d.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}):''}</span>}
                       </div>
                     </div>
                   </div>
@@ -853,6 +856,11 @@ export default function App() {
                       </button>
                     ))}
                   </div>
+                  {nd.paga === 'si' && nd.lines.length > 0 && (
+                    <div style={{marginTop:10,padding:'8px 12px',background:'#F0FAF4',border:'1px solid #b6e4c8',borderRadius:6,fontSize:13,color:'#1a5c33'}}>
+                      Total a cobrar: <b style={{fontSize:15}}>$ {ndMonto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</b>
+                    </div>
+                  )}
                 </div>
               )}
               <div style={{background:'#FAFAF8',border:'1px solid #ECECE8',borderRadius:8,padding:16}}>
