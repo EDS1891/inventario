@@ -563,6 +563,7 @@ export default function App() {
           <button className="hamburger" onClick={() => setSidebarOpen(o=>!o)} aria-label="Menú">
             <span/><span/><span/>
           </button>
+          <img src="/escudo.png" alt="Peñarol" style={{height:36,width:'auto'}} />
           <div className="topbar-title">
             {{panel:'PANEL',inventario:'INVENTARIO',detalle:'DETALLE',entregas:'ENTREGAS',movimientos:'MOVIMIENTOS',receptores:'RECEPTORES'}[view]}
           </div>
