@@ -541,12 +541,16 @@ export default function App() {
           </div>
         </div>
         <nav className="sidebar-nav">
-          {[['panel','PANEL'],['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES']].map(([key,label]) => (
-            <button key={key} className={`nav-item${view===key||(key==='inventario'&&view==='detalle')?' active':''}`} onClick={() => goView(key)}>
-              <span className="nav-dot" />
-              {label}
-            </button>
-          ))}
+          {[['panel','PANEL'],['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES']].map(([key,label]) => {
+            const isActive = view===key||(key==='inventario'&&view==='detalle')
+            return (
+              <button key={key} className={`nav-item${isActive?' active':''}`} onClick={() => goView(key)}>
+                <span className="nav-dot" />
+                {label}
+                {isActive && <img src="/escudo.png" alt="" style={{height:20,width:'auto',marginLeft:'auto',opacity:0.85}} />}
+              </button>
+            )
+          })}
         </nav>
         <div className="sidebar-user">
           <div className="user-avatar">CP</div>
