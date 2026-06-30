@@ -624,17 +624,17 @@ export default function App() {
                 </div>
                 {invRows.map(r => (
                   <div key={r.id} className="table-row clickable inv-cols" onClick={() => openDetail(r.id)}>
-                    <div className="mono" style={{fontSize:12.5,color:'#6a6a62',fontWeight:500}}>{r.code}</div>
+                    <div className="mono" style={{fontSize:12.5,color:'#1a1a1a',fontWeight:500}}>{r.code}</div>
                     <div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.name}</div>
                     <div className="inv-col-ubic"><span className="ubic-badge">{r.ubic}</span></div>
-                    <div className="inv-col-cat" style={{color:'#6a6a62'}}>{r.cat}</div>
-                    <div className="inv-col-sizes" style={{color:'#6a6a62'}}>{r.sizesLabel}</div>
+                    <div className="inv-col-cat" style={{color:'#1a1a1a'}}>{r.cat}</div>
+                    <div className="inv-col-sizes" style={{color:'#1a1a1a'}}>{r.sizesLabel}</div>
                     <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{r.totalFmt}</div>
                     <div style={{textAlign:'right',display:'flex',gap:4,justifyContent:'flex-end',flexWrap:'wrap'}}>
                       {r.dupUbic && <span className="badge" style={{background:'#FFF0C2',color:'#7a5800',border:'1px solid #FFD200'}}>⚠ Art. duplicado</span>}
                       {r.low && <span className="badge low">Bajo mín.</span>}
                     </div>
-                    <div className="inv-col-precio mono" style={{textAlign:'right',fontSize:12.5,color:'#6a6a62'}}>
+                    <div className="inv-col-precio mono" style={{textAlign:'right',fontSize:12.5,color:'#1a1a1a'}}>
                       {r.precio > 0 ? '$ '+r.precio.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}
                     </div>
                   </div>
