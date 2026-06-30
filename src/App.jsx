@@ -70,6 +70,7 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState('panel')
   const [selectedId, setSelectedId] = useState(null)
+  const [selectedCode, setSelectedCode] = useState(null)
   const [search, setSearch] = useState('')
   const [cat, setCat] = useState('Todas')
   const [modal, setModal] = useState(null)
@@ -109,12 +110,13 @@ export default function App() {
     saveTimer.current = setTimeout(() => saveToSupabase(db), 800)
   }, [db, loading])
 
-  // Redirect to inventario if selected article was deleted (reached stock 0)
+  // Redirect to inventario if selected article code no longer exists
   useEffect(() => {
-    if (view === 'detalle' && selectedId !== null && !db.articles.find(a => a.id === selectedId)) {
+    if (view === 'detalle' && selectedCode !== null && !db.articles.find(a => a.code === selectedCode)) {
       setView('inventario')
+      setSelectedCode(null)
     }
-  }, [db.articles, view, selectedId])
+  }, [db.articles, view, selectedCode])
 
   const showToast = useCallback((msg) => {
     setToast(msg)
@@ -124,24 +126,25 @@ export default function App() {
 
   const closeModal = () => setModal(null)
   const byCode = (code) => db.articles.find(a => a.code === code)
-  const curCode = () => { const a = db.articles.find(x => x.id === selectedId); return a ? a.code : '' }
+  const curCode = () => selectedCode || ''
 
   const goView = (v) => { setView(v); setSearch(''); setSidebarOpen(false) }
-  const openDetail = (id) => { setSelectedId(id); setView('detalle'); setSidebarOpen(false) }
+  const openDetail = (code) => { setSelectedCode(code); setView('detalle'); setSidebarOpen(false) }
 
   // ---- Entregas / Devoluciones ----
   const openEntrega = () => { setNd({ mode:'entrega', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[] }); setModal('entrega') }
   const openDevolucion = () => { setNd({ mode:'devolucion', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[] }); setModal('entrega') }
-  const openEntregaFromDetail = () => { const a = byCode(curCode()); setNd({ mode:'entrega', persona:'', receptor:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', lines:[] }); setModal('entrega') }
-  const openDevolucionFromDetail = () => { const a = byCode(curCode()); setNd({ mode:'devolucion', persona:'', receptor:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', lines:[] }); setModal('entrega') }
+  const openEntregaFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'entrega', persona:'', receptor:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[] }); setModal('entrega') }
+  const openDevolucionFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'devolucion', persona:'', receptor:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[] }); setModal('entrega') }
 
   const ndAddLine = () => {
     const qty = parseInt(nd.cQty, 10)
     if(!nd.cCode || !nd.cTalle || !qty || qty <= 0) { showToast('Completá artículo, talle y cantidad.'); return }
     if(nd.mode !== 'devolucion') {
-      const a = byCode(nd.cCode); const sz = a && a.sizes.find(s => s.talle === nd.cTalle)
+      const allArts = db.articles.filter(a => a.code === nd.cCode)
+      const totalAvail = allArts.reduce((s, a) => { const sz = a.sizes.find(x => x.talle === nd.cTalle); return s + (sz ? sz.qty : 0) }, 0)
       const already = nd.lines.filter(l => l.code === nd.cCode && l.talle === nd.cTalle).reduce((s,l) => s+l.qty, 0)
-      if(!sz || qty + already > sz.qty) { showToast('Stock insuficiente ('+(sz?sz.qty-already:0)+' disp.).'); return }
+      if(totalAvail === 0 || qty + already > totalAvail) { showToast('Stock insuficiente ('+(totalAvail-already)+' disp.).'); return }
     }
     setNd(p => ({...p, lines:[...p.lines,{code:nd.cCode,talle:nd.cTalle,qty}], cCode:'', cSearch:'', cTalle:'', cQty:''}))
   }
@@ -157,7 +160,9 @@ export default function App() {
       let mid = s.nextMov
       const fecha = today()
       nd.lines.forEach(l => {
-        const a = articles.find(x => x.code === l.code); const z = a && a.sizes.find(x => x.talle === l.talle)
+        // Find the entry that has this talle
+        const a = articles.find(x => x.code === l.code && x.sizes.some(sz => sz.talle === l.talle))
+        const z = a && a.sizes.find(x => x.talle === l.talle)
         if(z) z.qty = esDev ? z.qty + l.qty : Math.max(0, z.qty - l.qty)
         if(esDev) {
           movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'entrada', fecha, talle:l.talle, qty:l.qty, detalle:'Devolución de '+nd.persona+' ('+nd.receptor+')'})
@@ -210,20 +215,21 @@ export default function App() {
       .map(s => ({ talle:s.talle, q:parseInt(rep.qtys[s.talle]||0, 10) }))
       .filter(e => e.q > 0)
     if(entries.length === 0) { showToast('Ingresá al menos una cantidad.'); return }
-    const code = curCode(); const fecha = today()
+    const fecha = today()
     setDb(s => {
       let nextMov = s.nextMov
-      const artName = (s.articles.find(a => a.code === code)||{}).name || code
+      const artName = selA.name
+      const code = selA.code
       const articles = s.articles.map(a => {
-        if(a.code !== code) return a
+        if(a.id !== selectedId) return a
         return {...a, sizes: a.sizes.map(z => { const e=entries.find(e=>e.talle===z.talle); return e ? {...z, qty:z.qty+e.q} : z })}
       })
       const newMovs = entries.map(e => ({id:nextMov++, code, name:artName, tipo:'entrada', fecha, talle:e.talle, qty:e.q, detalle:'Ingreso de stock'}))
       return { ...s, articles, movimientos:[...newMovs,...s.movimientos], nextMov }
     })
     setModal(null)
-    const total = entries.reduce((s,e)=>s+e.q, 0)
-    showToast('Entrada registrada: +'+total+' u. en '+entries.length+' talle'+(entries.length>1?'s':'')+'.')
+    const tot = entries.reduce((s,e)=>s+e.q, 0)
+    showToast('Entrada registrada: +'+tot+' u. en '+entries.length+' talle'+(entries.length>1?'s':'')+'.')
   }
 
   // ---- Ajuste ----
@@ -232,13 +238,13 @@ export default function App() {
     if(!aj.talle || aj.cantidad === '') { showToast('Elegí talle e ingresá la cantidad contada.'); return }
     const q = parseInt(aj.cantidad, 10)
     if(isNaN(q) || q < 0) { showToast('Cantidad inválida.'); return }
-    const code = curCode(); const fecha = today()
-    const art = byCode(code); const z0 = art && art.sizes.find(z => z.talle === aj.talle); const cur = z0 ? z0.qty : 0
+    const code = selA.code; const fecha = today()
+    const z0 = selA.sizes.find(z => z.talle === aj.talle); const cur = z0 ? z0.qty : 0
     const delta = q - cur
     if(delta === 0) { showToast('Sin cambios: el stock ya es '+q+'.'); setModal(null); return }
     setDb(s => {
-      const artName = (s.articles.find(a => a.code === code)||{}).name || code
-      const articles = s.articles.map(a => { if(a.code!==code) return a; return {...a, sizes:a.sizes.map(z => z.talle===aj.talle?{...z,qty:Math.max(0,q)}:z)} })
+      const artName = selA.name
+      const articles = s.articles.map(a => { if(a.id!==selectedId) return a; return {...a, sizes:a.sizes.map(z => z.talle===aj.talle?{...z,qty:Math.max(0,q)}:z)} })
       const activeArticles = articles.filter(a => total(a) > 0)
       const movimientos = [{id:s.nextMov, code, name:artName, tipo:(delta>0?'entrada':'salida'), fecha, talle:aj.talle, qty:Math.abs(delta), detalle:'Ajuste por recuento (de '+cur+' a '+q+')'}, ...s.movimientos]
       return { ...s, articles:activeArticles, movimientos, nextMov:s.nextMov+1 }
@@ -350,13 +356,21 @@ export default function App() {
   const { articles, deliveries, movimientos } = db
   const codeName = Object.fromEntries(articles.map(a => [a.code, a.name]))
 
+  // KPIs: count unique codes, group by code for category totals
+  const byCodeMap = {}
+  articles.forEach(a => {
+    if(!byCodeMap[a.code]) byCodeMap[a.code] = { cat: a.cat, qty: 0 }
+    byCodeMap[a.code].qty += total(a)
+  })
+  const catTotal = cat => Object.values(byCodeMap).filter(v => v.cat === cat).reduce((s, v) => s + v.qty, 0)
+
   const kpis = {
-    articulos: articles.length,
+    articulos: new Set(articles.map(a => a.code)).size,
     unidades: fmt(articles.reduce((s,a) => s + total(a), 0)),
     valorStock: articles.reduce((s,a) => s + (a.precio||0) * total(a), 0),
-    entrenamiento: fmt(articles.filter(a=>a.cat==='Entrenamiento').reduce((s,a)=>s+total(a),0)),
-    juego: fmt(articles.filter(a=>a.cat==='Juego').reduce((s,a)=>s+total(a),0)),
-    casual: fmt(articles.filter(a=>a.cat==='Casual').reduce((s,a)=>s+total(a),0)),
+    entrenamiento: fmt(catTotal('Entrenamiento')),
+    juego: fmt(catTotal('Juego')),
+    casual: fmt(catTotal('Casual')),
     bajo: articles.filter(isLow).length,
     entregas: deliveries.length,
   }
@@ -376,32 +390,27 @@ export default function App() {
     return ua.l.localeCompare(ub.l)
   })
 
-  const codeTalleCounts = {}
-  articles.forEach(a => a.sizes.forEach(s => {
-    const k = a.code + ':' + s.talle
-    codeTalleCounts[k] = (codeTalleCounts[k]||0)+1
-  }))
-  const dupArticleIds = new Set(
-    articles.filter(a => a.sizes.some(s => codeTalleCounts[a.code+':'+s.talle] > 1)).map(a => a.id)
-  )
-  const dupCodes = new Set(articles.filter(a => dupArticleIds.has(a.id)).map(a => a.code))
-  const dupList = [...dupCodes].map(code => {
-    const entries = articles.filter(a => a.code === code)
-    const talleCounts = {}
-    entries.forEach(a => a.sizes.forEach(s => { talleCounts[s.talle] = (talleCounts[s.talle]||0)+1 }))
-    const tallesDup = Object.keys(talleCounts).filter(t => talleCounts[t] > 1)
-    return { code, name: entries[0].name, entries, tallesDup }
+  // Group by code for inventory rows
+  const groupedCodes = {}
+  filtered.forEach(a => {
+    if(!groupedCodes[a.code]) groupedCodes[a.code] = { ...a, _entries: [a] }
+    else groupedCodes[a.code]._entries.push(a)
   })
-
-  const invRows = filtered.map(a => ({
-    ...a,
-    totalFmt: fmt(total(a)),
-    sizesLabel: sizesLabel(a),
-    low: isLow(a),
-    ubic: a.ubic||'—',
-    dupUbic: dupArticleIds.has(a.id),
-    precio: a.precio||0,
-  }))
+  const invRows = Object.values(groupedCodes).map(g => {
+    const allSizes = g._entries.flatMap(e => e.sizes)
+    const tot = allSizes.reduce((s, z) => s + z.qty, 0)
+    const low = g._entries.some(e => isLow(e))
+    const ubics = [...new Set(g._entries.map(e => e.ubic).filter(Boolean))].join(' · ')
+    return {
+      ...g,
+      totalFmt: fmt(tot),
+      sizesLabel: TALLE_ORDER.filter(t => allSizes.some(s => s.talle === t)).join(' · '),
+      low,
+      ubic: ubics || '—',
+      precio: g.precio || 0,
+      dupUbic: false,
+    }
+  })
 
   const lowList = articles.filter(isLow).map(a => ({
     ...a,
@@ -438,18 +447,38 @@ export default function App() {
     return { name, ini:ini(name), count:ds.length, unidades }
   })
 
+  // selA: for modals that operate on a specific entry (selectedId)
   const selA = articles.find(a => a.id === selectedId)
+
+  // selEntries: all entries for the selected code (for detail view)
+  const selEntries = selectedCode ? articles.filter(a => a.code === selectedCode) : []
+
   let detail = null
-  if(selA) {
-    const tot = total(selA); const low = isLow(selA)
-    const maxQ = Math.max(1, ...selA.sizes.map(s=>s.qty))
-    const ordered = [...selA.sizes].sort((a,b) => TALLE_ORDER.indexOf(a.talle)-TALLE_ORDER.indexOf(b.talle))
-    const sizes = ordered.map(s => {
-      const sLow = (s.min||0)>0 && s.qty<=(s.min||0)
-      return {...s, isLow:sLow, pct:Math.round(s.qty/maxQ*100)}
+  if(selEntries.length > 0) {
+    const allSizesFlat = selEntries.flatMap(e => e.sizes)
+    const tot = allSizesFlat.reduce((s, z) => s + z.qty, 0)
+    const low = selEntries.some(e => isLow(e))
+    const movs = movimientos.filter(m => m.code === selectedCode)
+    const first = selEntries[0]
+    const entriesDisplay = selEntries.map(entry => {
+      const maxQ = Math.max(1, ...entry.sizes.map(s => s.qty))
+      const ordered = [...entry.sizes].sort((a,b) => TALLE_ORDER.indexOf(a.talle) - TALLE_ORDER.indexOf(b.talle))
+      const sizes = ordered.map(s => {
+        const sLow = (s.min||0) > 0 && s.qty <= (s.min||0)
+        return { ...s, isLow: sLow, pct: Math.round(s.qty / maxQ * 100) }
+      })
+      return { ...entry, sizes, ubic: entry.ubic || '—' }
     })
-    const movs = movimientos.filter(m => m.code===selA.code)
-    detail = { ...selA, total:tot, totalFmt:fmt(tot), low, sizesLabel:sizesLabel(selA), ubic:selA.ubic||'—', sizes, movs, noMovs:movs.length===0 }
+    detail = {
+      ...first,
+      entries: entriesDisplay,
+      total: tot,
+      totalFmt: fmt(tot),
+      low,
+      ubic: selEntries.map(e => e.ubic || '—').join(' · '),
+      movs,
+      noMovs: movs.length === 0,
+    }
   }
 
   // nd derived
@@ -547,7 +576,7 @@ export default function App() {
                   </div>
                   {lowList.length === 0 && <div className="empty">Sin artículos bajo mínimo 🎉</div>}
                   {lowList.map(a => (
-                    <div key={a.id} className="table-row clickable" style={{gridTemplateColumns:'1fr auto'}} onClick={() => openDetail(a.id)}>
+                    <div key={a.id} className="table-row clickable" style={{gridTemplateColumns:'1fr auto'}} onClick={() => openDetail(a.code)}>
                       <div>
                         <div style={{fontWeight:600,fontSize:13.5}}>{a.name}</div>
                         <div style={{fontSize:11.5,color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>{a.code}</div>
@@ -580,30 +609,6 @@ export default function App() {
                     </div>
                   ))}
                 </div>
-                {dupList.length > 0 && (
-                <div className="card">
-                  <div className="card-header">
-                    <div className="card-title">Artículos en ubicaciones múltiples</div>
-                    <div className="card-spacer"/>
-                    <span className="badge" style={{background:'#FFF0C2',color:'#7a5800',border:'1px solid #FFD200'}}>{dupList.length} artículo{dupList.length>1?'s':''}</span>
-                  </div>
-                  {dupList.map(d => (
-                    <div key={d.code} className="table-row clickable" style={{gridTemplateColumns:'1fr auto'}} onClick={() => openDetail(d.entries[0].id)}>
-                      <div>
-                        <div style={{fontWeight:600,fontSize:13.5}}>{d.name}</div>
-                        <div style={{fontSize:11.5,color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>{d.code}</div>
-                        <div style={{fontSize:12,color:'#6a6a62',marginTop:3}}>Ubicaciones: <b>{d.entries.map(a=>a.ubic||'—').join(' · ')}</b></div>
-                      </div>
-                      {d.tallesDup.length > 0 && (
-                        <div style={{textAlign:'right',flexShrink:0}}>
-                          <div style={{fontSize:11,color:'#8a8a82',marginBottom:2}}>Talle{d.tallesDup.length>1?'s':''} duplicado{d.tallesDup.length>1?'s':''}</div>
-                          <div style={{fontWeight:700,fontSize:13,color:'#C2473D'}}>{d.tallesDup.join(', ')}</div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                )}
               </div>
             </>
           )}
@@ -629,7 +634,7 @@ export default function App() {
                   <div className="inv-col-precio" style={{textAlign:'right'}}>PRECIO SOCIO</div>
                 </div>
                 {invRows.map(r => (
-                  <div key={r.id} className="table-row clickable inv-cols" onClick={() => openDetail(r.id)}>
+                  <div key={r.code} className="table-row clickable inv-cols" onClick={() => openDetail(r.code)}>
                     <div className="mono" style={{fontSize:12.5,color:'#1a1a1a',fontWeight:500}}>{r.code}</div>
                     <div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.name}</div>
                     <div className="inv-col-ubic"><span className="ubic-badge">{r.ubic}</span></div>
@@ -637,11 +642,10 @@ export default function App() {
                     <div className="inv-col-sizes" style={{color:'#1a1a1a'}}>{r.sizesLabel}</div>
                     <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{r.totalFmt}</div>
                     <div style={{textAlign:'right',display:'flex',gap:4,justifyContent:'flex-end',flexWrap:'wrap'}}>
-                      {r.dupUbic && <span className="badge" style={{background:'#FFF0C2',color:'#7a5800',border:'1px solid #FFD200'}}>⚠ Art. duplicado</span>}
                       {r.low && <span className="badge low">Bajo mín.</span>}
                     </div>
                     <div className="inv-col-precio mono" style={{textAlign:'right',fontSize:12.5,color:'#1a1a1a'}}>
-                      {r.precio > 0 ? '$ '+r.precio.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}
+                      {r.precio > 0 ? '$ '+r.precio.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}
                     </div>
                   </div>
                 ))}
@@ -656,6 +660,7 @@ export default function App() {
               <button className="back-link" onClick={() => setView('inventario')}>← Volver al inventario</button>
               <div className="detail-grid">
                 <div className="card">
+                  {/* Header global del artículo */}
                   <div style={{padding:'22px 24px',borderBottom:'1px solid #E7E7E3'}}>
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:16}}>
                       <div style={{flex:1}}>
@@ -664,7 +669,6 @@ export default function App() {
                         <div style={{display:'flex',gap:8,marginTop:9,alignItems:'center',flexWrap:'wrap'}}>
                           <span className="badge gray">{detail.cat}</span>
                           {detail.low && <span className="badge low">Bajo mínimo</span>}
-                          <span className="ubic-badge"><span style={{fontSize:11,color:'#9a7d00',fontFamily:'Archivo,sans-serif'}}>UBIC. </span>{detail.ubic}</span>
                         </div>
                       </div>
                       <div style={{textAlign:'right',flexShrink:0}}>
@@ -674,46 +678,46 @@ export default function App() {
                       </div>
                     </div>
                   </div>
-                  {dupArticleIds.has(detail.id) && (() => {
-                    const otros = articles.filter(a => a.code===detail.code && a.id!==detail.id)
-                    const thisTalles = new Set(detail.sizes.map(s => s.talle))
-                    const lineas = otros.map(a => ({
-                      ubic: a.ubic||'sin ubic.',
-                      tallesDup: a.sizes.map(s => s.talle).filter(t => thisTalles.has(t)),
-                      tallesSolo: a.sizes.map(s => s.talle).filter(t => !thisTalles.has(t)),
-                    }))
-                    return (
-                      <div style={{margin:'0 24px 0',padding:'10px 14px',background:'#FFF8E1',borderBottom:'1px solid #FFE57A',fontSize:12.5,color:'#7a5800'}}>
-                        <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:6}}><span>⚠</span><b>Artículo registrado en múltiples ubicaciones</b></div>
-                        {lineas.map((l,i) => (
-                          <div key={i} style={{paddingLeft:22,marginBottom:3}}>
-                            <b>{l.ubic}</b>
-                            {l.tallesDup.length > 0 && <span style={{color:'#C2473D'}}> — talles duplicados: <b>{l.tallesDup.join(', ')}</b></span>}
-                            {l.tallesSolo.length > 0 && <span style={{color:'#7a5800'}}> — talles exclusivos allí: {l.tallesSolo.join(', ')}</span>}
-                          </div>
-                        ))}
-                      </div>
-                    )
-                  })()}
+
+                  {/* Stock por ubicación */}
                   <div style={{padding:'18px 24px'}}>
-                    <div style={{fontSize:12,color:'#8a8a82',fontWeight:700,letterSpacing:'.04em',marginBottom:14}}>STOCK POR TALLE</div>
-                    {detail.sizes.map(s => (
-                      <div key={s.talle} className="bar-row">
-                        <div style={{width:46,fontWeight:700,fontSize:13.5}}>{s.talle}</div>
-                        <div className="bar-track"><div className="bar-fill" style={{width:s.pct+'%',background:s.isLow||s.qty<=0?'#C2473D':'#FFD200'}} /></div>
-                        <div style={{textAlign:'right',flexShrink:0}}>
-                          <div className="mono" style={{fontWeight:600,fontSize:13.5}}>{s.qty}</div>
-                          <div style={{fontSize:10.5,color:'#8a8a82'}}>mín {s.min}</div>
+                    {detail.entries.map((entry, idx) => {
+                      const entryTot = entry.sizes.reduce((s, z) => s + z.qty, 0)
+                      return (
+                        <div key={entry.id}>
+                          {idx > 0 && <div style={{borderTop:'1px solid #E7E7E3',margin:'20px 0'}} />}
+                          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+                            <span className="ubic-badge" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200',fontWeight:700}}>
+                              <span style={{fontSize:11,color:'#9a7d00',fontFamily:'Archivo,sans-serif'}}>UBIC. </span>{entry.ubic}
+                            </span>
+                            <span style={{fontSize:12.5,color:'#8a8a82'}}>{fmt(entryTot)} u.</span>
+                          </div>
+                          <div style={{fontSize:12,color:'#8a8a82',fontWeight:700,letterSpacing:'.04em',marginBottom:14}}>STOCK POR TALLE</div>
+                          {entry.sizes.map(s => (
+                            <div key={s.talle} className="bar-row">
+                              <div style={{width:46,fontWeight:700,fontSize:13.5}}>{s.talle}</div>
+                              <div className="bar-track"><div className="bar-fill" style={{width:s.pct+'%',background:s.isLow||s.qty<=0?'#C2473D':'#FFD200'}} /></div>
+                              <div style={{textAlign:'right',flexShrink:0}}>
+                                <div className="mono" style={{fontWeight:600,fontSize:13.5}}>{s.qty}</div>
+                                <div style={{fontSize:10.5,color:'#8a8a82'}}>mín {s.min}</div>
+                              </div>
+                            </div>
+                          ))}
+                          {/* Botones por ubicación */}
+                          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:16}}>
+                            <button className="btn btn-yellow" onClick={() => { setSelectedId(entry.id); openReponer() }}>＋ Registrar entrada</button>
+                            <button className="btn btn-dark" onClick={() => { setSelectedId(entry.id); openAjuste() }}>Ajustar stock</button>
+                            <button className="btn btn-ghost" onClick={() => { setSelectedId(entry.id); openMover() }}>⇄ Cambiar de ubicación</button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                    <div className="detail-actions">
-                      <button className="btn btn-yellow" onClick={openReponer}>+ Registrar entrada</button>
+                      )
+                    })}
+
+                    {/* Acciones globales */}
+                    <div className="detail-actions" style={{marginTop:24,paddingTop:20,borderTop:'1px solid #E7E7E3'}}>
                       <button className="btn btn-ghost" onClick={openEntregaFromDetail}>Registrar entrega</button>
                       <button className="btn btn-ghost" onClick={openDevolucionFromDetail}>↩ Devolución</button>
-                      <button className="btn btn-dark" onClick={openAjuste}>Ajustar stock</button>
-                      <button className="btn btn-ghost btn-full" onClick={openMover}>⇄ Cambiar de ubicación</button>
-                      <button className="btn btn-ghost btn-full" onClick={openEdit}>✎ Editar artículo</button>
+                      <button className="btn btn-ghost btn-full" onClick={() => { setSelectedId(detail.entries[0].id); openEdit() }}>✎ Editar artículo</button>
                     </div>
                   </div>
                 </div>
@@ -1058,7 +1062,8 @@ export default function App() {
               <button className="modal-close" onClick={closeModal}>×</button>
             </div>
             <div className="modal-body">
-              <div style={{fontSize:13,color:'#8a8a82',marginBottom:16}}>{selA.name} <span className="mono">· {selA.code}</span></div>
+              <div style={{fontSize:13,color:'#8a8a82',marginBottom:4}}>{selA.name} <span className="mono">· {selA.code}</span></div>
+              <div style={{fontSize:12,color:'#9a7d00',background:'#FBF7E3',padding:'6px 10px',borderRadius:6,marginBottom:14}}>Ubicación: <b>{selA.ubic||'—'}</b></div>
               <div style={{border:'1px solid #E7E7E3',borderRadius:8,overflow:'hidden'}}>
                 <div style={{display:'grid',gridTemplateColumns:'56px 1fr 1fr',background:'#FAFAF8',padding:'8px 12px',borderBottom:'1px solid #E7E7E3'}}>
                   <div style={{fontSize:11,fontWeight:700,color:'#8a8a82'}}>TALLE</div>
@@ -1092,7 +1097,8 @@ export default function App() {
               <button className="modal-close" onClick={closeModal}>×</button>
             </div>
             <div className="modal-body">
-              <div style={{fontSize:13,color:'#8a8a82',marginBottom:6}}>{selA.name} <span className="mono">· {selA.code}</span></div>
+              <div style={{fontSize:13,color:'#8a8a82',marginBottom:4}}>{selA.name} <span className="mono">· {selA.code}</span></div>
+              <div style={{fontSize:12,color:'#9a7d00',background:'#FBF7E3',padding:'6px 10px',borderRadius:6,marginBottom:10}}>Ubicación: <b>{selA.ubic||'—'}</b></div>
               <div style={{fontSize:12,color:'#9a7d00',background:'#FBF7E3',padding:'8px 12px',borderRadius:6,marginBottom:16}}>
                 Corrección por recuento: ingresá la cantidad física real contada. El sistema registra la diferencia.
               </div>
