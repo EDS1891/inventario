@@ -609,7 +609,7 @@ export default function App() {
                   <div className="inv-col-sizes">TALLES</div>
                   <div style={{textAlign:'right'}}>STOCK</div>
                   <div style={{textAlign:'right'}}>ESTADO</div>
-                  <div className="inv-col-precio" style={{textAlign:'right'}}>PRECIO</div>
+                  <div className="inv-col-precio" style={{textAlign:'right'}}>PRECIO SOCIO</div>
                 </div>
                 {invRows.map(r => (
                   <div key={r.id} className="table-row clickable inv-cols" onClick={() => openDetail(r.id)}>
