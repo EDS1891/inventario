@@ -528,8 +528,9 @@ export default function App() {
             <>
               <div className="kpi-grid">
                 <div className="kpi-card"><div className="kpi-label">ARTÍCULOS</div><div className="kpi-value">{kpis.articulos}</div><div className="kpi-sub">referencias activas</div></div>
-                <div className="kpi-card"><div className="kpi-label">UNIDADES EN STOCK</div><div className="kpi-value">{kpis.unidades}</div><div className="kpi-sub">suma de todos los talles</div>{kpis.valorStock > 0 && <div className="kpi-sub" style={{marginTop:6,fontWeight:700}}>$ {kpis.valorStock.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})} valor total</div>}</div>
+                <div className="kpi-card"><div className="kpi-label">UNIDADES EN STOCK</div><div className="kpi-value">{kpis.unidades}</div><div className="kpi-sub">suma de todos los talles</div></div>
                 <div className="kpi-card"><div className="kpi-label">ENTREGAS</div><div className="kpi-value">{kpis.entregas}</div><div className="kpi-sub">en el historial</div></div>
+                <div className="kpi-card"><div className="kpi-label">MONTO TOTAL EN ARTÍCULOS</div><div className="kpi-value" style={{fontSize:24}}>$ {kpis.valorStock.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</div></div>
               </div>
               <div className="panel-grid">
                 <div className="card">
