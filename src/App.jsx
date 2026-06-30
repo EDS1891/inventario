@@ -394,6 +394,7 @@ export default function App() {
     low: isLow(a),
     ubic: a.ubic||'—',
     dupUbic: dupArticleIds.has(a.id),
+    precio: a.precio||0,
   }))
 
   const lowList = articles.filter(isLow).map(a => ({
@@ -608,6 +609,7 @@ export default function App() {
                   <div className="inv-col-sizes">TALLES</div>
                   <div style={{textAlign:'right'}}>STOCK</div>
                   <div style={{textAlign:'right'}}>ESTADO</div>
+                  <div className="inv-col-precio" style={{textAlign:'right'}}>PRECIO</div>
                 </div>
                 {invRows.map(r => (
                   <div key={r.id} className="table-row clickable inv-cols" onClick={() => openDetail(r.id)}>
@@ -620,6 +622,9 @@ export default function App() {
                     <div style={{textAlign:'right',display:'flex',gap:4,justifyContent:'flex-end',flexWrap:'wrap'}}>
                       {r.dupUbic && <span className="badge" style={{background:'#FFF0C2',color:'#7a5800',border:'1px solid #FFD200'}}>⚠ Art. duplicado</span>}
                       {r.low && <span className="badge low">Bajo mín.</span>}
+                    </div>
+                    <div className="inv-col-precio mono" style={{textAlign:'right',fontSize:12.5,color:'#6a6a62'}}>
+                      {r.precio > 0 ? '$ '+r.precio.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}
                     </div>
                   </div>
                 ))}

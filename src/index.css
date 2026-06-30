@@ -237,7 +237,7 @@ nav.sidebar-nav {
 .table-row.clickable { cursor: pointer; }
 
 /* Inventory table columns */
-.inv-cols { grid-template-columns: 1.1fr 1.85fr .7fr 1.25fr .8fr .65fr .85fr; }
+.inv-cols { grid-template-columns: 1.1fr 1.85fr .7fr 1.25fr .8fr .65fr .85fr .75fr; }
 .del-cols { grid-template-columns: 1fr 1.6fr 2.3fr .7fr 44px; }
 .mov-cols { grid-template-columns: 0.95fr 2.4fr 1fr .7fr .7fr 44px; }
 
@@ -524,7 +524,7 @@ select.field-input { cursor: pointer; }
   /* Inventory table: hide some columns, scroll */
   .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .inv-cols { grid-template-columns: 110px 1fr 60px 70px; }
-  .inv-col-ubic, .inv-col-cat, .inv-col-sizes { display: none; }
+  .inv-col-ubic, .inv-col-cat, .inv-col-sizes, .inv-col-precio { display: none; }
 
   .del-cols { grid-template-columns: 80px 1fr 50px 34px; }
   .del-col-detail { display: none; }
