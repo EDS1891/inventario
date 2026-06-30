@@ -418,6 +418,28 @@ export default function App() {
     tallesBajo:  a.sizes.filter(s => (s.min||0) > 0 && s.qty < s.min).length,
   }))
 
+  // Talles duplicados: mismo código+talle en más de una ubicación
+  const codeTalleCounts = {}
+  articles.forEach(a => a.sizes.forEach(s => {
+    const k = a.code + ':' + s.talle
+    codeTalleCounts[k] = (codeTalleCounts[k]||0)+1
+  }))
+  const dupCodes = [...new Set(
+    articles.filter(a => a.sizes.some(s => codeTalleCounts[a.code+':'+s.talle] > 1)).map(a => a.code)
+  )]
+  const dupList = dupCodes.map(code => {
+    const entries = articles.filter(a => a.code === code)
+    const talleUbics = {}
+    entries.forEach(a => a.sizes.forEach(s => {
+      if(!talleUbics[s.talle]) talleUbics[s.talle] = []
+      talleUbics[s.talle].push(a.ubic || '—')
+    }))
+    const tallesDup = Object.entries(talleUbics)
+      .filter(([, ubics]) => ubics.length > 1)
+      .map(([talle, ubics]) => ({ talle, ubics }))
+    return { code, name: entries[0].name, tallesDup }
+  }).filter(d => d.tallesDup.length > 0)
+
   const delEnrich = d => {
     const totalUd = d.lines.reduce((s,l) => s+l.qty, 0)
     const resumen = d.lines.map(l => (codeName[l.code]||l.code)+' '+l.talle+' ×'+l.qty).join(' · ')
@@ -610,6 +632,30 @@ export default function App() {
                   ))}
                 </div>
               </div>
+              {dupList.length > 0 && (
+                <div className="card" style={{marginTop:16}}>
+                  <div className="card-header">
+                    <div className="card-title">⚠ Talles duplicados en múltiples ubicaciones</div>
+                    <div className="card-spacer"/>
+                    <span className="badge" style={{background:'#FFF0C2',color:'#7a5800',border:'1px solid #FFD200'}}>{dupList.length} artículo{dupList.length>1?'s':''}</span>
+                  </div>
+                  {dupList.map(d => (
+                    <div key={d.code} className="table-row clickable" style={{gridTemplateColumns:'1fr auto',cursor:'pointer'}} onClick={() => openDetail(d.code)}>
+                      <div>
+                        <div style={{fontWeight:600,fontSize:13.5}}>{d.name}</div>
+                        <div style={{fontSize:11.5,color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>{d.code}</div>
+                      </div>
+                      <div style={{textAlign:'right',display:'flex',flexDirection:'column',gap:3}}>
+                        {d.tallesDup.map(t => (
+                          <div key={t.talle} style={{fontSize:12,fontWeight:600,color:'#C2473D'}}>
+                            Talle <b>{t.talle}</b>: {t.ubics.join(' · ')}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </>
           )}
 
