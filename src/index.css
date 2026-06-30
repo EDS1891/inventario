@@ -217,10 +217,10 @@ nav.sidebar-nav {
 .table-header {
   display: grid;
   padding: 11px 20px;
-  background: #FAFAF8;
-  border-bottom: 1px solid #E7E7E3;
+  background: #121212;
+  border-bottom: 1px solid #121212;
   font-size: 11.5px;
-  color: #8a8a82;
+  color: #FFD200;
   font-weight: 700;
   letter-spacing: .04em;
 }
