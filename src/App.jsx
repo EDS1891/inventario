@@ -84,7 +84,7 @@ export default function App() {
   // delivery/devolución form
   const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', lines:[] })
   // new article form
-  const [na, setNa] = useState({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' })
+  const [na, setNa] = useState({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', precio:'', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' })
   // reponer form
   const [rep, setRep] = useState({ qtys:{} })
   // ajuste form
@@ -174,7 +174,7 @@ export default function App() {
   }
 
   // ---- Nuevo artículo ----
-  const openArticulo = () => { setNa({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' }); setModal('articulo') }
+  const openArticulo = () => { setNa({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', precio:'', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' }); setModal('articulo') }
 
   const naToggleTalle = (t) => {
     setNa(p => {
@@ -190,12 +190,13 @@ export default function App() {
   }
 
   const naConfirm = () => {
-    const { code, name, cat:ncat, tallesArr, tallesMins, tallesQty, estante, altura } = na
+    const { code, name, cat:ncat, tallesArr, tallesMins, tallesQty, estante, altura, precio } = na
     if(!code || !name) { showToast('Completá código y nombre.'); return }
     if(tallesArr.length === 0) { showToast('Seleccioná al menos un talle.'); return }
     const ubic = (estante||'1') + (altura||'A')
     const sizes = tallesArr.map(t => ({talle:t, qty:tallesQty[t]||0, min:tallesMins[t]||0}))
-    setDb(s => ({ ...s, articles:[{id:s.nextId, code, name, cat:ncat, ubic, sizes}, ...s.articles], nextId:s.nextId+1 }))
+    const precioNum = parseFloat(precio)||0
+    setDb(s => ({ ...s, articles:[{id:s.nextId, code, name, cat:ncat, ubic, precio:precioNum, sizes}, ...s.articles], nextId:s.nextId+1 }))
     setModal(null); setView('inventario')
     showToast('Artículo «'+name+'» creado.')
   }
@@ -254,14 +255,14 @@ export default function App() {
       return ua.n!==ub.n ? ua.n-ub.n : ua.l.localeCompare(ub.l)
     })
     const rows = sorted.map(a => {
-      const row = { UBICACIÓN: a.ubic||'—', CÓDIGO: a.code, ARTÍCULO: a.name, CATEGORÍA: a.cat }
+      const row = { UBICACIÓN: a.ubic||'—', CÓDIGO: a.code, ARTÍCULO: a.name, CATEGORÍA: a.cat, PRECIO: a.precio||0 }
       TALLE_ORDER.forEach(t => { const sz=a.sizes.find(s=>s.talle===t); row[t]=sz?sz.qty:'' })
       row['TOTAL'] = a.sizes.reduce((s,z)=>s+z.qty,0)
       return row
     })
-    const headers = ['UBICACIÓN','CÓDIGO','ARTÍCULO','CATEGORÍA',...TALLE_ORDER,'TOTAL']
+    const headers = ['UBICACIÓN','CÓDIGO','ARTÍCULO','CATEGORÍA','PRECIO',...TALLE_ORDER,'TOTAL']
     const ws = XLSX.utils.json_to_sheet(rows, { header: headers })
-    ws['!cols'] = headers.map((h,i) => ({ wch: i<4 ? (i===2?32:14) : 7 }))
+    ws['!cols'] = headers.map((h,i) => ({ wch: i===2?32 : i===4?10 : i<5?14 : 7 }))
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Stock por Ubicación')
     XLSX.writeFile(wb, 'stock-deposito-peniarol.xlsx')
@@ -304,11 +305,11 @@ export default function App() {
   // ---- Editar ----
   const openEdit = () => {
     const a = db.articles.find(x => x.id === selectedId); if(!a) return
-    setEditing({id:a.id, code:a.code, name:a.name, cat:a.cat, ubic:a.ubic||''}); setModal('edit')
+    setEditing({id:a.id, code:a.code, name:a.name, cat:a.cat, ubic:a.ubic||'', precio:a.precio||''}); setModal('edit')
   }
   const saveEdit = () => {
     if(!editing.code.trim() || !editing.name.trim()) { showToast('Completá código y nombre.'); return }
-    setDb(s => ({...s, articles:s.articles.map(a => a.id===editing.id?{...a,code:editing.code.trim(),name:editing.name.trim(),cat:editing.cat,ubic:editing.ubic.trim()}:a)}))
+    setDb(s => ({...s, articles:s.articles.map(a => a.id===editing.id?{...a,code:editing.code.trim(),name:editing.name.trim(),cat:editing.cat,ubic:editing.ubic.trim(),precio:parseFloat(editing.precio)||0}:a)}))
     setModal(null); showToast('Artículo actualizado.')
   }
 
@@ -647,6 +648,7 @@ export default function App() {
                       <div style={{textAlign:'right',flexShrink:0}}>
                         <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:30,lineHeight:1}}>{detail.totalFmt}</div>
                         <div style={{fontSize:11.5,color:'#8a8a82',marginTop:4}}>unidades totales</div>
+                        {detail.precio > 0 && <div style={{marginTop:8,fontSize:13,fontWeight:700,color:'#1a1a1a'}}>$ {detail.precio.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>}
                       </div>
                     </div>
                   </div>
@@ -919,6 +921,10 @@ export default function App() {
                 <input className="field-input" value={na.name} onChange={e => setNa(p=>({...p,name:e.target.value}))} placeholder="Ej. Camiseta Titular 2026" />
               </div>
               <div className="form-group">
+                <label className="field-label">Precio <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional)</span></label>
+                <input type="number" min="0" step="0.01" className="field-input" value={na.precio} onChange={e => setNa(p=>({...p,precio:e.target.value}))} placeholder="0.00" />
+              </div>
+              <div className="form-group">
                 <label className="field-label">Talles</label>
                 <div style={{display:'flex',gap:8,marginBottom:10}}>
                   {['adulto','nino'].map(t => (
@@ -1080,9 +1086,15 @@ export default function App() {
                 <label className="field-label">Nombre del artículo</label>
                 <input className="field-input" value={editing.name} onChange={e => setEditing(p=>({...p,name:e.target.value}))} />
               </div>
-              <div className="form-group">
-                <label className="field-label">Ubicación <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(ej. 3B, 0O)</span></label>
-                <input className="field-input mono" value={editing.ubic} onChange={e => setEditing(p=>({...p,ubic:e.target.value}))} placeholder="1A" />
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <div className="form-group">
+                  <label className="field-label">Ubicación <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(ej. 3B, 0O)</span></label>
+                  <input className="field-input mono" value={editing.ubic} onChange={e => setEditing(p=>({...p,ubic:e.target.value}))} placeholder="1A" />
+                </div>
+                <div className="form-group">
+                  <label className="field-label">Precio</label>
+                  <input type="number" min="0" step="0.01" className="field-input" value={editing.precio} onChange={e => setEditing(p=>({...p,precio:e.target.value}))} placeholder="0.00" />
+                </div>
               </div>
             </div>
             <div className="modal-footer">
