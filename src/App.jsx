@@ -309,12 +309,17 @@ export default function App() {
     return ua.l.localeCompare(ub.l)
   })
 
+  const codeCounts = {}
+  articles.forEach(a => { codeCounts[a.code] = (codeCounts[a.code]||0)+1 })
+  const dupCodes = new Set(Object.keys(codeCounts).filter(c => codeCounts[c] > 1))
+
   const invRows = filtered.map(a => ({
     ...a,
     totalFmt: fmt(total(a)),
     sizesLabel: sizesLabel(a),
     low: isLow(a),
     ubic: a.ubic||'—',
+    dupUbic: dupCodes.has(a.code),
   }))
 
   const lowList = articles.filter(isLow).map(a => ({
@@ -512,7 +517,10 @@ export default function App() {
                     <div className="inv-col-cat" style={{color:'#6a6a62'}}>{r.cat}</div>
                     <div className="inv-col-sizes" style={{color:'#6a6a62'}}>{r.sizesLabel}</div>
                     <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{r.totalFmt}</div>
-                    <div style={{textAlign:'right'}}>{r.low && <span className="badge low">Bajo mín.</span>}</div>
+                    <div style={{textAlign:'right',display:'flex',gap:4,justifyContent:'flex-end',flexWrap:'wrap'}}>
+                      {r.dupUbic && <span className="badge" style={{background:'#FFF0C2',color:'#7a5800',border:'1px solid #FFD200'}}>⚠ Ubic. duplicada</span>}
+                      {r.low && <span className="badge low">Bajo mín.</span>}
+                    </div>
                   </div>
                 ))}
                 {invRows.length === 0 && <div className="empty">{search ? `Sin resultados para «${search}».` : 'Sin artículos. Creá el primero con + Artículo.'}</div>}
@@ -543,6 +551,15 @@ export default function App() {
                       </div>
                     </div>
                   </div>
+                  {dupCodes.has(detail.code) && (() => {
+                    const otros = articles.filter(a => a.code===detail.code && a.id!==detail.id)
+                    return (
+                      <div style={{margin:'0 24px 0',padding:'10px 14px',background:'#FFF8E1',borderBottom:'1px solid #FFE57A',fontSize:12.5,color:'#7a5800',display:'flex',gap:8,alignItems:'center'}}>
+                        <span>⚠</span>
+                        <span>Este artículo aparece en múltiples ubicaciones: <b>{[detail.ubic, ...otros.map(a=>a.ubic||'sin ubic.')].join(' · ')}</b></span>
+                      </div>
+                    )
+                  })()}
                   <div style={{padding:'18px 24px'}}>
                     <div style={{fontSize:12,color:'#8a8a82',fontWeight:700,letterSpacing:'.04em',marginBottom:14}}>STOCK POR TALLE</div>
                     {detail.sizes.map(s => (
