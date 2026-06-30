@@ -76,6 +76,8 @@ export default function App() {
   const [confirm, setConfirm] = useState(null)
   const [editing, setEditing] = useState(null)
   const [movFilter, setMovFilter] = useState('Todos')
+  const [delFilterReceptor, setDelFilterReceptor] = useState('')
+  const [delFilterPersona, setDelFilterPersona] = useState('')
   const [toast, setToast] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const toastTimer = useRef(null)
@@ -409,6 +411,10 @@ export default function App() {
     return {...d, totalUd, resumen, ini:ini(d.persona||d.receptor)}
   }
   const deliveryRows = deliveries.map(delEnrich)
+  const deliveryReceptores = [...new Set(deliveries.map(d => d.receptor).filter(Boolean))]
+  const filteredDeliveryRows = deliveryRows
+    .filter(d => !delFilterReceptor || d.receptor === delFilterReceptor)
+    .filter(d => !delFilterPersona || d.persona.toLowerCase().includes(delFilterPersona.toLowerCase()))
   const recentDeliveries = deliveries.slice(0,4).map(delEnrich)
 
   const movKind = m => {
@@ -726,18 +732,28 @@ export default function App() {
 
           {/* ENTREGAS */}
           {view === 'entregas' && (
+            <>
+              <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginBottom:12}}>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap',flex:1}}>
+                  <button className={`chip${delFilterReceptor===''?' active':''}`} onClick={() => setDelFilterReceptor('')}>Todos</button>
+                  {deliveryReceptores.map(r => (
+                    <button key={r} className={`chip${delFilterReceptor===r?' active':''}`} onClick={() => setDelFilterReceptor(r)}>{r}</button>
+                  ))}
+                </div>
+                <input className="field-input" style={{width:200,flexShrink:0}} placeholder="Buscar integrante…" value={delFilterPersona} onChange={e => setDelFilterPersona(e.target.value)} />
+              </div>
             <div className="card table-wrap">
               <div className="card-header">
                 <div className="card-title">Historial de entregas</div>
                 <div className="card-spacer"/>
-                <span style={{fontSize:12.5,color:'#8a8a82'}}>{kpis.entregas} entregas</span>
+                <span style={{fontSize:12.5,color:'#8a8a82'}}>{filteredDeliveryRows.length} de {kpis.entregas} entregas</span>
               </div>
               <div className="table-header del-cols">
                 <div>FECHA</div><div>INTEGRANTE / GRUPO</div>
                 <div className="del-col-detail">DETALLE</div>
                 <div style={{textAlign:'right'}}>UNID.</div><div/>
               </div>
-              {deliveryRows.map(d => (
+              {filteredDeliveryRows.map(d => (
                 <div key={d.id} className="table-row del-cols">
                   <div className="mono" style={{fontSize:12.5,color:'#6a6a62'}}>{d.fecha}</div>
                   <div style={{display:'flex',alignItems:'center',gap:11,minWidth:0}}>
@@ -755,8 +771,9 @@ export default function App() {
                   <div style={{display:'flex',justifyContent:'flex-end'}}><button className="btn-del" onClick={() => askDeleteDelivery(d.id)}>✕</button></div>
                 </div>
               ))}
-              {deliveryRows.length === 0 && <div className="empty">Sin entregas registradas.</div>}
+              {filteredDeliveryRows.length === 0 && <div className="empty">{delFilterReceptor||delFilterPersona ? 'Sin entregas para este filtro.' : 'Sin entregas registradas.'}</div>}
             </div>
+            </>
           )}
 
           {/* MOVIMIENTOS */}
