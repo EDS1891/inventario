@@ -495,9 +495,8 @@ export default function App() {
                     </div>
                   ))}
                 </div>
-              </div>
-              {dupList.length > 0 && (
-                <div className="card" style={{marginTop:16}}>
+                {dupList.length > 0 && (
+                <div className="card">
                   <div className="card-header">
                     <div className="card-title">Artículos en ubicaciones múltiples</div>
                     <div className="card-spacer"/>
@@ -519,7 +518,8 @@ export default function App() {
                     </div>
                   ))}
                 </div>
-              )}
+                )}
+              </div>
             </>
           )}
 
