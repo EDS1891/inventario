@@ -82,7 +82,7 @@ export default function App() {
   const saveTimer = useRef(null)
 
   // delivery/devolución form
-  const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', lines:[] })
+  const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[] })
   // new article form
   const [na, setNa] = useState({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', precio:'', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' })
   // reponer form
@@ -128,8 +128,8 @@ export default function App() {
   const openDetail = (id) => { setSelectedId(id); setView('detalle'); setSidebarOpen(false) }
 
   // ---- Entregas / Devoluciones ----
-  const openEntrega = () => { setNd({ mode:'entrega', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', lines:[] }); setModal('entrega') }
-  const openDevolucion = () => { setNd({ mode:'devolucion', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', lines:[] }); setModal('entrega') }
+  const openEntrega = () => { setNd({ mode:'entrega', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[] }); setModal('entrega') }
+  const openDevolucion = () => { setNd({ mode:'devolucion', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[] }); setModal('entrega') }
   const openEntregaFromDetail = () => { const a = byCode(curCode()); setNd({ mode:'entrega', persona:'', receptor:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', lines:[] }); setModal('entrega') }
   const openDevolucionFromDetail = () => { const a = byCode(curCode()); setNd({ mode:'devolucion', persona:'', receptor:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', lines:[] }); setModal('entrega') }
 
@@ -165,7 +165,7 @@ export default function App() {
       })
       const activeArticles = articles.filter(a => total(a) > 0)
       if(esDev) return { ...s, articles:activeArticles, movimientos, modal:null, nextMov:mid }
-      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, lines:[...nd.lines]}, ...s.deliveries]
+      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, paga:nd.receptor==='Protocolo'?nd.paga:null, lines:[...nd.lines]}, ...s.deliveries]
       return { ...s, articles:activeArticles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid }
     })
     setModal(null)
@@ -741,7 +741,10 @@ export default function App() {
                     <div className="avatar lg">{d.ini}</div>
                     <div style={{minWidth:0}}>
                       <div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.persona}</div>
-                      <div style={{fontSize:11.5,color:'#8a8a82'}}>{d.grupo}</div>
+                      <div style={{fontSize:11.5,color:'#8a8a82'}}>
+                        {d.receptor}
+                        {d.paga !== null && d.paga !== undefined && <span style={{marginLeft:6,fontWeight:600,color:d.paga==='si'?'#2e9b5e':'#C2473D'}}>· Paga: {d.paga==='si'?'Sí':'No'}</span>}
+                      </div>
                     </div>
                   </div>
                   <div className="del-col-detail" style={{color:'#6a6a62',fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.resumen}</div>
@@ -831,11 +834,27 @@ export default function App() {
               </div>
               <div className="form-group">
                 <label className="field-label">Grupo / Plantel</label>
-                <select className="field-input" value={nd.receptor} onChange={e => setNd(p=>({...p,receptor:e.target.value}))}>
+                <select className="field-input" value={nd.receptor} onChange={e => setNd(p=>({...p,receptor:e.target.value,paga:null}))}>
                   <option value="">Seleccionar grupo…</option>
                   {RECEPTORES.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
+              {nd.receptor === 'Protocolo' && !ndIsDev && (
+                <div className="form-group">
+                  <label className="field-label">¿Paga?</label>
+                  <div style={{display:'flex',gap:8}}>
+                    {[['si','SÍ'],['no','NO']].map(([v,label]) => (
+                      <button key={v} style={{flex:1,padding:'7px 0',borderRadius:6,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:13,
+                        background:nd.paga===v?'#FFD200':'#F5F5F0',
+                        borderColor:nd.paga===v?'#e6be00':'#E0E0DA',
+                        color:nd.paga===v?'#121212':'#8a8a82'}}
+                        onClick={() => setNd(p=>({...p,paga:v}))}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div style={{background:'#FAFAF8',border:'1px solid #ECECE8',borderRadius:8,padding:16}}>
                 <div style={{fontSize:12.5,fontWeight:700,color:'#4a4a42',marginBottom:11}}>Agregar artículo</div>
                 <div style={{display:'flex',flexDirection:'column',gap:10}}>
