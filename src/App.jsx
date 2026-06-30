@@ -486,7 +486,7 @@ export default function App() {
           </div>
         </div>
         <nav className="sidebar-nav">
-          {[['panel','Panel'],['inventario','Inventario'],['entregas','Entregas'],['movimientos','Movimientos'],['receptores','Receptores']].map(([key,label]) => (
+          {[['panel','PANEL'],['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES']].map(([key,label]) => (
             <button key={key} className={`nav-item${view===key||(key==='inventario'&&view==='detalle')?' active':''}`} onClick={() => goView(key)}>
               <span className="nav-dot" />
               {label}
@@ -509,7 +509,7 @@ export default function App() {
             <span/><span/><span/>
           </button>
           <div className="topbar-title">
-            {{panel:'Panel',inventario:'Inventario',detalle:'Detalle',entregas:'Entregas',movimientos:'Movimientos',receptores:'Receptores'}[view]}
+            {{panel:'PANEL',inventario:'INVENTARIO',detalle:'DETALLE',entregas:'ENTREGAS',movimientos:'MOVIMIENTOS',receptores:'RECEPTORES'}[view]}
           </div>
           <div className="topbar-spacer" />
           <div className="search-box">
