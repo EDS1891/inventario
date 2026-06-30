@@ -88,6 +88,8 @@ export default function App() {
   const [rep, setRep] = useState({ qtys:{} })
   // ajuste form
   const [aj, setAj] = useState({ talle:'', cantidad:'' })
+  // mover form
+  const [mv, setMv] = useState({ tallesArr:[], estante:'1', altura:'A' })
 
   // Load from Supabase on mount (filter out articles with no stock)
   useEffect(() => {
@@ -239,6 +241,43 @@ export default function App() {
     })
     setModal(null)
     showToast('Stock ajustado: '+aj.talle+' = '+q+' ('+(delta>0?'+':'')+delta+').')
+  }
+
+  // ---- Mover talle ----
+  const openMover = () => { setMv({ tallesArr:[], estante:'1', altura:'A' }); setModal('mover') }
+  const mvConfirm = () => {
+    if(mv.tallesArr.length === 0) { showToast('Seleccioná al menos un talle.'); return }
+    const newUbic = mv.estante + mv.altura
+    if(newUbic === selA.ubic) { showToast('La ubicación destino es la misma que la actual.'); return }
+    setDb(prev => {
+      const code = curCode()
+      let arts = prev.articles
+      let nextId = prev.nextId
+      const targetEntry = arts.find(a => a.code === code && a.ubic === newUbic && a.id !== selA.id)
+      if(targetEntry) {
+        arts = arts.map(a => {
+          if(a.id !== targetEntry.id) return a
+          const newSizes = [...a.sizes]
+          mv.tallesArr.forEach(t => {
+            const src = selA.sizes.find(sz => sz.talle === t)
+            const idx = newSizes.findIndex(sz => sz.talle === t)
+            if(idx >= 0) newSizes[idx] = {...newSizes[idx], qty: newSizes[idx].qty + (src?.qty||0)}
+            else newSizes.push({...src})
+          })
+          return {...a, sizes: newSizes}
+        })
+      } else {
+        const movedSizes = selA.sizes.filter(sz => mv.tallesArr.includes(sz.talle))
+        arts = [...arts, {id:nextId++, code, name:selA.name, cat:selA.cat, ubic:newUbic, sizes:movedSizes}]
+      }
+      const remaining = selA.sizes.filter(sz => !mv.tallesArr.includes(sz.talle))
+      arts = remaining.length === 0
+        ? arts.filter(a => a.id !== selA.id)
+        : arts.map(a => a.id === selA.id ? {...a, sizes:remaining} : a)
+      return {...prev, articles:arts, nextId}
+    })
+    setModal(null); setView('inventario')
+    showToast('Talle(s) movido(s) a ' + mv.estante + mv.altura + '.')
   }
 
   // ---- Editar ----
@@ -620,6 +659,7 @@ export default function App() {
                       <button className="btn btn-ghost" onClick={openEntregaFromDetail}>Registrar entrega</button>
                       <button className="btn btn-ghost" onClick={openDevolucionFromDetail}>↩ Devolución</button>
                       <button className="btn btn-dark" onClick={openAjuste}>Ajustar stock</button>
+                      <button className="btn btn-ghost btn-full" onClick={openMover}>⇄ Cambiar de ubicación</button>
                       <button className="btn btn-ghost btn-full" onClick={openEdit}>✎ Editar artículo</button>
                     </div>
                   </div>
@@ -1038,6 +1078,52 @@ export default function App() {
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => setConfirm(null)}>Cancelar</button>
               <button className="btn btn-red" onClick={confirmYes}>Eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Cambiar de ubicación */}
+      {modal === 'mover' && selA && (
+        <div className="modal-backdrop" onClick={closeModal}>
+          <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">Cambiar de ubicación</div>
+              <button className="modal-close" onClick={closeModal}>×</button>
+            </div>
+            <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:14}}>
+              <div style={{fontSize:13,color:'#8a8a82'}}>{selA.name} <span className="mono">· {selA.code}</span></div>
+              <div style={{fontSize:12,background:'#F5F5F0',border:'1px solid #E0E0DA',borderRadius:6,padding:'8px 12px',color:'#6a6a62'}}>
+                Ubicación actual: <b style={{color:'#1a1a1a'}}>{selA.ubic||'—'}</b>
+              </div>
+              <div className="form-group">
+                <label className="field-label">Seleccioná los talles a mover</label>
+                <div className="talle-grid">
+                  {selA.sizes.map(s => (
+                    <button key={s.talle} className={`talle-btn${mv.tallesArr.includes(s.talle)?' active':''}`}
+                      onClick={() => setMv(p => ({...p, tallesArr: p.tallesArr.includes(s.talle) ? p.tallesArr.filter(t=>t!==s.talle) : [...p.tallesArr, s.talle]}))}>
+                      {s.talle}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="field-label">Ubicación destino</label>
+                <div style={{display:'flex',alignItems:'center',gap:10}}>
+                  <select className="field-input" style={{flex:1}} value={mv.estante} onChange={e => setMv(p=>({...p,estante:e.target.value}))}>
+                    {ESTANTES.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                  <span style={{fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>Altura</span>
+                  <select className="field-input" style={{flex:1}} value={mv.altura} onChange={e => setMv(p=>({...p,altura:e.target.value}))}>
+                    {ALTURAS.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </div>
+                <div style={{marginTop:6,fontSize:12,color:'#8a8a82'}}>Destino: <b style={{color:'#1a1a1a'}}>{mv.estante}{mv.altura}</b></div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={closeModal}>Cancelar</button>
+              <button className="btn btn-dark" onClick={mvConfirm}>Confirmar movimiento</button>
             </div>
           </div>
         </div>
