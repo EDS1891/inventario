@@ -553,10 +553,22 @@ export default function App() {
                   </div>
                   {dupCodes.has(detail.code) && (() => {
                     const otros = articles.filter(a => a.code===detail.code && a.id!==detail.id)
+                    const thisTalles = new Set(detail.sizes.map(s => s.talle))
+                    const lineas = otros.map(a => ({
+                      ubic: a.ubic||'sin ubic.',
+                      tallesDup: a.sizes.map(s => s.talle).filter(t => thisTalles.has(t)),
+                      tallesSolo: a.sizes.map(s => s.talle).filter(t => !thisTalles.has(t)),
+                    }))
                     return (
-                      <div style={{margin:'0 24px 0',padding:'10px 14px',background:'#FFF8E1',borderBottom:'1px solid #FFE57A',fontSize:12.5,color:'#7a5800',display:'flex',gap:8,alignItems:'center'}}>
-                        <span>⚠</span>
-                        <span>Este artículo aparece en múltiples ubicaciones: <b>{[detail.ubic, ...otros.map(a=>a.ubic||'sin ubic.')].join(' · ')}</b></span>
+                      <div style={{margin:'0 24px 0',padding:'10px 14px',background:'#FFF8E1',borderBottom:'1px solid #FFE57A',fontSize:12.5,color:'#7a5800'}}>
+                        <div style={{display:'flex',gap:8,alignItems:'center',marginBottom:6}}><span>⚠</span><b>Artículo registrado en múltiples ubicaciones</b></div>
+                        {lineas.map((l,i) => (
+                          <div key={i} style={{paddingLeft:22,marginBottom:3}}>
+                            <b>{l.ubic}</b>
+                            {l.tallesDup.length > 0 && <span style={{color:'#C2473D'}}> — talles duplicados: <b>{l.tallesDup.join(', ')}</b></span>}
+                            {l.tallesSolo.length > 0 && <span style={{color:'#7a5800'}}> — talles exclusivos allí: {l.tallesSolo.join(', ')}</span>}
+                          </div>
+                        ))}
                       </div>
                     )
                   })()}
