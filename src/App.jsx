@@ -123,7 +123,7 @@ export default function App() {
   const saveTimer = useRef(null)
 
   // delivery/devolución form
-  const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' })
+  const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' })
   // new article form
   const [na, setNa] = useState({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', precio:'', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' })
   // reponer form
@@ -252,7 +252,7 @@ export default function App() {
   const openDetail = (code) => { setSelectedCode(code); setView('detalle'); setSidebarOpen(false) }
 
   // ---- Entregas / Devoluciones ----
-  const openEntrega = () => { setNd({ mode:'entrega', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
+  const openEntrega = () => { setNd({ mode:'entrega', persona:'', receptor:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
   const openDevolucion = () => { setNd({ mode:'devolucion', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
   const openEntregaFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'entrega', persona:'', receptor:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
   const openDevolucionFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'devolucion', persona:'', receptor:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
@@ -260,13 +260,17 @@ export default function App() {
   const ndAddLine = () => {
     const qty = parseInt(nd.cQty, 10)
     if(!nd.cCode || !nd.cTalle || !qty || qty <= 0) { showToast('Completá artículo, talle y cantidad.'); return }
+    const ndUbicsAll = [...new Set(db.articles.filter(a => a.code === nd.cCode).map(a => a.ubic).filter(Boolean))]
+    if(ndUbicsAll.length > 1 && !nd.cUbic) { showToast('Seleccioná la ubicación primero.'); return }
+    const ubicToUse = nd.cUbic || (ndUbicsAll[0] || '')
     if(nd.mode !== 'devolucion') {
-      const allArts = db.articles.filter(a => a.code === nd.cCode)
-      const totalAvail = allArts.reduce((s, a) => { const sz = a.sizes.find(x => x.talle === nd.cTalle); return s + (sz ? sz.qty : 0) }, 0)
-      const already = nd.lines.filter(l => l.code === nd.cCode && l.talle === nd.cTalle).reduce((s,l) => s+l.qty, 0)
-      if(totalAvail === 0 || qty + already > totalAvail) { showToast('Stock insuficiente ('+(totalAvail-already)+' disp.).'); return }
+      const srcArt = db.articles.find(a => a.code === nd.cCode && (!ubicToUse || a.ubic === ubicToUse))
+      const avail = srcArt ? (srcArt.sizes.find(x => x.talle === nd.cTalle)?.qty || 0) : 0
+      const already = nd.lines.filter(l => l.code === nd.cCode && l.talle === nd.cTalle && l.ubic === ubicToUse).reduce((s,l) => s+l.qty, 0)
+      if(avail === 0 || qty + already > avail) { showToast('Stock insuficiente ('+(avail-already)+' disp.).'); return }
     }
-    setNd(p => ({...p, lines:[...p.lines,{code:nd.cCode,talle:nd.cTalle,qty}], cCode:'', cSearch:'', cTalle:'', cQty:''}))
+    const artName = db.articles.find(a => a.code === nd.cCode)?.name || nd.cCode
+    setNd(p => ({...p, lines:[...p.lines,{code:nd.cCode,talle:nd.cTalle,qty,ubic:ubicToUse,name:artName}], cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:''}))
   }
 
   const ndConfirm = () => {
@@ -280,8 +284,10 @@ export default function App() {
       let mid = s.nextMov
       const fecha = today()
       nd.lines.forEach(l => {
-        // Find the entry that has this talle
-        const a = articles.find(x => x.code === l.code && x.sizes.some(sz => sz.talle === l.talle))
+        // Find the entry at the specific location (ubic), fallback to first with the talle
+        const a = l.ubic
+          ? articles.find(x => x.code === l.code && x.ubic === l.ubic)
+          : articles.find(x => x.code === l.code && x.sizes.some(sz => sz.talle === l.talle))
         const z = a && a.sizes.find(x => x.talle === l.talle)
         if(z) z.qty = esDev ? z.qty + l.qty : Math.max(0, z.qty - l.qty)
         if(esDev) {
@@ -682,10 +688,13 @@ export default function App() {
   }
 
   // nd derived
-  const ndA = byCode(nd.cCode)
-  const ndTalleOptions = ndA ? ndA.sizes.map(s => ({value:s.talle, label:s.talle+' ('+s.qty+' disp.)'})) : []
+  const ndUbics = nd.cCode ? [...new Set(db.articles.filter(a => a.code === nd.cCode).map(a => a.ubic).filter(Boolean))] : []
+  const ndHasMultiUbic = ndUbics.length > 1
+  const effectiveUbic = nd.cUbic || (ndUbics.length === 1 ? ndUbics[0] : '')
+  const ndA = nd.cCode ? db.articles.find(a => a.code === nd.cCode && (!effectiveUbic || a.ubic === effectiveUbic)) : null
+  const ndTalleOptions = ndA ? ndA.sizes.filter(s => s.qty > 0).map(s => ({value:s.talle, label:s.talle+' ('+s.qty+' disp.)'})) : []
   let stockHint = ''
-  if(nd.cCode && nd.cTalle && ndA) { const z=ndA.sizes.find(s=>s.talle===nd.cTalle); if(z) stockHint='Disponible: '+z.qty+' u. en talle '+nd.cTalle }
+  if(nd.cCode && nd.cTalle && ndA) { const z=ndA.sizes.find(s=>s.talle===nd.cTalle); if(z) stockHint='Disponible: '+z.qty+' u. en talle '+nd.cTalle+(effectiveUbic?' · Ubic. '+effectiveUbic:'') }
   const ndTotal = nd.lines.reduce((s,l) => s+l.qty, 0)
   const ndMonto = nd.receptor === 'Protocolo' && nd.paga === 'si'
     ? nd.lines.reduce((s,l) => { const art=articles.find(a=>a.code===l.code); return s+(art?.precio||0)*l.qty }, 0) * 0.5
@@ -1446,7 +1455,7 @@ export default function App() {
                           return unique.length === 0
                             ? <div style={{padding:'10px 14px',fontSize:13,color:'#8a8a82'}}>Sin resultados</div>
                             : unique.map(a => (
-                              <div key={a.code} style={{padding:'9px 14px',cursor:'pointer',borderBottom:'1px solid #F2F2EE',fontSize:13}} onClick={() => setNd(p=>({...p, cCode:a.code, cSearch:'', cTalle:'', cQty:''}))}>
+                              <div key={a.code} style={{padding:'9px 14px',cursor:'pointer',borderBottom:'1px solid #F2F2EE',fontSize:13}} onClick={() => setNd(p=>({...p, cCode:a.code, cSearch:'', cUbic:'', cTalle:'', cQty:''}))}>
                                 <span style={{fontWeight:600}}>{a.name}</span>
                                 <span style={{color:'#8a8a82',fontSize:11.5,marginLeft:8}}>{a.code}</span>
                               </div>
@@ -1455,9 +1464,26 @@ export default function App() {
                       </div>
                     )}
                   </div>
+                  {nd.cCode && ndHasMultiUbic && (
+                    <div>
+                      <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginBottom:6}}>UBICACIÓN</div>
+                      <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                        {ndUbics.map(ubic => (
+                          <button key={ubic} onClick={() => setNd(p=>({...p, cUbic:ubic, cTalle:'', cQty:''}))}
+                            style={{padding:'5px 14px',borderRadius:5,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:12.5,
+                              background: nd.cUbic===ubic ? '#121212' : '#F5F5F0',
+                              color: nd.cUbic===ubic ? '#FFD200' : '#5a5a52',
+                              borderColor: nd.cUbic===ubic ? '#121212' : '#E0E0DA'}}>
+                            {ubic}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr auto',gap:10}}>
-                    <select className="field-input" value={nd.cTalle} onChange={e => setNd(p=>({...p,cTalle:e.target.value}))}>
-                      <option value="">Talle…</option>
+                    <select className="field-input" value={nd.cTalle} onChange={e => setNd(p=>({...p,cTalle:e.target.value}))}
+                      disabled={ndHasMultiUbic && !nd.cUbic}>
+                      <option value="">{ndHasMultiUbic && !nd.cUbic ? 'Elegí ubicación primero' : 'Talle…'}</option>
                       {ndTalleOptions.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </select>
                     <input type="number" min="1" className="field-input" value={nd.cQty} onChange={e => setNd(p=>({...p,cQty:e.target.value}))} placeholder="Cantidad" />
