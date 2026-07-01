@@ -776,7 +776,7 @@ export default function App() {
               <label className="field-label" style={{color:'#8a8a82'}}>CORREO ELECTRÓNICO</label>
               <input className="field-input" type="email" value={regForm.email} onChange={e=>setRegForm(p=>({...p,email:e.target.value,err:''}))} placeholder="correo@ejemplo.com" autoComplete="email" />
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+            <div className="form-cols-2">
               <div className="form-group">
                 <label className="field-label" style={{color:'#8a8a82'}}>TELÉFONO</label>
                 <input className="field-input" type="tel" value={regForm.telefono} onChange={e=>setRegForm(p=>({...p,telefono:e.target.value,err:''}))} placeholder="09X XXX XXX" />
@@ -803,7 +803,7 @@ export default function App() {
                 {DIVISIONES.map(d => <option key={d} value={d}>{d}</option>)}
               </select>
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+            <div className="form-cols-2">
               <div className="form-group">
                 <label className="field-label" style={{color:'#8a8a82'}}>CONTRASEÑA</label>
                 <input className="field-input" type="password" value={regForm.pass} onChange={e=>setRegForm(p=>({...p,pass:e.target.value,err:''}))} placeholder="Mín. 6 caracteres" />
@@ -986,9 +986,9 @@ export default function App() {
             <span className="search-icon" />
             <input value={search} onChange={e => { setSearch(e.target.value); if((view==='panel'||view==='detalle')&&e.target.value) setView('inventario') }} placeholder="Buscar…" />
           </div>
-          <button className="btn btn-ghost" onClick={openArticulo}><span>+</span><span> Artículo</span></button>
-          <button className="btn btn-ghost" onClick={openDevolucion}><span>↩</span><span> Dev.</span></button>
-          <button className="btn btn-yellow" onClick={openEntrega}><span>+</span><span> Entrega</span></button>
+          <button className="btn btn-ghost" onClick={openArticulo}>+<span className="btn-label"> Artículo</span></button>
+          <button className="btn btn-ghost" onClick={openDevolucion}>↩<span className="btn-label"> Dev.</span></button>
+          <button className="btn btn-yellow" onClick={openEntrega}>+<span className="btn-label"> Entrega</span></button>
         </header>
 
         <div className="content">
@@ -1480,7 +1480,7 @@ export default function App() {
                       </div>
                     </div>
                   )}
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr auto',gap:10}}>
+                  <div className="nd-tallerow">
                     <select className="field-input" value={nd.cTalle} onChange={e => setNd(p=>({...p,cTalle:e.target.value}))}
                       disabled={ndHasMultiUbic && !nd.cUbic}>
                       <option value="">{ndHasMultiUbic && !nd.cUbic ? 'Elegí ubicación primero' : 'Talle…'}</option>
@@ -1528,7 +1528,7 @@ export default function App() {
               <button className="modal-close" onClick={closeModal}>×</button>
             </div>
             <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:14}}>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1.4fr',gap:12}}>
+              <div className="form-cols-2" style={{gap:12}}>
                 <div className="form-group">
                   <label className="field-label">Código (SKU)</label>
                   <input className="field-input mono" value={na.code} onChange={e => setNa(p=>({...p,code:e.target.value.toUpperCase()}))} placeholder="CAM-XXX-26" />
@@ -1590,7 +1590,7 @@ export default function App() {
               </div>
               <div className="form-group">
                 <label className="field-label">Ubicación en depósito</label>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <div className="form-cols-2" style={{gap:12}}>
                   <div style={{display:'flex',alignItems:'center',gap:8}}>
                     <span style={{fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>Estantería</span>
                     <select className="field-input" style={{flex:1}} value={na.estante} onChange={e => setNa(p=>({...p,estante:e.target.value}))}>
@@ -1665,7 +1665,7 @@ export default function App() {
               <div style={{fontSize:12,color:'#9a7d00',background:'#FBF7E3',padding:'8px 12px',borderRadius:6,marginBottom:16}}>
                 Corrección por recuento: ingresá la cantidad física real contada. El sistema registra la diferencia.
               </div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+              <div className="form-cols-2" style={{gap:12}}>
                 <div className="form-group">
                   <label className="field-label">Talle</label>
                   <select className="field-input" value={aj.talle} onChange={e => setAj(p=>({...p,talle:e.target.value}))}>
@@ -1696,7 +1696,7 @@ export default function App() {
               <button className="modal-close" onClick={closeModal}>×</button>
             </div>
             <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:14}}>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1.4fr',gap:12}}>
+              <div className="form-cols-2" style={{gap:12}}>
                 <div className="form-group">
                   <label className="field-label">Código (SKU)</label>
                   <input className="field-input mono" value={editing.code} onChange={e => setEditing(p=>({...p,code:e.target.value}))} />
@@ -1712,7 +1712,7 @@ export default function App() {
                 <label className="field-label">Nombre del artículo</label>
                 <input className="field-input" value={editing.name} onChange={e => setEditing(p=>({...p,name:e.target.value}))} />
               </div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+              <div className="form-cols-2" style={{gap:12}}>
                 <div className="form-group">
                   <label className="field-label">Ubicación <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(ej. 3B, 0O)</span></label>
                   <input className="field-input mono" value={editing.ubic} onChange={e => setEditing(p=>({...p,ubic:e.target.value}))} placeholder="1A" />
@@ -1846,7 +1846,7 @@ export default function App() {
               <div style={{borderTop:'1px solid #E7E7E3',paddingTop:16}}>
                 <div style={{fontSize:12,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginBottom:10}}>AGREGAR USUARIO</div>
                 <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:10}}>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                  <div className="form-cols-2">
                     <div className="form-group">
                       <label className="field-label">Usuario</label>
                       <input className="field-input" value={userMgmt.newUser} onChange={e=>setUserMgmt(p=>({...p,newUser:e.target.value,err:''}))} placeholder="nombre de usuario" />
