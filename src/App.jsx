@@ -288,7 +288,10 @@ export default function App() {
             lines: nd.lines,
             delId: db.nextDel,
           })
-        }).catch(() => {})
+        })
+        .then(r => r.json())
+        .then(d => { if (d.ok) showToast('Email de notificación enviado a ' + recipient.email) else showToast('Error al enviar email: ' + (d.error || 'error desconocido')) })
+        .catch(() => showToast('No se pudo conectar con el servidor de email.'))
       }
     }
     setModal(null)
