@@ -12,6 +12,13 @@ const ALTURAS = ['A','B','C','D','E','O']
 
 const EMPTY_DB = { articles:[], deliveries:[], movimientos:[], nextId:1, nextDel:1, nextMov:1 }
 
+const USERS_KEY = 'dep_usuarios_v1'
+const SESSION_KEY = 'dep_session'
+function getStoredUsers() {
+  try { return JSON.parse(localStorage.getItem(USERS_KEY)) || [{ username:'compras', password:'peniarol1891' }] }
+  catch { return [{ username:'compras', password:'peniarol1891' }] }
+}
+
 async function loadFromSupabase() {
   const { data, error } = await supabase
     .from('deposito_state')
@@ -81,6 +88,9 @@ export default function App() {
   const [delFilterPersona, setDelFilterPersona] = useState('')
   const [toast, setToast] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [session, setSession] = useState(() => sessionStorage.getItem(SESSION_KEY) || null)
+  const [loginForm, setLoginForm] = useState({ user:'', pass:'', err:'' })
+  const [userMgmt, setUserMgmt] = useState({ list:[], newUser:'', newPass:'', err:'' })
   const toastTimer = useRef(null)
   const saveTimer = useRef(null)
 
@@ -117,6 +127,29 @@ export default function App() {
       setSelectedCode(null)
     }
   }, [db.articles, view, selectedCode])
+
+  const doLogin = () => {
+    const users = getStoredUsers()
+    const found = users.find(u => u.username.toLowerCase() === loginForm.user.toLowerCase() && u.password === loginForm.pass)
+    if(found) { sessionStorage.setItem(SESSION_KEY, found.username); setSession(found.username); setLoginForm({user:'',pass:'',err:''}) }
+    else setLoginForm(p => ({...p, err:'Usuario o contraseña incorrectos.'}))
+  }
+  const doLogout = () => { sessionStorage.removeItem(SESSION_KEY); setSession(null) }
+  const openUserMgmt = () => { setUserMgmt({ list:getStoredUsers(), newUser:'', newPass:'', err:'' }); setModal('usuarios') }
+  const addUser = () => {
+    const u = userMgmt.newUser.trim(); const p = userMgmt.newPass.trim()
+    if(!u || !p) { setUserMgmt(x=>({...x,err:'Completá usuario y contraseña.'})); return }
+    if(userMgmt.list.find(x => x.username.toLowerCase()===u.toLowerCase())) { setUserMgmt(x=>({...x,err:'Ese usuario ya existe.'})); return }
+    const list = [...userMgmt.list, {username:u,password:p}]
+    localStorage.setItem(USERS_KEY, JSON.stringify(list))
+    setUserMgmt(x=>({...x,list,newUser:'',newPass:'',err:''}))
+  }
+  const deleteUser = (username) => {
+    if(username === session) { showToast('No podés eliminar tu propio usuario.'); return }
+    const list = userMgmt.list.filter(u => u.username !== username)
+    localStorage.setItem(USERS_KEY, JSON.stringify(list))
+    setUserMgmt(x=>({...x,list}))
+  }
 
   const showToast = useCallback((msg) => {
     setToast(msg)
@@ -519,6 +552,30 @@ export default function App() {
 
   const ndIsDev = nd.mode === 'devolucion'
 
+  if(!session) return (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',background:'#121212',flexDirection:'column'}}>
+      <div style={{background:'#1a1a1a',borderRadius:12,padding:'40px 36px',width:'100%',maxWidth:380,boxShadow:'0 20px 60px rgba(0,0,0,.5)'}}>
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',marginBottom:32}}>
+          <img src="/escudo.png" alt="Peñarol" style={{height:64,marginBottom:16}} />
+          <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:18,color:'#FFD200',letterSpacing:'.05em'}}>DEPÓSITO</div>
+          <div style={{fontSize:11,color:'#8a8a82',letterSpacing:'.2em',marginTop:2}}>INDUMENTARIA · PEÑAROL</div>
+        </div>
+        <div style={{display:'flex',flexDirection:'column',gap:14}}>
+          <div className="form-group">
+            <label className="field-label" style={{color:'#8a8a82'}}>USUARIO</label>
+            <input className="field-input" value={loginForm.user} onChange={e=>setLoginForm(p=>({...p,user:e.target.value,err:''}))} onKeyDown={e=>e.key==='Enter'&&doLogin()} placeholder="usuario" autoComplete="username" />
+          </div>
+          <div className="form-group">
+            <label className="field-label" style={{color:'#8a8a82'}}>CONTRASEÑA</label>
+            <input className="field-input" type="password" value={loginForm.pass} onChange={e=>setLoginForm(p=>({...p,pass:e.target.value,err:''}))} onKeyDown={e=>e.key==='Enter'&&doLogin()} placeholder="••••••••" autoComplete="current-password" />
+          </div>
+          {loginForm.err && <div style={{fontSize:12.5,color:'#C2473D',fontWeight:600}}>{loginForm.err}</div>}
+          <button className="btn btn-yellow" style={{width:'100%',justifyContent:'center',marginTop:4,height:44}} onClick={doLogin}>Ingresar</button>
+        </div>
+      </div>
+    </div>
+  )
+
   if (loading) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',flexDirection:'column',gap:16,background:'#121212'}}>
       <img src="/escudo.png" alt="Peñarol" style={{height:64,opacity:.9}} />
@@ -553,11 +610,13 @@ export default function App() {
           })}
         </nav>
         <div className="sidebar-user">
-          <div className="user-avatar">CP</div>
-          <div>
-            <div className="user-name">COMPRAS PEÑAROL</div>
+          <div className="user-avatar">{ini(session||'')}</div>
+          <div style={{flex:1,minWidth:0}}>
+            <div className="user-name">{(session||'').toUpperCase()}</div>
             <div className="user-role">Gestión de depósito</div>
           </div>
+          <button title="Gestionar usuarios" onClick={openUserMgmt} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 4px',flexShrink:0}}>⚙</button>
+          <button title="Cerrar sesión" onClick={doLogout} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 4px',flexShrink:0}}>⏻</button>
         </div>
       </aside>
 
@@ -1278,6 +1337,46 @@ export default function App() {
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={closeModal}>Cancelar</button>
               <button className="btn btn-dark" onClick={mvConfirm}>Confirmar movimiento</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Gestión de usuarios */}
+      {modal === 'usuarios' && (
+        <div className="modal-backdrop" onClick={closeModal}>
+          <div className="modal modal-md" onClick={e=>e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">Gestión de usuarios</div>
+              <button className="modal-close" onClick={closeModal}>✕</button>
+            </div>
+            <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:16}}>
+              <div>
+                <div style={{fontSize:12,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginBottom:10}}>USUARIOS ACTIVOS</div>
+                {userMgmt.list.map(u => (
+                  <div key={u.username} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:'1px solid #F0F0EC'}}>
+                    <div className="avatar" style={{flexShrink:0}}>{ini(u.username)}</div>
+                    <div style={{flex:1,fontWeight:600,fontSize:13.5}}>{u.username}</div>
+                    {u.username === session && <span className="badge gray">Vos</span>}
+                    {u.username !== session && <button className="btn-del" onClick={()=>deleteUser(u.username)}>✕</button>}
+                  </div>
+                ))}
+              </div>
+              <div style={{borderTop:'1px solid #E7E7E3',paddingTop:16}}>
+                <div style={{fontSize:12,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginBottom:10}}>AGREGAR USUARIO</div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
+                  <div className="form-group">
+                    <label className="field-label">Usuario</label>
+                    <input className="field-input" value={userMgmt.newUser} onChange={e=>setUserMgmt(p=>({...p,newUser:e.target.value,err:''}))} placeholder="nombre de usuario" />
+                  </div>
+                  <div className="form-group">
+                    <label className="field-label">Contraseña</label>
+                    <input className="field-input" type="password" value={userMgmt.newPass} onChange={e=>setUserMgmt(p=>({...p,newPass:e.target.value,err:''}))} placeholder="••••••••" />
+                  </div>
+                </div>
+                {userMgmt.err && <div style={{fontSize:12.5,color:'#C2473D',fontWeight:600,marginBottom:8}}>{userMgmt.err}</div>}
+                <button className="btn btn-dark" onClick={addUser}>+ Agregar usuario</button>
+              </div>
             </div>
           </div>
         </div>
