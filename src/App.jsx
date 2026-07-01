@@ -25,7 +25,7 @@ async function loadFromSupabase() {
     supabase.from('deposito_state').select('*').eq('id', 1).single(),
     supabase.from('deposito_state').select('deliveries').eq('id', 2).single(),
   ])
-  if (error || !data) return EMPTY_DB
+  if (error || !data) return null
   let users = (usersRow?.deliveries?.length > 0 && usersRow.deliveries[0]?.username)
     ? usersRow.deliveries
     : null
@@ -51,7 +51,7 @@ async function loadFromSupabase() {
 }
 
 async function saveToSupabase(db) {
-  await Promise.all([
+  const [r1, r2] = await Promise.all([
     supabase.from('deposito_state').upsert({
       id: 1,
       articles: db.articles,
@@ -73,6 +73,7 @@ async function saveToSupabase(db) {
       updated_at: new Date().toISOString(),
     }),
   ])
+  return !r1.error && !r2.error
 }
 
 function fmt(n) { return Number(n).toLocaleString('es-UY') }
@@ -121,6 +122,8 @@ export default function App() {
   const [userMgmt, setUserMgmt] = useState({ list:[], newUser:'', newPass:'', err:'' })
   const toastTimer = useRef(null)
   const saveTimer = useRef(null)
+  const saveEnabled = useRef(false)
+  const dbRef = useRef(db)
 
   // delivery/devolución form
   const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' })
@@ -133,20 +136,40 @@ export default function App() {
   // mover form
   const [mv, setMv] = useState({ tallesArr:[], estante:'1', altura:'A' })
 
+  // Keep dbRef current so visibilitychange flush always sees latest state
+  useEffect(() => { dbRef.current = db }, [db])
+
   // Load from Supabase on mount (filter out articles with no stock)
   useEffect(() => {
     loadFromSupabase().then(data => {
-      setDb({...data, articles: data.articles.filter(a => total(a) > 0)})
+      if (data) {
+        setDb({...data, articles: data.articles.filter(a => total(a) > 0)})
+        saveEnabled.current = true
+      }
       setLoading(false)
     })
   }, [])
 
   // Save to Supabase whenever data changes (debounced 800ms)
   useEffect(() => {
-    if (loading) return
+    if (loading || !saveEnabled.current) return
     clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => saveToSupabase(db), 800)
+    saveTimer.current = setTimeout(async () => {
+      const ok = await saveToSupabase(db)
+      if (!ok) showToast('Error al guardar. Verificá la conexión.')
+    }, 800)
   }, [db, loading])
+
+  // Flush any pending save immediately when tab is hidden (mobile: switch app / close tab)
+  useEffect(() => {
+    const flush = () => {
+      if (!saveEnabled.current) return
+      clearTimeout(saveTimer.current)
+      saveToSupabase(dbRef.current)
+    }
+    document.addEventListener('visibilitychange', flush)
+    return () => document.removeEventListener('visibilitychange', flush)
+  }, [])
 
   // Redirect to inventario if selected article code no longer exists
   useEffect(() => {
