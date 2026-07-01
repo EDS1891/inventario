@@ -13,7 +13,7 @@ const CARGOS_REG = ['Coordinación','Director Técnico','Ayudante Técnico','Vid
 const ESTANTES = ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20']
 const ALTURAS = ['A','B','C','D','E','O']
 
-const DEFAULT_USERS = [{ username:'compras', password:'peniarol1891', role:'admin', displayName:'Compras Peñarol' }]
+const DEFAULT_USERS = [{ username:'compras', password:'peniarol1891', role:'admin', displayName:'Compras Peñarol', status:'aprobado' }]
 const EMPTY_DB = { articles:[], deliveries:[], movimientos:[], nextId:1, nextDel:1, nextMov:1, users: DEFAULT_USERS }
 
 const USERS_KEY = 'dep_usuarios_v1'
@@ -149,8 +149,9 @@ export default function App() {
   }
   const doLogin = () => {
     const found = db.users.find(u => u.username.toLowerCase() === loginForm.user.toLowerCase() && u.password === loginForm.pass)
-    if(found) { sessionStorage.setItem(SESSION_KEY, found.username); setSession(found.username); setLoginForm({user:'',pass:'',err:''}) }
-    else setLoginForm(p => ({...p, err:'Usuario o contraseña incorrectos.'}))
+    if(!found) { setLoginForm(p => ({...p, err:'Usuario o contraseña incorrectos.'})); return }
+    if(found.status === 'pendiente') { setLoginForm(p => ({...p, err:'Tu cuenta está pendiente de aprobación por el administrador.'})); return }
+    sessionStorage.setItem(SESSION_KEY, found.username); setSession(found.username); setLoginForm({user:'',pass:'',err:''})
   }
   const doRegister = () => {
     const { displayName, email, telefono, cargo, categoria, division, pass, pass2 } = regForm
@@ -164,11 +165,9 @@ export default function App() {
     if(pass !== pass2) { setRegForm(p=>({...p,err:'Las contraseñas no coinciden.'})); return }
     const username = email.trim().toLowerCase()
     if(db.users.find(u => u.username.toLowerCase() === username)) { setRegForm(p=>({...p,err:'Ya existe una cuenta con ese correo.'})); return }
-    const newUser = { username, password:pass, role:'receptor', displayName:displayName.trim(), email:username, telefono:telefono.trim(), cargo, categoria, division }
+    const newUser = { username, password:pass, role:'receptor', displayName:displayName.trim(), email:username, telefono:telefono.trim(), cargo, categoria, division, status:'pendiente' }
     saveUsers([...db.users, newUser])
-    sessionStorage.setItem(SESSION_KEY, username)
-    setSession(username)
-    setLoginView('login')
+    setLoginView('registered')
     setRegForm({ displayName:'', email:'', telefono:'', cargo:'', categoria:'', division:'', pass:'', pass2:'', err:'' })
   }
   const doLogout = () => { sessionStorage.removeItem(SESSION_KEY); setSession(null) }
@@ -204,7 +203,7 @@ export default function App() {
     if(!u || !p) { setUserMgmt(x=>({...x,err:'Completá usuario y contraseña.'})); return }
     if(userMgmt.list.find(x => x.username.toLowerCase()===u.toLowerCase())) { setUserMgmt(x=>({...x,err:'Ese usuario ya existe.'})); return }
     const displayName = userMgmt.newDisplayName.trim() || u
-    const list = [...userMgmt.list, {username:u, password:p, role:userMgmt.newRole||'receptor', displayName}]
+    const list = [...userMgmt.list, {username:u, password:p, role:userMgmt.newRole||'receptor', displayName, status:'aprobado'}]
     saveUsers(list)
     setUserMgmt(x=>({...x,list,newUser:'',newPass:'',newDisplayName:'',newRole:'receptor',err:''}))
   }
@@ -213,6 +212,18 @@ export default function App() {
     const list = userMgmt.list.filter(u => u.username !== username)
     saveUsers(list)
     setUserMgmt(x=>({...x,list}))
+  }
+  const approveUser = (username) => {
+    const list = db.users.map(u => u.username===username ? {...u, status:'aprobado'} : u)
+    saveUsers(list)
+    setUserMgmt(x=>({...x, list}))
+    showToast('Usuario aprobado.')
+  }
+  const rejectUser = (username) => {
+    const list = db.users.filter(u => u.username !== username)
+    saveUsers(list)
+    setUserMgmt(x=>({...x, list}))
+    showToast('Usuario rechazado y eliminado.')
   }
 
   const showToast = useCallback((msg) => {
@@ -598,6 +609,7 @@ export default function App() {
     .filter(d => !delFilterReceptor || d.receptor === delFilterReceptor)
     .filter(d => !delFilterPersona || d.persona.toLowerCase().includes(delFilterPersona.toLowerCase()))
   const recentDeliveries = deliveries.slice(0,4).map(delEnrich)
+  const pendingApprovals = db.users.filter(u => u.status === 'pendiente')
   const pendingDeliveries = deliveries
     .filter(d => d.status === 'pendiente' && d.toUser)
     .map(d => {
@@ -681,14 +693,16 @@ export default function App() {
           <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:18,color:'#FFD200',letterSpacing:'.05em'}}>INDUMENTARIA PEÑAROL</div>
         </div>
 
-        {/* Tabs login / registro */}
-        <div style={{display:'flex',borderBottom:'1px solid #2a2a2a',marginBottom:24}}>
-          {[['login','Ingresar'],['register','Registrarse']].map(([v,label]) => (
-            <button key={v} onClick={()=>setLoginView(v)} style={{flex:1,padding:'10px 0',background:'none',border:'none',cursor:'pointer',fontWeight:700,fontSize:13,color:loginView===v?'#FFD200':'#8a8a82',borderBottom:loginView===v?'2px solid #FFD200':'2px solid transparent',transition:'all .15s'}}>
-              {label}
-            </button>
-          ))}
-        </div>
+        {/* Tabs login / registro — oculto en vistas auxiliares */}
+        {(loginView === 'login' || loginView === 'register') && (
+          <div style={{display:'flex',borderBottom:'1px solid #2a2a2a',marginBottom:24}}>
+            {[['login','Ingresar'],['register','Registrarse']].map(([v,label]) => (
+              <button key={v} onClick={()=>setLoginView(v)} style={{flex:1,padding:'10px 0',background:'none',border:'none',cursor:'pointer',fontWeight:700,fontSize:13,color:loginView===v?'#FFD200':'#8a8a82',borderBottom:loginView===v?'2px solid #FFD200':'2px solid transparent',transition:'all .15s'}}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {loginView === 'login' && (
           <div style={{display:'flex',flexDirection:'column',gap:14}}>
@@ -780,6 +794,17 @@ export default function App() {
             </div>
             {regForm.err && <div style={{fontSize:12.5,color:'#C2473D',fontWeight:600}}>{regForm.err}</div>}
             <button className="btn btn-yellow" style={{width:'100%',justifyContent:'center',marginTop:4,height:44}} onClick={doRegister}>Crear cuenta</button>
+          </div>
+        )}
+
+        {loginView === 'registered' && (
+          <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:18,padding:'8px 0 4px'}}>
+            <div style={{width:56,height:56,borderRadius:'50%',background:'#1e3a2e',display:'flex',alignItems:'center',justifyContent:'center',fontSize:26}}>✓</div>
+            <div style={{textAlign:'center'}}>
+              <div style={{fontWeight:700,fontSize:15,color:'#fff',marginBottom:6}}>Cuenta creada</div>
+              <div style={{fontSize:13,color:'#8a8a82',lineHeight:1.5}}>Tu solicitud fue enviada.<br/>El administrador debe aprobarla antes de que puedas ingresar.</div>
+            </div>
+            <button className="btn btn-yellow" style={{width:'100%',justifyContent:'center',height:44}} onClick={()=>setLoginView('login')}>Volver al inicio de sesión</button>
           </div>
         )}
       </div>
@@ -1005,6 +1030,29 @@ export default function App() {
                     ))
                   }
                 </div>
+                {!isReceptor && pendingApprovals.length > 0 && (
+                  <div className="card" style={{marginTop:16}}>
+                    <div className="card-header">
+                      <div className="card-title">Solicitudes de acceso pendientes</div>
+                      <div className="card-spacer"/>
+                      <span className="badge" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200'}}>{pendingApprovals.length}</span>
+                      <button className="back-link" style={{color:'#9a7d00',margin:0}} onClick={() => goView('usuarios-reg')}>Ver →</button>
+                    </div>
+                    {pendingApprovals.map(u => (
+                      <div key={u.username} className="table-row" style={{gridTemplateColumns:'34px 1fr auto'}}>
+                        <div className="avatar" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200',opacity:.8}}>{ini(u.displayName||u.username)}</div>
+                        <div style={{minWidth:0}}>
+                          <div style={{fontWeight:600,fontSize:13.5,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.displayName||u.username}</div>
+                          <div style={{fontSize:11.5,color:'#8a8a82'}}>{u.cargo}{u.categoria ? ' · '+u.categoria : ''}</div>
+                        </div>
+                        <div style={{display:'flex',gap:6,flexShrink:0}}>
+                          <button onClick={()=>approveUser(u.username)} style={{padding:'4px 10px',borderRadius:5,border:'none',cursor:'pointer',fontWeight:700,fontSize:11.5,background:'#FFD200',color:'#121212'}}>Aprobar</button>
+                          <button onClick={()=>rejectUser(u.username)} style={{padding:'4px 10px',borderRadius:5,border:'1px solid #C2473D',cursor:'pointer',fontWeight:700,fontSize:11.5,background:'none',color:'#C2473D'}}>Rechazar</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="card" style={{marginTop:16}}>
                 <div className="card-header">
@@ -1258,10 +1306,13 @@ export default function App() {
           {view === 'usuarios-reg' && (
             <div style={{display:'flex',flexDirection:'column',gap:10,padding:'0 2px'}}>
               {db.users.map(u => (
-                <div key={u.username} className="card" style={{padding:'16px 20px',display:'flex',alignItems:'center',gap:14}}>
-                  <div className="avatar" style={{flexShrink:0,width:42,height:42,fontSize:15}}>{ini(u.displayName||u.username)}</div>
+                <div key={u.username} className="card" style={{padding:'16px 20px',display:'flex',alignItems:'center',gap:14,borderLeft: u.status==='pendiente' ? '3px solid #FFD200' : undefined}}>
+                  <div className="avatar" style={{flexShrink:0,width:42,height:42,fontSize:15,opacity:u.status==='pendiente'?.6:1}}>{ini(u.displayName||u.username)}</div>
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontWeight:700,fontSize:14}}>{u.displayName||u.username}</div>
+                    <div style={{fontWeight:700,fontSize:14,display:'flex',alignItems:'center',gap:8}}>
+                      {u.displayName||u.username}
+                      {u.status==='pendiente' && <span style={{background:'#FFF8DC',color:'#8a6200',border:'1px solid #e6be00',borderRadius:4,padding:'1px 7px',fontSize:10,fontWeight:700}}>PENDIENTE</span>}
+                    </div>
                     <div style={{fontSize:12,color:'#8a8a82',marginTop:2}}>{u.email||u.username}</div>
                     {(u.cargo||u.categoria||u.division) && (
                       <div style={{fontSize:12,color:'#8a8a82',marginTop:2,display:'flex',flexWrap:'wrap',gap:4,alignItems:'center'}}>
@@ -1271,6 +1322,12 @@ export default function App() {
                       </div>
                     )}
                     {u.telefono && <div style={{fontSize:12,color:'#8a8a82',marginTop:2}}>{u.telefono}</div>}
+                    {u.status==='pendiente' && session==='compras' && (
+                      <div style={{display:'flex',gap:8,marginTop:10}}>
+                        <button onClick={()=>approveUser(u.username)} style={{padding:'5px 14px',borderRadius:5,border:'none',cursor:'pointer',fontWeight:700,fontSize:12,background:'#FFD200',color:'#121212'}}>Aprobar</button>
+                        <button onClick={()=>rejectUser(u.username)} style={{padding:'5px 14px',borderRadius:5,border:'1px solid #C2473D',cursor:'pointer',fontWeight:700,fontSize:12,background:'none',color:'#C2473D'}}>Rechazar</button>
+                      </div>
+                    )}
                   </div>
                   <span style={{background:u.role==='admin'?'#121212':'#EDF7F2',color:u.role==='admin'?'#FFD200':'#2e9b5e',border:'1px solid '+(u.role==='admin'?'#3a3a3a':'#2e9b5e'),borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700,flexShrink:0}}>
                     {u.role==='admin'?'Admin':'Receptor'}
