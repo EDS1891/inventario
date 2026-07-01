@@ -150,7 +150,7 @@ export default function App() {
     if(!email.trim() || !email.includes('@')) { setRegForm(p=>({...p,err:'Ingresá un correo electrónico válido.'})); return }
     if(!telefono.trim()) { setRegForm(p=>({...p,err:'Ingresá tu teléfono.'})); return }
     if(!cargo) { setRegForm(p=>({...p,err:'Seleccioná tu cargo.'})); return }
-    if(!categoria) { setRegForm(p=>({...p,err:'Seleccioná tu ocupación.'})); return }
+    if(!categoria) { setRegForm(p=>({...p,err:'Seleccioná tu sector.'})); return }
     if(!division) { setRegForm(p=>({...p,err:'Seleccioná tu división.'})); return }
     if(!pass || pass.length < 6) { setRegForm(p=>({...p,err:'La contraseña debe tener al menos 6 caracteres.'})); return }
     if(pass !== pass2) { setRegForm(p=>({...p,err:'Las contraseñas no coinciden.'})); return }
@@ -756,9 +756,9 @@ export default function App() {
               </div>
             </div>
             <div className="form-group">
-              <label className="field-label" style={{color:'#8a8a82'}}>OCUPACIÓN</label>
+              <label className="field-label" style={{color:'#8a8a82'}}>SECTOR</label>
               <select className="field-input" value={regForm.categoria} onChange={e=>setRegForm(p=>({...p,categoria:e.target.value,err:''}))}>
-                <option value="">Seleccioná tu ocupación…</option>
+                <option value="">Seleccioná tu sector…</option>
                 {OCUPACIONES.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
             </div>
