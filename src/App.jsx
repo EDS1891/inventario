@@ -92,7 +92,9 @@ export default function App() {
   const [toast, setToast] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [session, setSession] = useState(() => sessionStorage.getItem(SESSION_KEY) || null)
+  const [loginView, setLoginView] = useState('login')
   const [loginForm, setLoginForm] = useState({ user:'', pass:'', err:'' })
+  const [regForm, setRegForm] = useState({ displayName:'', email:'', telefono:'', cargo:'', categoria:'', pass:'', pass2:'', err:'' })
   const [userMgmt, setUserMgmt] = useState({ list:[], newUser:'', newPass:'', err:'' })
   const toastTimer = useRef(null)
   const saveTimer = useRef(null)
@@ -136,6 +138,26 @@ export default function App() {
     const found = users.find(u => u.username.toLowerCase() === loginForm.user.toLowerCase() && u.password === loginForm.pass)
     if(found) { sessionStorage.setItem(SESSION_KEY, found.username); setSession(found.username); setLoginForm({user:'',pass:'',err:''}) }
     else setLoginForm(p => ({...p, err:'Usuario o contraseña incorrectos.'}))
+  }
+  const doRegister = () => {
+    const { displayName, email, telefono, cargo, categoria, pass, pass2 } = regForm
+    if(!displayName.trim()) { setRegForm(p=>({...p,err:'Ingresá tu nombre completo.'})); return }
+    if(!email.trim() || !email.includes('@')) { setRegForm(p=>({...p,err:'Ingresá un correo electrónico válido.'})); return }
+    if(!telefono.trim()) { setRegForm(p=>({...p,err:'Ingresá tu teléfono.'})); return }
+    if(!cargo.trim()) { setRegForm(p=>({...p,err:'Ingresá tu cargo.'})); return }
+    if(!categoria) { setRegForm(p=>({...p,err:'Seleccioná tu categoría.'})); return }
+    if(!pass || pass.length < 6) { setRegForm(p=>({...p,err:'La contraseña debe tener al menos 6 caracteres.'})); return }
+    if(pass !== pass2) { setRegForm(p=>({...p,err:'Las contraseñas no coinciden.'})); return }
+    const users = getStoredUsers()
+    const username = email.trim().toLowerCase()
+    if(users.find(u => u.username.toLowerCase() === username)) { setRegForm(p=>({...p,err:'Ya existe una cuenta con ese correo.'})); return }
+    const newUser = { username, password:pass, role:'receptor', displayName:displayName.trim(), email:username, telefono:telefono.trim(), cargo:cargo.trim(), categoria }
+    const updated = [...users, newUser]
+    localStorage.setItem(USERS_KEY, JSON.stringify(updated))
+    sessionStorage.setItem(SESSION_KEY, username)
+    setSession(username)
+    setLoginView('login')
+    setRegForm({ displayName:'', email:'', telefono:'', cargo:'', categoria:'', pass:'', pass2:'', err:'' })
   }
   const doLogout = () => { sessionStorage.removeItem(SESSION_KEY); setSession(null) }
   const openUserMgmt = () => { setUserMgmt({ list:getStoredUsers(), newUser:'', newPass:'', newDisplayName:'', newRole:'receptor', err:'' }); setModal('usuarios') }
@@ -588,25 +610,79 @@ export default function App() {
   const ndIsDev = nd.mode === 'devolucion'
 
   if(!session) return (
-    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',background:'#121212',flexDirection:'column'}}>
-      <div style={{background:'#1a1a1a',borderRadius:12,padding:'40px 36px',width:'100%',maxWidth:380,boxShadow:'0 20px 60px rgba(0,0,0,.5)'}}>
-        <div style={{display:'flex',flexDirection:'column',alignItems:'center',marginBottom:32}}>
-          <img src="/escudo.png" alt="Peñarol" style={{height:64,marginBottom:16}} />
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'100dvh',background:'#121212',flexDirection:'column',padding:20,overflowY:'auto'}}>
+      <div style={{background:'#1a1a1a',borderRadius:12,padding:'36px 32px',width:'100%',maxWidth:420,boxShadow:'0 20px 60px rgba(0,0,0,.5)'}}>
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',marginBottom:28}}>
+          <img src="/escudo.png" alt="Peñarol" style={{height:56,marginBottom:14}} />
           <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:18,color:'#FFD200',letterSpacing:'.05em'}}>DEPÓSITO</div>
           <div style={{fontSize:11,color:'#8a8a82',letterSpacing:'.2em',marginTop:2}}>INDUMENTARIA · PEÑAROL</div>
         </div>
-        <div style={{display:'flex',flexDirection:'column',gap:14}}>
-          <div className="form-group">
-            <label className="field-label" style={{color:'#8a8a82'}}>USUARIO</label>
-            <input className="field-input" value={loginForm.user} onChange={e=>setLoginForm(p=>({...p,user:e.target.value,err:''}))} onKeyDown={e=>e.key==='Enter'&&doLogin()} placeholder="usuario" autoComplete="username" />
-          </div>
-          <div className="form-group">
-            <label className="field-label" style={{color:'#8a8a82'}}>CONTRASEÑA</label>
-            <input className="field-input" type="password" value={loginForm.pass} onChange={e=>setLoginForm(p=>({...p,pass:e.target.value,err:''}))} onKeyDown={e=>e.key==='Enter'&&doLogin()} placeholder="••••••••" autoComplete="current-password" />
-          </div>
-          {loginForm.err && <div style={{fontSize:12.5,color:'#C2473D',fontWeight:600}}>{loginForm.err}</div>}
-          <button className="btn btn-yellow" style={{width:'100%',justifyContent:'center',marginTop:4,height:44}} onClick={doLogin}>Ingresar</button>
+
+        {/* Tabs login / registro */}
+        <div style={{display:'flex',borderBottom:'1px solid #2a2a2a',marginBottom:24}}>
+          {[['login','Ingresar'],['register','Registrarse']].map(([v,label]) => (
+            <button key={v} onClick={()=>setLoginView(v)} style={{flex:1,padding:'10px 0',background:'none',border:'none',cursor:'pointer',fontWeight:700,fontSize:13,color:loginView===v?'#FFD200':'#8a8a82',borderBottom:loginView===v?'2px solid #FFD200':'2px solid transparent',transition:'all .15s'}}>
+              {label}
+            </button>
+          ))}
         </div>
+
+        {loginView === 'login' && (
+          <div style={{display:'flex',flexDirection:'column',gap:14}}>
+            <div className="form-group">
+              <label className="field-label" style={{color:'#8a8a82'}}>CORREO / USUARIO</label>
+              <input className="field-input" value={loginForm.user} onChange={e=>setLoginForm(p=>({...p,user:e.target.value,err:''}))} onKeyDown={e=>e.key==='Enter'&&doLogin()} placeholder="usuario o correo" autoComplete="username" />
+            </div>
+            <div className="form-group">
+              <label className="field-label" style={{color:'#8a8a82'}}>CONTRASEÑA</label>
+              <input className="field-input" type="password" value={loginForm.pass} onChange={e=>setLoginForm(p=>({...p,pass:e.target.value,err:''}))} onKeyDown={e=>e.key==='Enter'&&doLogin()} placeholder="••••••••" autoComplete="current-password" />
+            </div>
+            {loginForm.err && <div style={{fontSize:12.5,color:'#C2473D',fontWeight:600}}>{loginForm.err}</div>}
+            <button className="btn btn-yellow" style={{width:'100%',justifyContent:'center',marginTop:4,height:44}} onClick={doLogin}>Ingresar</button>
+          </div>
+        )}
+
+        {loginView === 'register' && (
+          <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            <div className="form-group">
+              <label className="field-label" style={{color:'#8a8a82'}}>NOMBRE COMPLETO</label>
+              <input className="field-input" value={regForm.displayName} onChange={e=>setRegForm(p=>({...p,displayName:e.target.value,err:''}))} placeholder="Ej. Juan García" />
+            </div>
+            <div className="form-group">
+              <label className="field-label" style={{color:'#8a8a82'}}>CORREO ELECTRÓNICO</label>
+              <input className="field-input" type="email" value={regForm.email} onChange={e=>setRegForm(p=>({...p,email:e.target.value,err:''}))} placeholder="correo@ejemplo.com" autoComplete="email" />
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+              <div className="form-group">
+                <label className="field-label" style={{color:'#8a8a82'}}>TELÉFONO</label>
+                <input className="field-input" type="tel" value={regForm.telefono} onChange={e=>setRegForm(p=>({...p,telefono:e.target.value,err:''}))} placeholder="09X XXX XXX" />
+              </div>
+              <div className="form-group">
+                <label className="field-label" style={{color:'#8a8a82'}}>CARGO</label>
+                <input className="field-input" value={regForm.cargo} onChange={e=>setRegForm(p=>({...p,cargo:e.target.value,err:''}))} placeholder="Ej. Jugador" />
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="field-label" style={{color:'#8a8a82'}}>CATEGORÍA</label>
+              <select className="field-input" value={regForm.categoria} onChange={e=>setRegForm(p=>({...p,categoria:e.target.value,err:''}))}>
+                <option value="">Seleccioná tu categoría…</option>
+                {RECEPTORES.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+              <div className="form-group">
+                <label className="field-label" style={{color:'#8a8a82'}}>CONTRASEÑA</label>
+                <input className="field-input" type="password" value={regForm.pass} onChange={e=>setRegForm(p=>({...p,pass:e.target.value,err:''}))} placeholder="Mín. 6 caracteres" />
+              </div>
+              <div className="form-group">
+                <label className="field-label" style={{color:'#8a8a82'}}>REPETIR CONTRASEÑA</label>
+                <input className="field-input" type="password" value={regForm.pass2} onChange={e=>setRegForm(p=>({...p,pass2:e.target.value,err:''}))} placeholder="••••••••" />
+              </div>
+            </div>
+            {regForm.err && <div style={{fontSize:12.5,color:'#C2473D',fontWeight:600}}>{regForm.err}</div>}
+            <button className="btn btn-yellow" style={{width:'100%',justifyContent:'center',marginTop:4,height:44}} onClick={doRegister}>Crear cuenta</button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -1499,20 +1575,31 @@ export default function App() {
               <div>
                 <div style={{fontSize:12,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginBottom:10}}>USUARIOS ACTIVOS</div>
                 {userMgmt.list.map(u => (
-                  <div key={u.username} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:'1px solid #F0F0EC'}}>
-                    <div className="avatar" style={{flexShrink:0}}>{ini(u.displayName||u.username)}</div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontWeight:600,fontSize:13.5}}>{u.displayName||u.username}</div>
-                      <div style={{fontSize:11.5,color:'#8a8a82'}}>{u.username}</div>
+                  <div key={u.username} style={{padding:'12px 0',borderBottom:'1px solid #F0F0EC'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:12}}>
+                      <div className="avatar" style={{flexShrink:0}}>{ini(u.displayName||u.username)}</div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:700,fontSize:13.5}}>{u.displayName||u.username}</div>
+                        <div style={{fontSize:11.5,color:'#8a8a82'}}>{u.email||u.username}{u.cargo?' · '+u.cargo:''}{u.categoria?' · '+u.categoria:''}</div>
+                        {u.telefono && <div style={{fontSize:11.5,color:'#8a8a82'}}>{u.telefono}</div>}
+                      </div>
+                      <span style={{background:u.role==='admin'?'#121212':'#EDF7F2',color:u.role==='admin'?'#FFD200':'#2e9b5e',border:'1px solid '+(u.role==='admin'?'#3a3a3a':'#2e9b5e'),borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700,flexShrink:0}}>{u.role==='admin'?'Admin':'Receptor'}</span>
+                      {u.username === session && <span className="badge gray">Vos</span>}
+                      {u.username !== session && <button className="btn-del" onClick={()=>deleteUser(u.username)}>✕</button>}
                     </div>
-                    <span style={{
-                      background: u.role==='admin' ? '#121212' : '#EDF7F2',
-                      color: u.role==='admin' ? '#FFD200' : '#2e9b5e',
-                      border: '1px solid ' + (u.role==='admin' ? '#3a3a3a' : '#2e9b5e'),
-                      borderRadius:5, padding:'2px 8px', fontSize:11, fontWeight:700, flexShrink:0
-                    }}>{u.role==='admin' ? 'Admin' : 'Receptor'}</span>
-                    {u.username === session && <span className="badge gray">Vos</span>}
-                    {u.username !== session && <button className="btn-del" onClick={()=>deleteUser(u.username)}>✕</button>}
+                    {session === 'compras' && u.username !== 'compras' && (
+                      <div style={{display:'flex',gap:6,marginTop:8,paddingLeft:42}}>
+                        {[['admin','Administrador'],['receptor','Receptor']].map(([v,label]) => (
+                          <button key={v} onClick={()=>{
+                            const list = userMgmt.list.map(x => x.username===u.username?{...x,role:v}:x)
+                            localStorage.setItem(USERS_KEY, JSON.stringify(list))
+                            setUserMgmt(p=>({...p,list}))
+                          }} style={{padding:'4px 12px',borderRadius:5,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:11.5,background:u.role===v?'#FFD200':'#F5F5F0',borderColor:u.role===v?'#e6be00':'#E0E0DA',color:u.role===v?'#121212':'#8a8a82'}}>
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1533,6 +1620,7 @@ export default function App() {
                     <label className="field-label">Nombre completo</label>
                     <input className="field-input" value={userMgmt.newDisplayName||''} onChange={e=>setUserMgmt(p=>({...p,newDisplayName:e.target.value,err:''}))} placeholder="Ej. Juan Pérez" />
                   </div>
+                  {session === 'compras' && (
                   <div className="form-group">
                     <label className="field-label">Rol</label>
                     <div style={{display:'flex',gap:8}}>
@@ -1547,6 +1635,7 @@ export default function App() {
                       ))}
                     </div>
                   </div>
+                  )}
                 </div>
                 {userMgmt.err && <div style={{fontSize:12.5,color:'#C2473D',fontWeight:600,marginBottom:8}}>{userMgmt.err}</div>}
                 <button className="btn btn-dark" onClick={addUser}>+ Agregar usuario</button>
