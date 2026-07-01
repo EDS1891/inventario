@@ -98,6 +98,8 @@ export default function App() {
   const [loginView, setLoginView] = useState('login')
   const [loginForm, setLoginForm] = useState({ user:'', pass:'', err:'' })
   const [regForm, setRegForm] = useState({ displayName:'', email:'', telefono:'', cargo:'', categoria:'', division:'', pass:'', pass2:'', err:'' })
+  const [forgotForm, setForgotForm] = useState({ email:'', newPass:'', newPass2:'', step:1, err:'' })
+  const [changePassForm, setChangePassForm] = useState({ current:'', newPass:'', newPass2:'', err:'' })
   const [userMgmt, setUserMgmt] = useState({ list:[], newUser:'', newPass:'', err:'' })
   const toastTimer = useRef(null)
   const saveTimer = useRef(null)
@@ -164,6 +166,37 @@ export default function App() {
     setRegForm({ displayName:'', email:'', telefono:'', cargo:'', categoria:'', division:'', pass:'', pass2:'', err:'' })
   }
   const doLogout = () => { sessionStorage.removeItem(SESSION_KEY); setSession(null) }
+  const doForgotStep1 = () => {
+    const email = forgotForm.email.trim().toLowerCase()
+    if(!email) { setForgotForm(p=>({...p,err:'Ingresá tu correo.'})); return }
+    const users = getStoredUsers()
+    if(!users.find(u => u.username.toLowerCase() === email)) { setForgotForm(p=>({...p,err:'No existe una cuenta con ese correo.'})); return }
+    setForgotForm(p=>({...p,step:2,err:''}))
+  }
+  const doForgotStep2 = () => {
+    const { email, newPass, newPass2 } = forgotForm
+    if(!newPass || newPass.length < 6) { setForgotForm(p=>({...p,err:'La contraseña debe tener al menos 6 caracteres.'})); return }
+    if(newPass !== newPass2) { setForgotForm(p=>({...p,err:'Las contraseñas no coinciden.'})); return }
+    const users = getStoredUsers()
+    const updated = users.map(u => u.username.toLowerCase()===email.trim().toLowerCase() ? {...u,password:newPass} : u)
+    localStorage.setItem(USERS_KEY, JSON.stringify(updated))
+    setForgotForm({ email:'', newPass:'', newPass2:'', step:1, err:'' })
+    setLoginView('login')
+    setLoginForm(p=>({...p,err:''}))
+  }
+  const doChangePass = () => {
+    const { current, newPass, newPass2 } = changePassForm
+    const users = getStoredUsers()
+    const me = users.find(u => u.username === session)
+    if(!me || me.password !== current) { setChangePassForm(p=>({...p,err:'La contraseña actual es incorrecta.'})); return }
+    if(!newPass || newPass.length < 6) { setChangePassForm(p=>({...p,err:'La nueva contraseña debe tener al menos 6 caracteres.'})); return }
+    if(newPass !== newPass2) { setChangePassForm(p=>({...p,err:'Las contraseñas no coinciden.'})); return }
+    const updated = users.map(u => u.username===session ? {...u,password:newPass} : u)
+    localStorage.setItem(USERS_KEY, JSON.stringify(updated))
+    setChangePassForm({ current:'', newPass:'', newPass2:'', err:'' })
+    closeModal()
+    showToast('Contraseña actualizada correctamente.')
+  }
   const openUserMgmt = () => { setUserMgmt({ list:getStoredUsers(), newUser:'', newPass:'', newDisplayName:'', newRole:'receptor', err:'' }); setModal('usuarios') }
   const addUser = () => {
     const u = userMgmt.newUser.trim(); const p = userMgmt.newPass.trim()
@@ -642,6 +675,32 @@ export default function App() {
             </div>
             {loginForm.err && <div style={{fontSize:12.5,color:'#C2473D',fontWeight:600}}>{loginForm.err}</div>}
             <button className="btn btn-yellow" style={{width:'100%',justifyContent:'center',marginTop:4,height:44}} onClick={doLogin}>Ingresar</button>
+            <button onClick={()=>{setLoginView('forgot');setForgotForm({email:'',newPass:'',newPass2:'',step:1,err:''})}} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:12,marginTop:4,padding:0,textDecoration:'underline'}}>¿Olvidaste tu contraseña?</button>
+          </div>
+        )}
+
+        {loginView === 'forgot' && (
+          <div style={{display:'flex',flexDirection:'column',gap:14}}>
+            <div style={{fontSize:13,color:'#8a8a82',marginBottom:2}}>{forgotForm.step===1 ? 'Ingresá el correo con el que te registraste.' : 'Elegí una nueva contraseña.'}</div>
+            {forgotForm.step === 1 && (
+              <div className="form-group">
+                <label className="field-label" style={{color:'#8a8a82'}}>CORREO ELECTRÓNICO</label>
+                <input className="field-input" type="email" value={forgotForm.email} onChange={e=>setForgotForm(p=>({...p,email:e.target.value,err:''}))} onKeyDown={e=>e.key==='Enter'&&doForgotStep1()} placeholder="correo@ejemplo.com" autoComplete="email" />
+              </div>
+            )}
+            {forgotForm.step === 2 && (<>
+              <div className="form-group">
+                <label className="field-label" style={{color:'#8a8a82'}}>NUEVA CONTRASEÑA</label>
+                <input className="field-input" type="password" value={forgotForm.newPass} onChange={e=>setForgotForm(p=>({...p,newPass:e.target.value,err:''}))} placeholder="Mín. 6 caracteres" />
+              </div>
+              <div className="form-group">
+                <label className="field-label" style={{color:'#8a8a82'}}>REPETIR CONTRASEÑA</label>
+                <input className="field-input" type="password" value={forgotForm.newPass2} onChange={e=>setForgotForm(p=>({...p,newPass2:e.target.value,err:''}))} placeholder="••••••••" />
+              </div>
+            </>)}
+            {forgotForm.err && <div style={{fontSize:12.5,color:'#C2473D',fontWeight:600}}>{forgotForm.err}</div>}
+            <button className="btn btn-yellow" style={{width:'100%',justifyContent:'center',height:44}} onClick={forgotForm.step===1?doForgotStep1:doForgotStep2}>{forgotForm.step===1?'Continuar':'Guardar contraseña'}</button>
+            <button onClick={()=>setLoginView('login')} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:12,padding:0,textDecoration:'underline'}}>Volver al inicio de sesión</button>
           </div>
         )}
 
@@ -833,6 +892,7 @@ export default function App() {
             <div className="user-name">{(session||'').toUpperCase()}</div>
             <div className="user-role">Gestión de depósito</div>
           </div>
+          <button title="Cambiar contraseña" onClick={()=>{setChangePassForm({current:'',newPass:'',newPass2:'',err:''});setModal('cambiar-pass')}} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:16,padding:'0 4px',flexShrink:0}}>🔑</button>
           <button title="Gestionar usuarios" onClick={openUserMgmt} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 4px',flexShrink:0}}>⚙</button>
           <button title="Cerrar sesión" onClick={doLogout} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 4px',flexShrink:0}}>⏻</button>
         </div>
@@ -1653,6 +1713,33 @@ export default function App() {
                 {userMgmt.err && <div style={{fontSize:12.5,color:'#C2473D',fontWeight:600,marginBottom:8}}>{userMgmt.err}</div>}
                 <button className="btn btn-dark" onClick={addUser}>+ Agregar usuario</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modal === 'cambiar-pass' && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-box" onClick={e=>e.stopPropagation()} style={{maxWidth:400}}>
+            <div className="modal-header">
+              <div className="modal-title">Cambiar contraseña</div>
+              <button className="modal-close" onClick={closeModal}>✕</button>
+            </div>
+            <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:14}}>
+              <div className="form-group">
+                <label className="field-label">CONTRASEÑA ACTUAL</label>
+                <input className="field-input" type="password" value={changePassForm.current} onChange={e=>setChangePassForm(p=>({...p,current:e.target.value,err:''}))} placeholder="••••••••" />
+              </div>
+              <div className="form-group">
+                <label className="field-label">NUEVA CONTRASEÑA</label>
+                <input className="field-input" type="password" value={changePassForm.newPass} onChange={e=>setChangePassForm(p=>({...p,newPass:e.target.value,err:''}))} placeholder="Mín. 6 caracteres" />
+              </div>
+              <div className="form-group">
+                <label className="field-label">REPETIR NUEVA CONTRASEÑA</label>
+                <input className="field-input" type="password" value={changePassForm.newPass2} onChange={e=>setChangePassForm(p=>({...p,newPass2:e.target.value,err:''}))} placeholder="••••••••" />
+              </div>
+              {changePassForm.err && <div style={{fontSize:12.5,color:'#C2473D',fontWeight:600}}>{changePassForm.err}</div>}
+              <button className="btn btn-dark" style={{width:'100%',justifyContent:'center',height:42}} onClick={doChangePass}>Guardar contraseña</button>
             </div>
           </div>
         </div>
