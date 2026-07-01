@@ -1367,15 +1367,23 @@ export default function App() {
                     />
                     {!nd.cCode && nd.cSearch && (
                       <div onMouseDown={e => e.preventDefault()} style={{position:'absolute',top:'calc(100% + 4px)',left:0,right:0,background:'#fff',border:'1px solid #ECECE8',borderRadius:8,zIndex:200,maxHeight:220,overflowY:'auto',boxShadow:'0 4px 16px rgba(0,0,0,.12)'}}>
-                        {articles.filter(a => a.name.toLowerCase().includes(nd.cSearch.toLowerCase()) || a.code.toLowerCase().includes(nd.cSearch.toLowerCase())).length === 0
-                          ? <div style={{padding:'10px 14px',fontSize:13,color:'#8a8a82'}}>Sin resultados</div>
-                          : articles.filter(a => a.name.toLowerCase().includes(nd.cSearch.toLowerCase()) || a.code.toLowerCase().includes(nd.cSearch.toLowerCase())).map(a => (
-                            <div key={a.code} style={{padding:'9px 14px',cursor:'pointer',borderBottom:'1px solid #F2F2EE',fontSize:13}} onClick={() => setNd(p=>({...p, cCode:a.code, cSearch:'', cTalle:'', cQty:''}))}>
-                              <span style={{fontWeight:600}}>{a.name}</span>
-                              <span style={{color:'#8a8a82',fontSize:11.5,marginLeft:8}}>{a.code}</span>
-                            </div>
-                          ))
-                        }
+                        {(() => {
+                          const term = nd.cSearch.toLowerCase()
+                          const seen = new Set()
+                          const unique = articles.filter(a => {
+                            if(seen.has(a.code)) return false
+                            seen.add(a.code)
+                            return a.name?.toLowerCase().includes(term) || a.code?.toLowerCase().includes(term)
+                          })
+                          return unique.length === 0
+                            ? <div style={{padding:'10px 14px',fontSize:13,color:'#8a8a82'}}>Sin resultados</div>
+                            : unique.map(a => (
+                              <div key={a.code} style={{padding:'9px 14px',cursor:'pointer',borderBottom:'1px solid #F2F2EE',fontSize:13}} onClick={() => setNd(p=>({...p, cCode:a.code, cSearch:'', cTalle:'', cQty:''}))}>
+                                <span style={{fontWeight:600}}>{a.name}</span>
+                                <span style={{color:'#8a8a82',fontSize:11.5,marginLeft:8}}>{a.code}</span>
+                              </div>
+                            ))
+                        })()}
                       </div>
                     )}
                   </div>
