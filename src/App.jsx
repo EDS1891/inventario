@@ -895,7 +895,7 @@ export default function App() {
           </div>
         </div>
         <nav className="sidebar-nav">
-          {[['panel','PANEL'],['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES']].map(([key,label]) => {
+          {[['panel','PANEL'],['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES'],['usuarios-reg','USUARIOS REGISTRADOS']].map(([key,label]) => {
             const isActive = view===key||(key==='inventario'&&view==='detalle')
             return (
               <button key={key} className={`nav-item${isActive?' active':''}`} onClick={() => goView(key)}>
@@ -926,7 +926,7 @@ export default function App() {
           </button>
           <img src="/1891_Amarillo.jpg" alt="1891" style={{height:28,width:'auto'}} />
           <div className="topbar-title">
-            {{panel:'PANEL',inventario:'INVENTARIO',detalle:'DETALLE',entregas:'ENTREGAS',movimientos:'MOVIMIENTOS',receptores:'RECEPTORES'}[view]}
+            {{panel:'PANEL',inventario:'INVENTARIO',detalle:'DETALLE',entregas:'ENTREGAS',movimientos:'MOVIMIENTOS',receptores:'RECEPTORES','usuarios-reg':'USUARIOS REGISTRADOS'}[view]}
           </div>
           <div className="topbar-spacer" />
           <div className="search-box">
@@ -1243,6 +1243,31 @@ export default function App() {
           )}
 
           {/* RECEPTORES */}
+          {view === 'usuarios-reg' && (
+            <div style={{display:'flex',flexDirection:'column',gap:10,padding:'0 2px'}}>
+              {getStoredUsers().map(u => (
+                <div key={u.username} className="card" style={{padding:'16px 20px',display:'flex',alignItems:'center',gap:14}}>
+                  <div className="avatar" style={{flexShrink:0,width:42,height:42,fontSize:15}}>{ini(u.displayName||u.username)}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:700,fontSize:14}}>{u.displayName||u.username}</div>
+                    <div style={{fontSize:12,color:'#8a8a82',marginTop:2}}>{u.email||u.username}</div>
+                    {(u.cargo||u.categoria||u.division) && (
+                      <div style={{fontSize:12,color:'#8a8a82',marginTop:2,display:'flex',flexWrap:'wrap',gap:4,alignItems:'center'}}>
+                        {u.cargo && <span>{u.cargo}</span>}
+                        {u.categoria && <span style={{background:'#F0F0EC',borderRadius:4,padding:'1px 6px',fontSize:11}}>{u.categoria}</span>}
+                        {u.division && <span style={{background:'#E8F0FE',borderRadius:4,padding:'1px 6px',fontSize:11,color:'#1a56db'}}>{u.division}</span>}
+                      </div>
+                    )}
+                    {u.telefono && <div style={{fontSize:12,color:'#8a8a82',marginTop:2}}>{u.telefono}</div>}
+                  </div>
+                  <span style={{background:u.role==='admin'?'#121212':'#EDF7F2',color:u.role==='admin'?'#FFD200':'#2e9b5e',border:'1px solid '+(u.role==='admin'?'#3a3a3a':'#2e9b5e'),borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700,flexShrink:0}}>
+                    {u.role==='admin'?'Admin':'Receptor'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
           {view === 'receptores' && (
             <div className="receptor-grid">
               {receptorCards.map(r => (
