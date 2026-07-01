@@ -13,17 +13,12 @@ const CARGOS_REG = ['Coordinación','Director Técnico','Ayudante Técnico','Vid
 const ESTANTES = ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20']
 const ALTURAS = ['A','B','C','D','E','O']
 
-const EMPTY_DB = { articles:[], deliveries:[], movimientos:[], nextId:1, nextDel:1, nextMov:1 }
+const DEFAULT_USERS = [{ username:'compras', password:'peniarol1891', role:'admin', displayName:'Compras Peñarol' }]
+const EMPTY_DB = { articles:[], deliveries:[], movimientos:[], nextId:1, nextDel:1, nextMov:1, users: DEFAULT_USERS }
 
 const USERS_KEY = 'dep_usuarios_v1'
 const SESSION_KEY = 'dep_session'
-function getStoredUsers() {
-  try {
-    const raw = JSON.parse(localStorage.getItem(USERS_KEY)) || []
-    if(raw.length === 0) return [{ username:'compras', password:'peniarol1891', role:'admin', displayName:'Compras Peñarol' }]
-    return raw.map(u => ({ displayName: u.username, ...u, role: u.role || 'admin' }))
-  } catch { return [{ username:'compras', password:'peniarol1891', role:'admin', displayName:'Compras Peñarol' }] }
-}
+
 
 async function loadFromSupabase() {
   const { data, error } = await supabase
@@ -32,6 +27,15 @@ async function loadFromSupabase() {
     .eq('id', 1)
     .single()
   if (error || !data) return EMPTY_DB
+  let users = data.users || null
+  if (!users) {
+    try {
+      const raw = JSON.parse(localStorage.getItem(USERS_KEY)) || []
+      users = raw.length > 0
+        ? raw.map(u => ({ displayName: u.username, ...u, role: u.role || 'admin' }))
+        : DEFAULT_USERS
+    } catch { users = DEFAULT_USERS }
+  }
   return {
     articles: (data.articles || []).map(a => ({
       ...a, sizes: (a.sizes || []).map(s => ({ talle: s.talle, qty: Number(s.qty)||0, min: Number(s.min)||0 }))
@@ -41,6 +45,7 @@ async function loadFromSupabase() {
     nextId: data.next_id || 1,
     nextDel: data.next_del || 1,
     nextMov: data.next_mov || 1,
+    users,
   }
 }
 
@@ -53,6 +58,7 @@ async function saveToSupabase(db) {
     next_id: db.nextId,
     next_del: db.nextDel,
     next_mov: db.nextMov,
+    users: db.users,
     updated_at: new Date().toISOString(),
   })
 }
@@ -138,9 +144,11 @@ export default function App() {
     }
   }, [db.articles, view, selectedCode])
 
+  const saveUsers = (list) => {
+    setDb(prev => ({ ...prev, users: list }))
+  }
   const doLogin = () => {
-    const users = getStoredUsers()
-    const found = users.find(u => u.username.toLowerCase() === loginForm.user.toLowerCase() && u.password === loginForm.pass)
+    const found = db.users.find(u => u.username.toLowerCase() === loginForm.user.toLowerCase() && u.password === loginForm.pass)
     if(found) { sessionStorage.setItem(SESSION_KEY, found.username); setSession(found.username); setLoginForm({user:'',pass:'',err:''}) }
     else setLoginForm(p => ({...p, err:'Usuario o contraseña incorrectos.'}))
   }
@@ -154,12 +162,10 @@ export default function App() {
     if(!division) { setRegForm(p=>({...p,err:'Seleccioná tu división.'})); return }
     if(!pass || pass.length < 6) { setRegForm(p=>({...p,err:'La contraseña debe tener al menos 6 caracteres.'})); return }
     if(pass !== pass2) { setRegForm(p=>({...p,err:'Las contraseñas no coinciden.'})); return }
-    const users = getStoredUsers()
     const username = email.trim().toLowerCase()
-    if(users.find(u => u.username.toLowerCase() === username)) { setRegForm(p=>({...p,err:'Ya existe una cuenta con ese correo.'})); return }
+    if(db.users.find(u => u.username.toLowerCase() === username)) { setRegForm(p=>({...p,err:'Ya existe una cuenta con ese correo.'})); return }
     const newUser = { username, password:pass, role:'receptor', displayName:displayName.trim(), email:username, telefono:telefono.trim(), cargo, categoria, division }
-    const updated = [...users, newUser]
-    localStorage.setItem(USERS_KEY, JSON.stringify(updated))
+    saveUsers([...db.users, newUser])
     sessionStorage.setItem(SESSION_KEY, username)
     setSession(username)
     setLoginView('login')
@@ -169,48 +175,43 @@ export default function App() {
   const doForgotStep1 = () => {
     const email = forgotForm.email.trim().toLowerCase()
     if(!email) { setForgotForm(p=>({...p,err:'Ingresá tu correo.'})); return }
-    const users = getStoredUsers()
-    if(!users.find(u => u.username.toLowerCase() === email)) { setForgotForm(p=>({...p,err:'No existe una cuenta con ese correo.'})); return }
+    if(!db.users.find(u => u.username.toLowerCase() === email)) { setForgotForm(p=>({...p,err:'No existe una cuenta con ese correo.'})); return }
     setForgotForm(p=>({...p,step:2,err:''}))
   }
   const doForgotStep2 = () => {
     const { email, newPass, newPass2 } = forgotForm
     if(!newPass || newPass.length < 6) { setForgotForm(p=>({...p,err:'La contraseña debe tener al menos 6 caracteres.'})); return }
     if(newPass !== newPass2) { setForgotForm(p=>({...p,err:'Las contraseñas no coinciden.'})); return }
-    const users = getStoredUsers()
-    const updated = users.map(u => u.username.toLowerCase()===email.trim().toLowerCase() ? {...u,password:newPass} : u)
-    localStorage.setItem(USERS_KEY, JSON.stringify(updated))
+    saveUsers(db.users.map(u => u.username.toLowerCase()===email.trim().toLowerCase() ? {...u,password:newPass} : u))
     setForgotForm({ email:'', newPass:'', newPass2:'', step:1, err:'' })
     setLoginView('login')
     setLoginForm(p=>({...p,err:''}))
   }
   const doChangePass = () => {
     const { current, newPass, newPass2 } = changePassForm
-    const users = getStoredUsers()
-    const me = users.find(u => u.username === session)
+    const me = db.users.find(u => u.username === session)
     if(!me || me.password !== current) { setChangePassForm(p=>({...p,err:'La contraseña actual es incorrecta.'})); return }
     if(!newPass || newPass.length < 6) { setChangePassForm(p=>({...p,err:'La nueva contraseña debe tener al menos 6 caracteres.'})); return }
     if(newPass !== newPass2) { setChangePassForm(p=>({...p,err:'Las contraseñas no coinciden.'})); return }
-    const updated = users.map(u => u.username===session ? {...u,password:newPass} : u)
-    localStorage.setItem(USERS_KEY, JSON.stringify(updated))
+    saveUsers(db.users.map(u => u.username===session ? {...u,password:newPass} : u))
     setChangePassForm({ current:'', newPass:'', newPass2:'', err:'' })
     closeModal()
     showToast('Contraseña actualizada correctamente.')
   }
-  const openUserMgmt = () => { setUserMgmt({ list:getStoredUsers(), newUser:'', newPass:'', newDisplayName:'', newRole:'receptor', err:'' }); setModal('usuarios') }
+  const openUserMgmt = () => { setUserMgmt({ list:db.users, newUser:'', newPass:'', newDisplayName:'', newRole:'receptor', err:'' }); setModal('usuarios') }
   const addUser = () => {
     const u = userMgmt.newUser.trim(); const p = userMgmt.newPass.trim()
     if(!u || !p) { setUserMgmt(x=>({...x,err:'Completá usuario y contraseña.'})); return }
     if(userMgmt.list.find(x => x.username.toLowerCase()===u.toLowerCase())) { setUserMgmt(x=>({...x,err:'Ese usuario ya existe.'})); return }
     const displayName = userMgmt.newDisplayName.trim() || u
     const list = [...userMgmt.list, {username:u, password:p, role:userMgmt.newRole||'receptor', displayName}]
-    localStorage.setItem(USERS_KEY, JSON.stringify(list))
+    saveUsers(list)
     setUserMgmt(x=>({...x,list,newUser:'',newPass:'',newDisplayName:'',newRole:'receptor',err:''}))
   }
   const deleteUser = (username) => {
     if(username === session) { showToast('No podés eliminar tu propio usuario.'); return }
     const list = userMgmt.list.filter(u => u.username !== username)
-    localStorage.setItem(USERS_KEY, JSON.stringify(list))
+    saveUsers(list)
     setUserMgmt(x=>({...x,list}))
   }
 
@@ -276,8 +277,7 @@ export default function App() {
     })
     // Enviar email de notificación si la entrega va a un usuario específico
     if (nd.toUser && nd.mode !== 'devolucion') {
-      const users = getStoredUsers()
-      const recipient = users.find(u => u.username === nd.toUser)
+      const recipient = db.users.find(u => u.username === nd.toUser)
       if (recipient?.email) {
         fetch('/api/send-email', {
           method: 'POST',
@@ -496,7 +496,7 @@ export default function App() {
   const codeName = articles.reduce((acc, a) => { acc[a.code] = a.name; return acc }, {})
 
   // Current user role
-  const allUsers = getStoredUsers()
+  const allUsers = db.users
   const currentUser = allUsers.find(u => u.username === session) || null
   const isReceptor = currentUser?.role === 'receptor'
 
@@ -601,8 +601,7 @@ export default function App() {
   const pendingDeliveries = deliveries
     .filter(d => d.status === 'pendiente' && d.toUser)
     .map(d => {
-      const users = getStoredUsers()
-      const u = users.find(x => x.username === d.toUser)
+      const u = db.users.find(x => x.username === d.toUser)
       const totalUd = d.lines.reduce((s,l) => s+l.qty, 0)
       return { ...d, totalUd, displayName: u?.displayName || d.toUser, ini: ini(u?.displayName || d.toUser) }
     })
@@ -1258,7 +1257,7 @@ export default function App() {
           {/* RECEPTORES */}
           {view === 'usuarios-reg' && (
             <div style={{display:'flex',flexDirection:'column',gap:10,padding:'0 2px'}}>
-              {getStoredUsers().map(u => (
+              {db.users.map(u => (
                 <div key={u.username} className="card" style={{padding:'16px 20px',display:'flex',alignItems:'center',gap:14}}>
                   <div className="avatar" style={{flexShrink:0,width:42,height:42,fontSize:15}}>{ini(u.displayName||u.username)}</div>
                   <div style={{flex:1,minWidth:0}}>
@@ -1738,7 +1737,7 @@ export default function App() {
                         {[['admin','Administrador'],['receptor','Receptor']].map(([v,label]) => (
                           <button key={v} onClick={()=>{
                             const list = userMgmt.list.map(x => x.username===u.username?{...x,role:v}:x)
-                            localStorage.setItem(USERS_KEY, JSON.stringify(list))
+                            saveUsers(list)
                             setUserMgmt(p=>({...p,list}))
                           }} style={{padding:'4px 12px',borderRadius:5,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:11.5,background:u.role===v?'#FFD200':'#F5F5F0',borderColor:u.role===v?'#e6be00':'#E0E0DA',color:u.role===v?'#121212':'#8a8a82'}}>
                             {label}
