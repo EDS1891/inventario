@@ -274,6 +274,23 @@ export default function App() {
       const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, lines:[...nd.lines], toUser, status, confirmedAt}, ...s.deliveries]
       return { ...s, articles:activeArticles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid }
     })
+    // Enviar email de notificación si la entrega va a un usuario específico
+    if (nd.toUser && nd.mode !== 'devolucion') {
+      const users = getStoredUsers()
+      const recipient = users.find(u => u.username === nd.toUser)
+      if (recipient?.email) {
+        fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: recipient.email,
+            displayName: recipient.displayName || recipient.username,
+            lines: nd.lines,
+            delId: db.nextDel,
+          })
+        }).catch(() => {})
+      }
+    }
     setModal(null)
     setView(nd.mode === 'devolucion' ? 'inventario' : 'entregas')
     showToast(nd.mode === 'devolucion' ? 'Devolución registrada y stock actualizado.' : 'Entrega registrada y stock actualizado.')
