@@ -15,8 +15,11 @@ const EMPTY_DB = { articles:[], deliveries:[], movimientos:[], nextId:1, nextDel
 const USERS_KEY = 'dep_usuarios_v1'
 const SESSION_KEY = 'dep_session'
 function getStoredUsers() {
-  try { return JSON.parse(localStorage.getItem(USERS_KEY)) || [{ username:'compras', password:'peniarol1891' }] }
-  catch { return [{ username:'compras', password:'peniarol1891' }] }
+  try {
+    const raw = JSON.parse(localStorage.getItem(USERS_KEY)) || []
+    if(raw.length === 0) return [{ username:'compras', password:'peniarol1891', role:'admin', displayName:'Compras Peñarol' }]
+    return raw.map(u => ({ displayName: u.username, ...u, role: u.role || 'admin' }))
+  } catch { return [{ username:'compras', password:'peniarol1891', role:'admin', displayName:'Compras Peñarol' }] }
 }
 
 async function loadFromSupabase() {
@@ -95,7 +98,7 @@ export default function App() {
   const saveTimer = useRef(null)
 
   // delivery/devolución form
-  const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[] })
+  const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' })
   // new article form
   const [na, setNa] = useState({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', precio:'', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' })
   // reponer form
@@ -135,14 +138,15 @@ export default function App() {
     else setLoginForm(p => ({...p, err:'Usuario o contraseña incorrectos.'}))
   }
   const doLogout = () => { sessionStorage.removeItem(SESSION_KEY); setSession(null) }
-  const openUserMgmt = () => { setUserMgmt({ list:getStoredUsers(), newUser:'', newPass:'', err:'' }); setModal('usuarios') }
+  const openUserMgmt = () => { setUserMgmt({ list:getStoredUsers(), newUser:'', newPass:'', newDisplayName:'', newRole:'receptor', err:'' }); setModal('usuarios') }
   const addUser = () => {
     const u = userMgmt.newUser.trim(); const p = userMgmt.newPass.trim()
     if(!u || !p) { setUserMgmt(x=>({...x,err:'Completá usuario y contraseña.'})); return }
     if(userMgmt.list.find(x => x.username.toLowerCase()===u.toLowerCase())) { setUserMgmt(x=>({...x,err:'Ese usuario ya existe.'})); return }
-    const list = [...userMgmt.list, {username:u,password:p}]
+    const displayName = userMgmt.newDisplayName.trim() || u
+    const list = [...userMgmt.list, {username:u, password:p, role:userMgmt.newRole||'receptor', displayName}]
     localStorage.setItem(USERS_KEY, JSON.stringify(list))
-    setUserMgmt(x=>({...x,list,newUser:'',newPass:'',err:''}))
+    setUserMgmt(x=>({...x,list,newUser:'',newPass:'',newDisplayName:'',newRole:'receptor',err:''}))
   }
   const deleteUser = (username) => {
     if(username === session) { showToast('No podés eliminar tu propio usuario.'); return }
@@ -165,10 +169,10 @@ export default function App() {
   const openDetail = (code) => { setSelectedCode(code); setView('detalle'); setSidebarOpen(false) }
 
   // ---- Entregas / Devoluciones ----
-  const openEntrega = () => { setNd({ mode:'entrega', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[] }); setModal('entrega') }
-  const openDevolucion = () => { setNd({ mode:'devolucion', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[] }); setModal('entrega') }
-  const openEntregaFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'entrega', persona:'', receptor:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[] }); setModal('entrega') }
-  const openDevolucionFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'devolucion', persona:'', receptor:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[] }); setModal('entrega') }
+  const openEntrega = () => { setNd({ mode:'entrega', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
+  const openDevolucion = () => { setNd({ mode:'devolucion', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
+  const openEntregaFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'entrega', persona:'', receptor:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
+  const openDevolucionFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'devolucion', persona:'', receptor:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
 
   const ndAddLine = () => {
     const qty = parseInt(nd.cQty, 10)
@@ -205,7 +209,10 @@ export default function App() {
       })
       const activeArticles = articles.filter(a => total(a) > 0)
       if(esDev) return { ...s, articles:activeArticles, movimientos, modal:null, nextMov:mid }
-      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, lines:[...nd.lines]}, ...s.deliveries]
+      const toUser = nd.toUser || null
+      const status = toUser ? 'pendiente' : 'aceptado'
+      const confirmedAt = toUser ? null : fecha
+      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, lines:[...nd.lines], toUser, status, confirmedAt}, ...s.deliveries]
       return { ...s, articles:activeArticles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid }
     })
     setModal(null)
@@ -385,9 +392,37 @@ export default function App() {
     setConfirm(null)
   }
 
+  // ---- Receptor: aceptar / rechazar entrega ----
+  const receptorAceptar = (delId) => {
+    setDb(s => {
+      const deliveries = s.deliveries.map(d => d.id === delId ? {...d, status:'aceptado', confirmedAt:today()} : d)
+      return {...s, deliveries}
+    })
+    showToast('Entrega aceptada.')
+  }
+  const receptorRechazar = (delId) => {
+    setDb(s => {
+      const del = s.deliveries.find(d => d.id === delId); if(!del) return {...s}
+      // revert stock
+      const articles = s.articles.map(a => ({...a, sizes:a.sizes.map(z=>({...z}))}))
+      del.lines.forEach(l => { const a=articles.find(x=>x.code===l.code); const z=a&&a.sizes.find(x=>x.talle===l.talle); if(z) z.qty+=l.qty })
+      const deliveries = s.deliveries.map(d => d.id === delId ? {...d, status:'rechazado', confirmedAt:today()} : d)
+      return {...s, articles, deliveries}
+    })
+    showToast('Entrega rechazada y stock restituido.')
+  }
+
   // ---- Derived data ----
   const { articles, deliveries, movimientos } = db
-  const codeName = Object.fromEntries(articles.map(a => [a.code, a.name]))
+  const codeName = articles.reduce((acc, a) => { acc[a.code] = a.name; return acc }, {})
+
+  // Current user role
+  const allUsers = getStoredUsers()
+  const currentUser = allUsers.find(u => u.username === session) || null
+  const isReceptor = currentUser?.role === 'receptor'
+
+  // Receptor users list (for the delivery modal selector)
+  const receptorUsers = allUsers.filter(u => u.role === 'receptor')
 
   // KPIs: count unique codes, group by code for category totals
   const byCodeMap = {}
@@ -582,6 +617,100 @@ export default function App() {
       <div style={{color:'#FFD200',fontFamily:'Archivo Black,sans-serif',fontSize:14,letterSpacing:'.1em'}}>CARGANDO…</div>
     </div>
   )
+
+  // ---- Vista del receptor ----
+  if (isReceptor) {
+    const myDeliveries = db.deliveries.filter(d => d.toUser === session)
+    const pendientes = myDeliveries.filter(d => (d.status||'aceptado') === 'pendiente')
+    const historial  = myDeliveries.filter(d => (d.status||'aceptado') !== 'pendiente')
+    const rCodeName  = db.articles.reduce((acc, a) => { acc[a.code] = a.name; return acc }, {})
+    return (
+      <div style={{minHeight:'100dvh',background:'#F6F6F4',fontFamily:'Archivo,sans-serif'}}>
+        {/* Header */}
+        <div style={{background:'#121212',padding:'18px 24px',display:'flex',alignItems:'center',gap:16}}>
+          <img src="/escudo.png" alt="Peñarol" style={{height:44}} />
+          <div style={{flex:1}}>
+            <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:14,color:'#FFD200',letterSpacing:'.05em'}}>DEPÓSITO · INDUMENTARIA</div>
+            <div style={{fontSize:13,color:'#fff',marginTop:2}}>Hola, <b>{currentUser?.displayName || session}</b></div>
+          </div>
+          <button onClick={doLogout} style={{background:'#2a2a2a',border:'1px solid #3a3a3a',color:'#ccc',borderRadius:8,padding:'8px 14px',cursor:'pointer',fontSize:13}}>Cerrar sesión</button>
+        </div>
+
+        <div style={{maxWidth:680,margin:'0 auto',padding:'28px 16px',display:'flex',flexDirection:'column',gap:28}}>
+
+          {/* Pendientes */}
+          <div>
+            <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:13,color:'#8a8a82',letterSpacing:'.08em',marginBottom:14}}>PENDIENTES DE CONFIRMACIÓN</div>
+            {pendientes.length === 0 && (
+              <div style={{background:'#fff',borderRadius:12,padding:'20px 20px',textAlign:'center',color:'#8a8a82',fontSize:13.5,border:'1px solid #E7E7E3'}}>Sin entregas pendientes.</div>
+            )}
+            {pendientes.map(d => (
+              <div key={d.id} style={{background:'#fff',borderRadius:12,border:'1px solid #E7E7E3',marginBottom:12,overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,.06)'}}>
+                <div style={{padding:'14px 18px',borderBottom:'1px solid #F0F0EC',display:'flex',alignItems:'center',gap:12}}>
+                  <span style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200',borderRadius:6,padding:'2px 9px',fontSize:12,fontWeight:700}}>Pendiente</span>
+                  <span style={{fontSize:12.5,color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>{d.fecha}</span>
+                  <span style={{fontSize:12.5,color:'#6a6a62',flex:1,textAlign:'right'}}>{d.receptor}</span>
+                </div>
+                <div style={{padding:'14px 18px'}}>
+                  {d.lines.map((l,i) => (
+                    <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'5px 0',borderBottom:i<d.lines.length-1?'1px solid #F5F5F0':'none'}}>
+                      <span style={{flex:1,fontWeight:600,fontSize:13.5}}>{rCodeName[l.code]||l.code}</span>
+                      <span style={{fontSize:12.5,color:'#6a6a62'}}>Talle {l.talle}</span>
+                      <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13.5}}>×{l.qty}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{padding:'12px 18px',borderTop:'1px solid #F0F0EC',display:'flex',gap:10}}>
+                  <button onClick={() => receptorAceptar(d.id)} style={{flex:1,background:'#2e9b5e',color:'#fff',border:'none',borderRadius:8,padding:'10px 0',fontWeight:700,fontSize:14,cursor:'pointer'}}>✓ Aceptar</button>
+                  <button onClick={() => receptorRechazar(d.id)} style={{flex:1,background:'#C2473D',color:'#fff',border:'none',borderRadius:8,padding:'10px 0',fontWeight:700,fontSize:14,cursor:'pointer'}}>✕ Rechazar</button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Historial */}
+          <div>
+            <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:13,color:'#8a8a82',letterSpacing:'.08em',marginBottom:14}}>HISTORIAL</div>
+            {historial.length === 0 && (
+              <div style={{background:'#fff',borderRadius:12,padding:'20px 20px',textAlign:'center',color:'#8a8a82',fontSize:13.5,border:'1px solid #E7E7E3'}}>Sin entregas en el historial.</div>
+            )}
+            {historial.map(d => {
+              const st = d.status || 'aceptado'
+              const stColor = st === 'aceptado' ? '#2e9b5e' : '#C2473D'
+              const stBg    = st === 'aceptado' ? '#EDF7F2' : '#FBEAE8'
+              const stLabel = st === 'aceptado' ? 'Aceptado' : 'Rechazado'
+              return (
+                <div key={d.id} style={{background:'#fff',borderRadius:12,border:'1px solid #E7E7E3',marginBottom:12,overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,.06)'}}>
+                  <div style={{padding:'14px 18px',borderBottom:'1px solid #F0F0EC',display:'flex',alignItems:'center',gap:12}}>
+                    <span style={{background:stBg,color:stColor,border:'1px solid '+stColor,borderRadius:6,padding:'2px 9px',fontSize:12,fontWeight:700}}>{stLabel}</span>
+                    <span style={{fontSize:12.5,color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>{d.fecha}</span>
+                    {d.confirmedAt && <span style={{fontSize:11.5,color:'#8a8a82',flex:1,textAlign:'right'}}>Confirmado: {d.confirmedAt}</span>}
+                  </div>
+                  <div style={{padding:'14px 18px'}}>
+                    {d.lines.map((l,i) => (
+                      <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'5px 0',borderBottom:i<d.lines.length-1?'1px solid #F5F5F0':'none'}}>
+                        <span style={{flex:1,fontWeight:600,fontSize:13.5}}>{rCodeName[l.code]||l.code}</span>
+                        <span style={{fontSize:12.5,color:'#6a6a62'}}>Talle {l.talle}</span>
+                        <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13.5}}>×{l.qty}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Toast */}
+        {toast && (
+          <div className="toast">
+            <span className="toast-dot"/>
+            {toast}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="app-shell">
@@ -889,7 +1018,10 @@ export default function App() {
                   </div>
                   <div className="del-col-detail" style={{color:'#6a6a62',fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.resumen}</div>
                   <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{d.totalUd}</div>
-                  <div style={{display:'flex',justifyContent:'flex-end'}}><button className="btn-del" onClick={() => askDeleteDelivery(d.id)}>✕</button></div>
+                  <div style={{display:'flex',justifyContent:'flex-end',alignItems:'center',gap:6}}>
+                    {(() => { const st=d.status||'aceptado'; return st==='pendiente'?<span style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Pendiente</span>:st==='rechazado'?<span style={{background:'#FBEAE8',color:'#C2473D',border:'1px solid #C2473D',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Rechazado</span>:<span style={{background:'#EDF7F2',color:'#2e9b5e',border:'1px solid #2e9b5e',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Aceptado</span> })()}
+                    <button className="btn-del" onClick={() => askDeleteDelivery(d.id)}>✕</button>
+                  </div>
                 </div>
               ))}
               {filteredDeliveryRows.length === 0 && <div className="empty">{delFilterReceptor||delFilterPersona ? 'Sin entregas para este filtro.' : 'Sin entregas registradas.'}</div>}
@@ -980,6 +1112,19 @@ export default function App() {
                   {RECEPTORES.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
+              {!ndIsDev && receptorUsers.length > 0 && (
+                <div className="form-group">
+                  <label className="field-label">Enviar a usuario registrado <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional)</span></label>
+                  <select className="field-input" value={nd.toUser} onChange={e => {
+                    const u = receptorUsers.find(x => x.username === e.target.value)
+                    setNd(p=>({...p, toUser:e.target.value, persona: u ? u.displayName : p.persona}))
+                  }}>
+                    <option value="">Sin usuario específico</option>
+                    {receptorUsers.map(u => <option key={u.username} value={u.username}>{u.displayName} ({u.username})</option>)}
+                  </select>
+                  {nd.toUser && <div style={{marginTop:6,fontSize:12,color:'#7a5800',background:'#FFF8D6',border:'1px solid #FFD200',borderRadius:6,padding:'6px 10px'}}>La entrega quedará pendiente de confirmación por el receptor.</div>}
+                </div>
+              )}
               {nd.receptor === 'Protocolo' && !ndIsDev && (
                 <div className="form-group">
                   <label className="field-label">¿Paga?</label>
@@ -1355,8 +1500,17 @@ export default function App() {
                 <div style={{fontSize:12,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginBottom:10}}>USUARIOS ACTIVOS</div>
                 {userMgmt.list.map(u => (
                   <div key={u.username} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:'1px solid #F0F0EC'}}>
-                    <div className="avatar" style={{flexShrink:0}}>{ini(u.username)}</div>
-                    <div style={{flex:1,fontWeight:600,fontSize:13.5}}>{u.username}</div>
+                    <div className="avatar" style={{flexShrink:0}}>{ini(u.displayName||u.username)}</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:600,fontSize:13.5}}>{u.displayName||u.username}</div>
+                      <div style={{fontSize:11.5,color:'#8a8a82'}}>{u.username}</div>
+                    </div>
+                    <span style={{
+                      background: u.role==='admin' ? '#121212' : '#EDF7F2',
+                      color: u.role==='admin' ? '#FFD200' : '#2e9b5e',
+                      border: '1px solid ' + (u.role==='admin' ? '#3a3a3a' : '#2e9b5e'),
+                      borderRadius:5, padding:'2px 8px', fontSize:11, fontWeight:700, flexShrink:0
+                    }}>{u.role==='admin' ? 'Admin' : 'Receptor'}</span>
                     {u.username === session && <span className="badge gray">Vos</span>}
                     {u.username !== session && <button className="btn-del" onClick={()=>deleteUser(u.username)}>✕</button>}
                   </div>
@@ -1364,14 +1518,34 @@ export default function App() {
               </div>
               <div style={{borderTop:'1px solid #E7E7E3',paddingTop:16}}>
                 <div style={{fontSize:12,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginBottom:10}}>AGREGAR USUARIO</div>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:10}}>
-                  <div className="form-group">
-                    <label className="field-label">Usuario</label>
-                    <input className="field-input" value={userMgmt.newUser} onChange={e=>setUserMgmt(p=>({...p,newUser:e.target.value,err:''}))} placeholder="nombre de usuario" />
+                <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:10}}>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                    <div className="form-group">
+                      <label className="field-label">Usuario</label>
+                      <input className="field-input" value={userMgmt.newUser} onChange={e=>setUserMgmt(p=>({...p,newUser:e.target.value,err:''}))} placeholder="nombre de usuario" />
+                    </div>
+                    <div className="form-group">
+                      <label className="field-label">Contraseña</label>
+                      <input className="field-input" type="password" value={userMgmt.newPass} onChange={e=>setUserMgmt(p=>({...p,newPass:e.target.value,err:''}))} placeholder="••••••••" />
+                    </div>
                   </div>
                   <div className="form-group">
-                    <label className="field-label">Contraseña</label>
-                    <input className="field-input" type="password" value={userMgmt.newPass} onChange={e=>setUserMgmt(p=>({...p,newPass:e.target.value,err:''}))} placeholder="••••••••" />
+                    <label className="field-label">Nombre completo</label>
+                    <input className="field-input" value={userMgmt.newDisplayName||''} onChange={e=>setUserMgmt(p=>({...p,newDisplayName:e.target.value,err:''}))} placeholder="Ej. Juan Pérez" />
+                  </div>
+                  <div className="form-group">
+                    <label className="field-label">Rol</label>
+                    <div style={{display:'flex',gap:8}}>
+                      {[['admin','Administrador'],['receptor','Receptor']].map(([v,label]) => (
+                        <button key={v} style={{flex:1,padding:'8px 0',borderRadius:6,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:13,
+                          background:(userMgmt.newRole||'receptor')===v?'#FFD200':'#F5F5F0',
+                          borderColor:(userMgmt.newRole||'receptor')===v?'#e6be00':'#E0E0DA',
+                          color:(userMgmt.newRole||'receptor')===v?'#121212':'#8a8a82'}}
+                          onClick={() => setUserMgmt(p=>({...p,newRole:v}))}>
+                          {label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
                 {userMgmt.err && <div style={{fontSize:12.5,color:'#C2473D',fontWeight:600,marginBottom:8}}>{userMgmt.err}</div>}
