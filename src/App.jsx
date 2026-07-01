@@ -1053,8 +1053,7 @@ export default function App() {
                     ))}
                   </div>
                 )}
-              </div>
-              <div className="card" style={{marginTop:16}}>
+                <div className="card">
                 <div className="card-header">
                   <div className="card-title">⚠ Talles duplicados en múltiples ubicaciones</div>
                   <div className="card-spacer"/>
@@ -1076,6 +1075,7 @@ export default function App() {
                     </div>
                   </div>
                 ))}
+              </div>
               </div>
             </>
           )}
