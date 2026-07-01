@@ -7,6 +7,9 @@ const TALLES_ADULTO = ['S','M','L','XL','XXL','XXXL','Único']
 const TALLES_NINO   = ['2','4','6','8','10','12','14']
 const RECEPTORES = ['1° División','3° División','Juveniles','Captación','Femenino','Juveniles Femenino','Fútbol Sala Masculino','Fútbol Sala Femenino','Basket','Deportes Anexos','Funcionarios','Protocolo']
 const CATEGORIAS = ['Entrenamiento','Juego','Casual']
+const OCUPACIONES = ['Juveniles','Juveniles Femenino','Captacion']
+const DIVISIONES = ['3° División','Sub 19','Sub 17','Sub 16','Sub 15','Sub 14']
+const CARGOS_REG = ['Coordinación','Director Técnico','Ayudante Técnico','Videoanalista','Preparador Físico','Entrenador de Arqueros','Doctor/a','Kinesiólogo/a']
 const ESTANTES = ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20']
 const ALTURAS = ['A','B','C','D','E','O']
 
@@ -94,7 +97,7 @@ export default function App() {
   const [session, setSession] = useState(() => sessionStorage.getItem(SESSION_KEY) || null)
   const [loginView, setLoginView] = useState('login')
   const [loginForm, setLoginForm] = useState({ user:'', pass:'', err:'' })
-  const [regForm, setRegForm] = useState({ displayName:'', email:'', telefono:'', cargo:'', categoria:'', pass:'', pass2:'', err:'' })
+  const [regForm, setRegForm] = useState({ displayName:'', email:'', telefono:'', cargo:'', categoria:'', division:'', pass:'', pass2:'', err:'' })
   const [userMgmt, setUserMgmt] = useState({ list:[], newUser:'', newPass:'', err:'' })
   const toastTimer = useRef(null)
   const saveTimer = useRef(null)
@@ -140,24 +143,25 @@ export default function App() {
     else setLoginForm(p => ({...p, err:'Usuario o contraseña incorrectos.'}))
   }
   const doRegister = () => {
-    const { displayName, email, telefono, cargo, categoria, pass, pass2 } = regForm
+    const { displayName, email, telefono, cargo, categoria, division, pass, pass2 } = regForm
     if(!displayName.trim()) { setRegForm(p=>({...p,err:'Ingresá tu nombre completo.'})); return }
     if(!email.trim() || !email.includes('@')) { setRegForm(p=>({...p,err:'Ingresá un correo electrónico válido.'})); return }
     if(!telefono.trim()) { setRegForm(p=>({...p,err:'Ingresá tu teléfono.'})); return }
-    if(!cargo.trim()) { setRegForm(p=>({...p,err:'Ingresá tu cargo.'})); return }
-    if(!categoria) { setRegForm(p=>({...p,err:'Seleccioná tu categoría.'})); return }
+    if(!cargo) { setRegForm(p=>({...p,err:'Seleccioná tu cargo.'})); return }
+    if(!categoria) { setRegForm(p=>({...p,err:'Seleccioná tu ocupación.'})); return }
+    if(!division) { setRegForm(p=>({...p,err:'Seleccioná tu división.'})); return }
     if(!pass || pass.length < 6) { setRegForm(p=>({...p,err:'La contraseña debe tener al menos 6 caracteres.'})); return }
     if(pass !== pass2) { setRegForm(p=>({...p,err:'Las contraseñas no coinciden.'})); return }
     const users = getStoredUsers()
     const username = email.trim().toLowerCase()
     if(users.find(u => u.username.toLowerCase() === username)) { setRegForm(p=>({...p,err:'Ya existe una cuenta con ese correo.'})); return }
-    const newUser = { username, password:pass, role:'receptor', displayName:displayName.trim(), email:username, telefono:telefono.trim(), cargo:cargo.trim(), categoria }
+    const newUser = { username, password:pass, role:'receptor', displayName:displayName.trim(), email:username, telefono:telefono.trim(), cargo, categoria, division }
     const updated = [...users, newUser]
     localStorage.setItem(USERS_KEY, JSON.stringify(updated))
     sessionStorage.setItem(SESSION_KEY, username)
     setSession(username)
     setLoginView('login')
-    setRegForm({ displayName:'', email:'', telefono:'', cargo:'', categoria:'', pass:'', pass2:'', err:'' })
+    setRegForm({ displayName:'', email:'', telefono:'', cargo:'', categoria:'', division:'', pass:'', pass2:'', err:'' })
   }
   const doLogout = () => { sessionStorage.removeItem(SESSION_KEY); setSession(null) }
   const openUserMgmt = () => { setUserMgmt({ list:getStoredUsers(), newUser:'', newPass:'', newDisplayName:'', newRole:'receptor', err:'' }); setModal('usuarios') }
@@ -659,14 +663,24 @@ export default function App() {
               </div>
               <div className="form-group">
                 <label className="field-label" style={{color:'#8a8a82'}}>CARGO</label>
-                <input className="field-input" value={regForm.cargo} onChange={e=>setRegForm(p=>({...p,cargo:e.target.value,err:''}))} placeholder="Ej. Jugador" />
+                <select className="field-input" value={regForm.cargo} onChange={e=>setRegForm(p=>({...p,cargo:e.target.value,err:''}))}>
+                  <option value="">Seleccioná tu cargo…</option>
+                  {CARGOS_REG.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
             </div>
             <div className="form-group">
-              <label className="field-label" style={{color:'#8a8a82'}}>CATEGORÍA</label>
+              <label className="field-label" style={{color:'#8a8a82'}}>OCUPACIÓN</label>
               <select className="field-input" value={regForm.categoria} onChange={e=>setRegForm(p=>({...p,categoria:e.target.value,err:''}))}>
-                <option value="">Seleccioná tu categoría…</option>
-                {RECEPTORES.map(r => <option key={r} value={r}>{r}</option>)}
+                <option value="">Seleccioná tu ocupación…</option>
+                {OCUPACIONES.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="field-label" style={{color:'#8a8a82'}}>DIVISIÓN</label>
+              <select className="field-input" value={regForm.division} onChange={e=>setRegForm(p=>({...p,division:e.target.value,err:''}))}>
+                <option value="">Seleccioná tu división…</option>
+                {DIVISIONES.map(d => <option key={d} value={d}>{d}</option>)}
               </select>
             </div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
