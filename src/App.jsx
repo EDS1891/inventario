@@ -598,6 +598,14 @@ export default function App() {
     .filter(d => !delFilterReceptor || d.receptor === delFilterReceptor)
     .filter(d => !delFilterPersona || d.persona.toLowerCase().includes(delFilterPersona.toLowerCase()))
   const recentDeliveries = deliveries.slice(0,4).map(delEnrich)
+  const pendingDeliveries = deliveries
+    .filter(d => d.status === 'pendiente' && d.toUser)
+    .map(d => {
+      const users = getStoredUsers()
+      const u = users.find(x => x.username === d.toUser)
+      const totalUd = d.lines.reduce((s,l) => s+l.qty, 0)
+      return { ...d, totalUd, displayName: u?.displayName || d.toUser, ini: ini(u?.displayName || d.toUser) }
+    })
 
   const movKind = m => {
     const d = m.detalle||''
@@ -974,24 +982,29 @@ export default function App() {
                 </div>
                 <div className="card">
                   <div className="card-header">
-                    <div className="card-title">Entregas recientes</div>
+                    <div className="card-title">Entregas pendientes de respuesta</div>
                     <div className="card-spacer"/>
+                    {pendingDeliveries.length > 0 && <span className="badge" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200'}}>{pendingDeliveries.length}</span>}
                     <button className="back-link" style={{color:'#9a7d00',margin:0}} onClick={() => goView('entregas')}>Ver todas →</button>
                   </div>
-                  {recentDeliveries.length === 0 && <div className="empty">Sin entregas registradas.</div>}
-                  {recentDeliveries.map(d => (
-                    <div key={d.id} className="table-row" style={{gridTemplateColumns:'34px 1fr auto'}}>
-                      <div className="avatar">{d.ini}</div>
-                      <div style={{minWidth:0}}>
-                        <div style={{fontWeight:600,fontSize:13.5,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.persona}</div>
-                        <div style={{fontSize:11.5,color:'#8a8a82',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.receptor} · {d.resumen}</div>
+                  {pendingDeliveries.length === 0
+                    ? <div className="empty">No hay entregas pendientes de confirmación.</div>
+                    : pendingDeliveries.map(d => (
+                      <div key={d.id} className="table-row" style={{gridTemplateColumns:'34px 1fr auto'}}>
+                        <div className="avatar" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200'}}>{d.ini}</div>
+                        <div style={{minWidth:0}}>
+                          <div style={{fontWeight:600,fontSize:13.5,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.displayName}</div>
+                          <div style={{fontSize:11.5,color:'#8a8a82'}}>
+                            {d.lines.length} artículo{d.lines.length!==1?'s':''} · {d.totalUd} unidades
+                          </div>
+                        </div>
+                        <div style={{textAlign:'right',flexShrink:0}}>
+                          <span style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200',borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700}}>Pendiente</span>
+                          <div style={{fontSize:11,color:'#8a8a82',marginTop:3}}>{d.fecha}</div>
+                        </div>
                       </div>
-                      <div style={{textAlign:'right',flexShrink:0}}>
-                        <div style={{fontWeight:700,fontSize:14}}>{d.totalUd}</div>
-                        <div style={{fontSize:11,color:'#8a8a82'}}>{d.fecha}</div>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  }
                 </div>
               </div>
               <div className="card" style={{marginTop:16}}>
