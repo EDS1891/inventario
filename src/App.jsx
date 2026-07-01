@@ -290,7 +290,7 @@ export default function App() {
           })
         })
         .then(r => r.json())
-        .then(d => { if (d.ok) showToast('Email de notificación enviado a ' + recipient.email) else showToast('Error al enviar email: ' + (d.error || 'error desconocido')) })
+        .then(d => { if (d.ok) { showToast('Email de notificación enviado a ' + recipient.email) } else { showToast('Error al enviar email: ' + (d.error || 'error desconocido')) } })
         .catch(() => showToast('No se pudo conectar con el servidor de email.'))
       }
     }
@@ -1673,7 +1673,14 @@ export default function App() {
                       <div className="avatar" style={{flexShrink:0}}>{ini(u.displayName||u.username)}</div>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontWeight:700,fontSize:13.5}}>{u.displayName||u.username}</div>
-                        <div style={{fontSize:11.5,color:'#8a8a82'}}>{u.email||u.username}{u.cargo?' · '+u.cargo:''}{u.categoria?' · '+u.categoria:''}</div>
+                        <div style={{fontSize:11.5,color:'#8a8a82'}}>{u.email||u.username}</div>
+                        {(u.cargo||u.categoria||u.division) && (
+                          <div style={{fontSize:11.5,color:'#8a8a82'}}>
+                            {u.cargo||''}
+                            {u.categoria ? <span style={{marginLeft:6,background:'#F0F0EC',borderRadius:4,padding:'1px 6px',fontSize:11}}>{u.categoria}</span> : null}
+                            {u.division ? <span style={{marginLeft:4,background:'#E8F0FE',borderRadius:4,padding:'1px 6px',fontSize:11,color:'#1a56db'}}>{u.division}</span> : null}
+                          </div>
+                        )}
                         {u.telefono && <div style={{fontSize:11.5,color:'#8a8a82'}}>{u.telefono}</div>}
                       </div>
                       <span style={{background:u.role==='admin'?'#121212':'#EDF7F2',color:u.role==='admin'?'#FFD200':'#2e9b5e',border:'1px solid '+(u.role==='admin'?'#3a3a3a':'#2e9b5e'),borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700,flexShrink:0}}>{u.role==='admin'?'Admin':'Receptor'}</span>
