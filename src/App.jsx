@@ -113,7 +113,7 @@ export default function App() {
   const [delFilterPersona, setDelFilterPersona] = useState('')
   const [toast, setToast] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [session, setSession] = useState(() => sessionStorage.getItem(SESSION_KEY) || null)
+  const [session, setSession] = useState(() => localStorage.getItem(SESSION_KEY) || null)
   const [loginView, setLoginView] = useState('login')
   const [loginForm, setLoginForm] = useState({ user:'', pass:'', err:'' })
   const [regForm, setRegForm] = useState({ displayName:'', email:'', telefono:'', cargo:'', categoria:'', division:'', pass:'', pass2:'', err:'' })
@@ -186,7 +186,7 @@ export default function App() {
     const found = db.users.find(u => u.username.toLowerCase() === loginForm.user.toLowerCase() && u.password === loginForm.pass)
     if(!found) { setLoginForm(p => ({...p, err:'Usuario o contraseña incorrectos.'})); return }
     if(found.status === 'pendiente') { setLoginForm(p => ({...p, err:'Tu cuenta está pendiente de aprobación por el administrador.'})); return }
-    sessionStorage.setItem(SESSION_KEY, found.username); setSession(found.username); setLoginForm({user:'',pass:'',err:''})
+    localStorage.setItem(SESSION_KEY, found.username); setSession(found.username); setLoginForm({user:'',pass:'',err:''})
   }
   const doRegister = () => {
     const { displayName, email, telefono, cargo, categoria, division, pass, pass2 } = regForm
@@ -205,7 +205,7 @@ export default function App() {
     setLoginView('registered')
     setRegForm({ displayName:'', email:'', telefono:'', cargo:'', categoria:'', division:'', pass:'', pass2:'', err:'' })
   }
-  const doLogout = () => { sessionStorage.removeItem(SESSION_KEY); setSession(null) }
+  const doLogout = () => { localStorage.removeItem(SESSION_KEY); setSession(null) }
   const doForgotStep1 = () => {
     const email = forgotForm.email.trim().toLowerCase()
     if(!email) { setForgotForm(p=>({...p,err:'Ingresá tu correo.'})); return }
