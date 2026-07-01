@@ -618,8 +618,7 @@ export default function App() {
       <div style={{background:'#1a1a1a',borderRadius:12,padding:'36px 32px',width:'100%',maxWidth:420,boxShadow:'0 20px 60px rgba(0,0,0,.5)'}}>
         <div style={{display:'flex',flexDirection:'column',alignItems:'center',marginBottom:28}}>
           <img src="/escudo.png" alt="Peñarol" style={{height:56,marginBottom:14}} />
-          <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:18,color:'#FFD200',letterSpacing:'.05em'}}>DEPÓSITO</div>
-          <div style={{fontSize:11,color:'#8a8a82',letterSpacing:'.2em',marginTop:2}}>INDUMENTARIA · PEÑAROL</div>
+          <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:18,color:'#FFD200',letterSpacing:'.05em'}}>INVENTARIO INDUMENTARIA PEÑAROL</div>
         </div>
 
         {/* Tabs login / registro */}
