@@ -21,13 +21,14 @@ const SESSION_KEY = 'dep_session'
 
 
 async function loadFromSupabase() {
-  const { data, error } = await supabase
-    .from('deposito_state')
-    .select('*')
-    .eq('id', 1)
-    .single()
+  const [{ data, error }, { data: usersRow }] = await Promise.all([
+    supabase.from('deposito_state').select('*').eq('id', 1).single(),
+    supabase.from('deposito_state').select('deliveries').eq('id', 2).single(),
+  ])
   if (error || !data) return EMPTY_DB
-  let users = data.users || null
+  let users = (usersRow?.deliveries?.length > 0 && usersRow.deliveries[0]?.username)
+    ? usersRow.deliveries
+    : null
   if (!users) {
     try {
       const raw = JSON.parse(localStorage.getItem(USERS_KEY)) || []
@@ -50,17 +51,28 @@ async function loadFromSupabase() {
 }
 
 async function saveToSupabase(db) {
-  await supabase.from('deposito_state').upsert({
-    id: 1,
-    articles: db.articles,
-    deliveries: db.deliveries,
-    movimientos: db.movimientos,
-    next_id: db.nextId,
-    next_del: db.nextDel,
-    next_mov: db.nextMov,
-    users: db.users,
-    updated_at: new Date().toISOString(),
-  })
+  await Promise.all([
+    supabase.from('deposito_state').upsert({
+      id: 1,
+      articles: db.articles,
+      deliveries: db.deliveries,
+      movimientos: db.movimientos,
+      next_id: db.nextId,
+      next_del: db.nextDel,
+      next_mov: db.nextMov,
+      updated_at: new Date().toISOString(),
+    }),
+    supabase.from('deposito_state').upsert({
+      id: 2,
+      articles: [],
+      deliveries: db.users,
+      movimientos: [],
+      next_id: 0,
+      next_del: 0,
+      next_mov: 0,
+      updated_at: new Date().toISOString(),
+    }),
+  ])
 }
 
 function fmt(n) { return Number(n).toLocaleString('es-UY') }
