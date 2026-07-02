@@ -111,6 +111,7 @@ export default function App() {
   const [movFilter, setMovFilter] = useState('Todos')
   const [delFilterReceptor, setDelFilterReceptor] = useState('')
   const [delFilterPersona, setDelFilterPersona] = useState('')
+  const [selectedDeliveryId, setSelectedDeliveryId] = useState(null)
   const [toast, setToast] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [session, setSession] = useState(() => localStorage.getItem(SESSION_KEY) || null)
@@ -1277,7 +1278,7 @@ export default function App() {
                 <div style={{textAlign:'right'}}>UNID.</div><div/>
               </div>
               {filteredDeliveryRows.map(d => (
-                <div key={d.id} className="table-row del-cols">
+                <div key={d.id} className="table-row del-cols clickable" onClick={() => setSelectedDeliveryId(d.id)}>
                   <div className="mono" style={{fontSize:12.5,color:'#6a6a62'}}>{d.fecha}</div>
                   <div style={{display:'flex',alignItems:'center',gap:11,minWidth:0}}>
                     <div className="avatar lg">{d.ini}</div>
@@ -1293,7 +1294,7 @@ export default function App() {
                   <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{d.totalUd}</div>
                   <div style={{display:'flex',justifyContent:'flex-end',alignItems:'center',gap:6}}>
                     {(() => { const st=d.status||'aceptado'; return st==='pendiente'?<span style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Pendiente</span>:st==='rechazado'?<span style={{background:'#FBEAE8',color:'#C2473D',border:'1px solid #C2473D',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Rechazado</span>:<span style={{background:'#EDF7F2',color:'#2e9b5e',border:'1px solid #2e9b5e',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Aceptado</span> })()}
-                    <button className="btn-del" onClick={() => askDeleteDelivery(d.id)}>✕</button>
+                    <button className="btn-del" onClick={e => { e.stopPropagation(); askDeleteDelivery(d.id) }}>✕</button>
                   </div>
                 </div>
               ))}
@@ -1398,6 +1399,64 @@ export default function App() {
       </div>
 
       {/* ===== MODALES ===== */}
+
+      {/* Modal: Detalle de entrega */}
+      {selectedDeliveryId && (() => {
+        const d = deliveryRows.find(x => x.id === selectedDeliveryId)
+        if (!d) return null
+        const st = d.status || 'aceptado'
+        const stStyle = st==='pendiente'
+          ? {background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200'}
+          : st==='rechazado'
+          ? {background:'#FBEAE8',color:'#C2473D',border:'1px solid #C2473D'}
+          : {background:'#EDF7F2',color:'#2e9b5e',border:'1px solid #2e9b5e'}
+        const stLabel = st==='pendiente'?'Pendiente':st==='rechazado'?'Rechazado':'Aceptado'
+        return (
+          <div className="modal-backdrop" onClick={() => setSelectedDeliveryId(null)}>
+            <div className="modal modal-md" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <div>
+                  <div className="modal-title">{d.persona}</div>
+                  <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>{d.receptor} · {d.fecha}</div>
+                </div>
+                <span style={{...stStyle,borderRadius:5,padding:'3px 9px',fontSize:11,fontWeight:700,marginLeft:'auto',marginRight:12,whiteSpace:'nowrap'}}>{stLabel}</span>
+                <button className="modal-close" onClick={() => setSelectedDeliveryId(null)}>×</button>
+              </div>
+              <div className="modal-body" style={{padding:0}}>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 60px 55px',background:'#121212',padding:'9px 20px'}}>
+                  <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em'}}>PRENDA</div>
+                  <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em',textAlign:'center'}}>TALLE</div>
+                  <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em',textAlign:'right'}}>CANT.</div>
+                </div>
+                {d.lines.map((l, i) => (
+                  <div key={i} style={{display:'grid',gridTemplateColumns:'1fr 60px 55px',padding:'11px 20px',borderBottom:'1px solid #F0F0EC',alignItems:'center'}}>
+                    <div>
+                      <div style={{fontWeight:600,fontSize:13.5}}>{l.name || l.code}</div>
+                      {l.ubic && <div style={{fontSize:11.5,color:'#8a8a82',marginTop:2}}>Ubic. {l.ubic}</div>}
+                    </div>
+                    <div style={{textAlign:'center',fontWeight:700,fontSize:13}}>{l.talle}</div>
+                    <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',fontSize:14}}>{l.qty}</div>
+                  </div>
+                ))}
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 20px',background:'#FAFAF8',borderTop:'2px solid #E7E7E3'}}>
+                  <span style={{fontSize:13,color:'#6a6a62',fontWeight:600}}>Total unidades</span>
+                  <span style={{fontWeight:800,fontSize:16,fontFamily:'IBM Plex Mono,monospace'}}>{d.totalUd}</span>
+                </div>
+                {d.paga === 'si' && d.monto > 0 && (
+                  <div style={{padding:'10px 20px',background:'#F0FAF4',borderTop:'1px solid #b6e4c8',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <span style={{fontSize:13,color:'#1a5c33',fontWeight:600}}>Total a cobrar</span>
+                    <span style={{fontWeight:800,fontSize:15,color:'#1a5c33'}}>$ {d.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={() => setSelectedDeliveryId(null)}>Cerrar</button>
+                <button className="btn btn-red" onClick={() => { setSelectedDeliveryId(null); askDeleteDelivery(d.id) }}>Eliminar entrega</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Modal: Entrega / Devolución */}
       {modal === 'entrega' && (
