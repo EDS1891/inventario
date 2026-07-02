@@ -815,18 +815,20 @@ export default function App() {
             </div>
             <div className="form-group">
               <label className="field-label" style={{color:'#8a8a82'}}>SECTOR</label>
-              <select className="field-input" value={regForm.categoria} onChange={e=>setRegForm(p=>({...p,categoria:e.target.value,err:''}))}>
+              <select className="field-input" value={regForm.categoria} onChange={e=>setRegForm(p=>({...p,categoria:e.target.value,division:'',err:''}))}>
                 <option value="">Seleccioná tu sector…</option>
                 {OCUPACIONES.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
             </div>
-            <div className="form-group">
-              <label className="field-label" style={{color:'#8a8a82'}}>DIVISIÓN</label>
-              <select className="field-input" value={regForm.division} onChange={e=>setRegForm(p=>({...p,division:e.target.value,err:''}))}>
-                <option value="">Seleccioná tu división…</option>
-                {DIVISIONES.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
-            </div>
+            {regForm.categoria && regForm.categoria !== '3° División' && (
+              <div className="form-group">
+                <label className="field-label" style={{color:'#8a8a82'}}>DIVISIÓN</label>
+                <select className="field-input" value={regForm.division} onChange={e=>setRegForm(p=>({...p,division:e.target.value,err:''}))}>
+                  <option value="">Seleccioná tu división…</option>
+                  {DIVISIONES.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+            )}
             <div className="form-cols-2">
               <div className="form-group">
                 <label className="field-label" style={{color:'#8a8a82'}}>CONTRASEÑA</label>
