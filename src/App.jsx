@@ -1485,7 +1485,9 @@ export default function App() {
                   <label className="field-label">Enviar a usuario registrado <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional)</span></label>
                   <select className="field-input" value={nd.toUser} onChange={e => {
                     const u = receptorUsers.find(x => x.username === e.target.value)
-                    setNd(p=>({...p, toUser:e.target.value, persona: u ? u.displayName : p.persona}))
+                    const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
+                    const matchedReceptor = u ? (RECEPTORES.find(r => norm(r) === norm(u.categoria)) || '') : ''
+                    setNd(p=>({...p, toUser:e.target.value, persona: u ? u.displayName : p.persona, receptor: matchedReceptor || p.receptor}))
                   }}>
                     <option value="">Sin usuario específico</option>
                     {receptorUsers.map(u => <option key={u.username} value={u.username}>{u.displayName} ({u.username})</option>)}
