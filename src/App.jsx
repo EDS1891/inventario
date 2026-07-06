@@ -135,7 +135,7 @@ export default function App() {
   // ajuste form
   const [aj, setAj] = useState({ talle:'', cantidad:'' })
   // mover form
-  const [mv, setMv] = useState({ tallesArr:[], estante:'1', altura:'A' })
+  const [mv, setMv] = useState({ qtys:{}, estante:'1', altura:'A' })
 
   // Keep dbRef current so visibilitychange flush always sees latest state
   useEffect(() => { dbRef.current = db }, [db])
@@ -426,7 +426,7 @@ export default function App() {
   }
 
   // ---- Mover talle ----
-  const openMover = () => { setMv({ tallesArr:[], estante:'1', altura:'A' }); setModal('mover') }
+  const openMover = () => { setMv({ qtys:{}, estante:'1', altura:'A' }); setModal('mover') }
 
   const exportExcel = () => {
     const sorted = [...articles].sort((a, b) => {
@@ -448,38 +448,52 @@ export default function App() {
     XLSX.writeFile(wb, 'stock-deposito-peniarol.xlsx')
   }
   const mvConfirm = () => {
-    if(mv.tallesArr.length === 0) { showToast('Seleccioná al menos un talle.'); return }
+    const toMove = Object.entries(mv.qtys).map(([t,q]) => [t, parseInt(q,10)||0]).filter(([,q]) => q > 0)
+    if(toMove.length === 0) { showToast('Ingresá la cantidad a mover en al menos un talle.'); return }
     const newUbic = mv.estante + mv.altura
     if(newUbic === selA.ubic) { showToast('La ubicación destino es la misma que la actual.'); return }
+    for(const [t, q] of toMove) {
+      const src = selA.sizes.find(sz => sz.talle === t)
+      if(!src || q > src.qty) { showToast('Stock insuficiente para talle ' + t + '.'); return }
+    }
     setDb(prev => {
       const code = curCode()
-      let arts = prev.articles
+      let arts = [...prev.articles]
       let nextId = prev.nextId
-      const targetEntry = arts.find(a => a.code === code && a.ubic === newUbic && a.id !== selA.id)
+      // Reducir stock en origen
+      arts = arts.map(a => {
+        if(a.id !== selA.id) return a
+        const newSizes = a.sizes.map(sz => {
+          const q = parseInt(mv.qtys[sz.talle],10)||0
+          return q > 0 ? {...sz, qty: sz.qty - q} : sz
+        }).filter(sz => sz.qty > 0)
+        return newSizes.length === 0 ? null : {...a, sizes: newSizes}
+      }).filter(Boolean)
+      // Agregar en destino
+      const targetEntry = arts.find(a => a.code === code && a.ubic === newUbic)
       if(targetEntry) {
         arts = arts.map(a => {
           if(a.id !== targetEntry.id) return a
           const newSizes = [...a.sizes]
-          mv.tallesArr.forEach(t => {
+          toMove.forEach(([t, q]) => {
             const src = selA.sizes.find(sz => sz.talle === t)
             const idx = newSizes.findIndex(sz => sz.talle === t)
-            if(idx >= 0) newSizes[idx] = {...newSizes[idx], qty: newSizes[idx].qty + (src?.qty||0)}
-            else newSizes.push({...src})
+            if(idx >= 0) newSizes[idx] = {...newSizes[idx], qty: newSizes[idx].qty + q}
+            else newSizes.push({talle:t, qty:q, min:src?.min||0})
           })
           return {...a, sizes: newSizes}
         })
       } else {
-        const movedSizes = selA.sizes.filter(sz => mv.tallesArr.includes(sz.talle))
-        arts = [...arts, {id:nextId++, code, name:selA.name, cat:selA.cat, ubic:newUbic, sizes:movedSizes}]
+        const newSizes = toMove.map(([t, q]) => {
+          const src = selA.sizes.find(sz => sz.talle === t)
+          return {talle:t, qty:q, min:src?.min||0}
+        })
+        arts = [...arts, {id:nextId++, code, name:selA.name, cat:selA.cat, ubic:newUbic, sizes:newSizes, precio:selA.precio||0}]
       }
-      const remaining = selA.sizes.filter(sz => !mv.tallesArr.includes(sz.talle))
-      arts = remaining.length === 0
-        ? arts.filter(a => a.id !== selA.id)
-        : arts.map(a => a.id === selA.id ? {...a, sizes:remaining} : a)
       return {...prev, articles:arts, nextId}
     })
     setModal(null); setView('inventario')
-    showToast('Talle(s) movido(s) a ' + mv.estante + mv.altura + '.')
+    showToast('Movido a ' + mv.estante + mv.altura + '.')
   }
 
   // ---- Editar ----
@@ -1860,13 +1874,24 @@ export default function App() {
                 Ubicación actual: <b style={{color:'#1a1a1a'}}>{selA.ubic||'—'}</b>
               </div>
               <div className="form-group">
-                <label className="field-label">Seleccioná los talles a mover</label>
-                <div className="talle-grid">
+                <label className="field-label">Cantidad a mover por talle</label>
+                <div style={{border:'1px solid #E7E7E3',borderRadius:8,overflow:'hidden'}}>
+                  <div style={{display:'grid',gridTemplateColumns:'56px 1fr 84px',background:'#FAFAF8',padding:'7px 12px',borderBottom:'1px solid #E7E7E3'}}>
+                    <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:.5}}>TALLE</div>
+                    <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:.5}}>STOCK</div>
+                    <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:.5,textAlign:'center'}}>MOVER</div>
+                  </div>
                   {selA.sizes.map(s => (
-                    <button key={s.talle} className={`talle-btn${mv.tallesArr.includes(s.talle)?' active':''}`}
-                      onClick={() => setMv(p => ({...p, tallesArr: p.tallesArr.includes(s.talle) ? p.tallesArr.filter(t=>t!==s.talle) : [...p.tallesArr, s.talle]}))}>
-                      {s.talle}
-                    </button>
+                    <div key={s.talle} style={{display:'grid',gridTemplateColumns:'56px 1fr 84px',gap:6,padding:'8px 12px',borderBottom:'1px solid #F0F0EC',alignItems:'center'}}>
+                      <div style={{fontWeight:700,fontSize:13.5}}>{s.talle}</div>
+                      <div style={{fontSize:13,color:'#6a6a62'}}>{s.qty} u.</div>
+                      <input type="number" min="0" max={s.qty} className="field-input"
+                        style={{height:34,textAlign:'center',padding:'0 6px',fontSize:13}}
+                        value={mv.qtys[s.talle]||''}
+                        onChange={e => setMv(p => ({...p, qtys:{...p.qtys,[s.talle]:e.target.value}}))}
+                        placeholder="0"
+                      />
+                    </div>
                   ))}
                 </div>
               </div>
