@@ -600,16 +600,26 @@ export default function App() {
     const allSizes = g._entries.flatMap(e => e.sizes)
     const tot = allSizes.reduce((s, z) => s + z.qty, 0)
     const low = g._entries.some(e => isLow(e))
-    const ubics = [...new Set(g._entries.map(e => e.ubic).filter(Boolean))].join(' · ')
+    const sortedEntries = [...g._entries].sort((a, b) => {
+      const ua = parseUbic(a.ubic), ub = parseUbic(b.ubic)
+      if(ua.n !== ub.n) return ua.n - ub.n
+      return ua.l.localeCompare(ub.l)
+    })
+    const ubics = [...new Set(sortedEntries.map(e => e.ubic).filter(Boolean))].join(' · ')
     return {
       ...g,
       totalFmt: fmt(tot),
       sizesLabel: TALLE_ORDER.filter(t => allSizes.some(s => s.talle === t)).join(' · '),
       low,
       ubic: ubics || '—',
+      _firstUbic: sortedEntries[0]?.ubic || '',
       precio: g.precio || 0,
       dupUbic: false,
     }
+  }).sort((a, b) => {
+    const ua = parseUbic(a._firstUbic), ub = parseUbic(b._firstUbic)
+    if(ua.n !== ub.n) return ua.n - ub.n
+    return ua.l.localeCompare(ub.l)
   })
 
   const lowList = articles.filter(isLow).map(a => ({
