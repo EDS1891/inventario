@@ -112,6 +112,7 @@ export default function App() {
   const [delFilterReceptor, setDelFilterReceptor] = useState('')
   const [delFilterPersona, setDelFilterPersona] = useState('')
   const [selectedDeliveryId, setSelectedDeliveryId] = useState(null)
+  const [selectedReceptor, setSelectedReceptor] = useState(null)
   const [toast, setToast] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [session, setSession] = useState(() => localStorage.getItem(SESSION_KEY) || null)
@@ -1411,12 +1412,13 @@ export default function App() {
           {view === 'receptores' && (
             <div className="receptor-grid">
               {receptorCards.map(r => (
-                <div key={r.name} className="card" style={{padding:20,display:'flex',gap:14,alignItems:'center'}}>
+                <div key={r.name} className="card" style={{padding:20,display:'flex',gap:14,alignItems:'center',cursor:'pointer'}} onClick={() => setSelectedReceptor(r.name)}>
                   <div className="avatar xl">{r.ini}</div>
                   <div style={{flex:1}}>
                     <div style={{fontWeight:700,fontSize:15}}>{r.name}</div>
                     <div style={{fontSize:12.5,color:'#8a8a82',marginTop:3}}>{r.count} entregas · {r.unidades} unidades</div>
                   </div>
+                  <span style={{color:'#C8C8C0',fontSize:20}}>›</span>
                 </div>
               ))}
             </div>
@@ -1478,6 +1480,57 @@ export default function App() {
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={() => setSelectedDeliveryId(null)}>Cerrar</button>
                 <button className="btn btn-red" onClick={() => { setSelectedDeliveryId(null); askDeleteDelivery(d.id) }}>Eliminar entrega</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Modal: Detalle de receptor */}
+      {selectedReceptor && (() => {
+        const rData = receptorCards.find(r => r.name === selectedReceptor)
+        const rDeliveries = deliveryRows.filter(d => d.receptor === selectedReceptor).sort((a,b) => b.fecha.localeCompare(a.fecha))
+        return (
+          <div className="modal-backdrop" onClick={() => setSelectedReceptor(null)}>
+            <div className="modal modal-md" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <div style={{display:'flex',gap:12,alignItems:'center'}}>
+                  <div className="avatar xl">{rData?.ini}</div>
+                  <div>
+                    <div className="modal-title">{selectedReceptor}</div>
+                    <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>{rData?.count} entregas · {rData?.unidades} unidades totales</div>
+                  </div>
+                </div>
+                <button className="modal-close" onClick={() => setSelectedReceptor(null)}>×</button>
+              </div>
+              <div className="modal-body" style={{padding:0,maxHeight:'65vh',overflowY:'auto'}}>
+                {rDeliveries.length === 0
+                  ? <div style={{padding:24,textAlign:'center',color:'#8a8a82'}}>Sin entregas registradas.</div>
+                  : rDeliveries.map(d => {
+                      const st = d.status || 'aceptado'
+                      const stStyle = st==='pendiente'
+                        ? {background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200'}
+                        : st==='rechazado'
+                        ? {background:'#FBEAE8',color:'#C2473D',border:'1px solid #C2473D'}
+                        : {background:'#EDF7F2',color:'#2e9b5e',border:'1px solid #2e9b5e'}
+                      const stLabel = st==='pendiente'?'Pendiente':st==='rechazado'?'Rechazado':'Aceptado'
+                      return (
+                        <div key={d.id} className="clickable"
+                          style={{display:'flex',alignItems:'center',gap:10,padding:'12px 20px',borderBottom:'1px solid #F0F0EC'}}
+                          onClick={() => { setSelectedReceptor(null); setSelectedDeliveryId(d.id) }}>
+                          <div style={{flex:1}}>
+                            <div style={{fontWeight:600,fontSize:13.5}}>{d.persona}</div>
+                            <div style={{fontSize:11.5,color:'#8a8a82',marginTop:2}}>{d.fecha} · {d.totalUd} u.</div>
+                          </div>
+                          <span style={{...stStyle,borderRadius:5,padding:'3px 9px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>{stLabel}</span>
+                          <span style={{color:'#C8C8C0',fontSize:20,marginLeft:4}}>›</span>
+                        </div>
+                      )
+                    })
+                }
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={() => setSelectedReceptor(null)}>Cerrar</button>
               </div>
             </div>
           </div>
