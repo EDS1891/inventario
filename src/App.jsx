@@ -1036,9 +1036,9 @@ export default function App() {
                 <div className="kpi-card"><div className="kpi-label">UNIDADES EN STOCK</div><div className="kpi-value">{kpis.unidades}</div><div className="kpi-sub">suma de todos los talles</div></div>
 
                 <div className="kpi-card"><div className="kpi-label">MONTO TOTAL EN ARTÍCULOS</div><div className="kpi-value" style={{fontSize:24}}>$ {kpis.valorStock.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</div></div>
-                <div className="kpi-card"><div className="kpi-label">PRENDAS DE ENTRENAMIENTO</div><div className="kpi-value">{kpis.entrenamiento}</div><div className="kpi-sub">unidades en stock</div></div>
-                <div className="kpi-card"><div className="kpi-label">PRENDAS DE JUEGO</div><div className="kpi-value">{kpis.juego}</div><div className="kpi-sub">unidades en stock</div></div>
-                <div className="kpi-card"><div className="kpi-label">PRENDAS CASUAL</div><div className="kpi-value">{kpis.casual}</div><div className="kpi-sub">unidades en stock</div></div>
+                <div className="kpi-card" style={{cursor:'pointer'}} onClick={() => { setCat('Entrenamiento'); setView('inventario') }}><div className="kpi-label">PRENDAS DE ENTRENAMIENTO</div><div className="kpi-value">{kpis.entrenamiento}</div><div className="kpi-sub">unidades en stock →</div></div>
+                <div className="kpi-card" style={{cursor:'pointer'}} onClick={() => { setCat('Juego'); setView('inventario') }}><div className="kpi-label">PRENDAS DE JUEGO</div><div className="kpi-value">{kpis.juego}</div><div className="kpi-sub">unidades en stock →</div></div>
+                <div className="kpi-card" style={{cursor:'pointer'}} onClick={() => { setCat('Casual'); setView('inventario') }}><div className="kpi-label">PRENDAS CASUAL</div><div className="kpi-value">{kpis.casual}</div><div className="kpi-sub">unidades en stock →</div></div>
               </div>
               <div className="panel-grid">
                 <div className="card">
