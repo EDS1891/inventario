@@ -14,16 +14,18 @@ const ESTANTES = ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','1
 const ALTURAS = ['A','B','C','D','E','O']
 
 const DEFAULT_USERS = [{ username:'compras', password:'peniarol1891', role:'admin', displayName:'Compras Peñarol', status:'aprobado' }]
-const EMPTY_DB = { articles:[], deliveries:[], movimientos:[], nextId:1, nextDel:1, nextMov:1, users: DEFAULT_USERS }
+const EMPTY_DB = { articles:[], deliveries:[], movimientos:[], nextId:1, nextDel:1, nextMov:1, users: DEFAULT_USERS, camisetasUtileria:[] }
+const COMPETICIONES = ['CAMPEONATO URUGUAYO','CONMEBOL','COPA LIBERTADORES FEMENINA','COPA LIBERTADORES FÚTBOL SALA','COPA INTERCONTINENTAL SUB 20']
 
 const USERS_KEY = 'dep_usuarios_v1'
 const SESSION_KEY = 'dep_session'
 
 
 async function loadFromSupabase() {
-  const [{ data, error }, { data: usersRow }] = await Promise.all([
+  const [{ data, error }, { data: usersRow }, { data: utiRow }] = await Promise.all([
     supabase.from('deposito_state').select('*').eq('id', 1).single(),
     supabase.from('deposito_state').select('deliveries').eq('id', 2).single(),
+    supabase.from('deposito_state').select('articles').eq('id', 3).single(),
   ])
   if (error || !data) return null
   let users = (usersRow?.deliveries?.length > 0 && usersRow.deliveries[0]?.username)
@@ -47,11 +49,12 @@ async function loadFromSupabase() {
     nextDel: data.next_del || 1,
     nextMov: data.next_mov || 1,
     users,
+    camisetasUtileria: utiRow?.articles || [],
   }
 }
 
 async function saveToSupabase(db) {
-  const [r1, r2] = await Promise.all([
+  const [r1, r2, r3] = await Promise.all([
     supabase.from('deposito_state').upsert({
       id: 1,
       articles: db.articles,
@@ -72,8 +75,18 @@ async function saveToSupabase(db) {
       next_mov: 0,
       updated_at: new Date().toISOString(),
     }),
+    supabase.from('deposito_state').upsert({
+      id: 3,
+      articles: db.camisetasUtileria || [],
+      deliveries: [],
+      movimientos: [],
+      next_id: 0,
+      next_del: 0,
+      next_mov: 0,
+      updated_at: new Date().toISOString(),
+    }),
   ])
-  return !r1.error && !r2.error
+  return !r1.error && !r2.error && !r3.error
 }
 
 function fmt(n) { return Number(n).toLocaleString('es-UY') }
@@ -113,6 +126,9 @@ export default function App() {
   const [delFilterPersona, setDelFilterPersona] = useState('')
   const [selectedDeliveryId, setSelectedDeliveryId] = useState(null)
   const [selectedReceptor, setSelectedReceptor] = useState(null)
+  const [utiFilter, setUtiFilter] = useState('')
+  const [utiForm, setUtiForm] = useState({ competicion:'', numero:'', jugador:'', talle:'S', id:null })
+  const [utiModal, setUtiModal] = useState(false)
   const [toast, setToast] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [session, setSession] = useState(() => localStorage.getItem(SESSION_KEY) || null)
@@ -696,6 +712,26 @@ export default function App() {
   const movFilterKind = (movChipDefs.find(c=>c[0]===movFilter)||[])[1]
   const movRows = movimientos.filter(m => !movFilterKind || movKind(m)===movFilterKind)
 
+  const saveUti = () => {
+    if(!utiForm.numero.trim()) { showToast('Ingresá el número de camiseta.'); return }
+    setDb(prev => {
+      const list = prev.camisetasUtileria || []
+      if(utiForm.id !== null) {
+        return {...prev, camisetasUtileria: list.map(c => c.id === utiForm.id ? {...utiForm} : c)}
+      } else {
+        const newId = list.length > 0 ? Math.max(...list.map(c => c.id)) + 1 : 1
+        return {...prev, camisetasUtileria: [...list, {...utiForm, id: newId}]}
+      }
+    })
+    setUtiModal(false)
+    showToast(utiForm.id !== null ? 'Camiseta actualizada.' : 'Camiseta agregada.')
+  }
+  const deleteUti = (id) => {
+    setDb(prev => ({...prev, camisetasUtileria: (prev.camisetasUtileria||[]).filter(c => c.id !== id)}))
+    showToast('Camiseta eliminada.')
+  }
+  const utiFiltered = (db.camisetasUtileria || []).filter(c => !utiFilter || c.competicion === utiFilter)
+
   const receptorCards = RECEPTORES.map(name => {
     const ds = deliveries.filter(d => d.receptor===name)
     const unidades = ds.reduce((s,d) => s+d.lines.reduce((x,l)=>x+l.qty,0),0)
@@ -999,7 +1035,7 @@ export default function App() {
           </div>
         </div>
         <nav className="sidebar-nav">
-          {[['panel','PANEL'],['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES'],['usuarios-reg','USUARIOS REGISTRADOS']].map(([key,label]) => {
+          {[['panel','PANEL'],['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES'],['usuarios-reg','USUARIOS REGISTRADOS'],['utileria','CAMISETAS UTILERÍA']].map(([key,label]) => {
             const isActive = view===key||(key==='inventario'&&view==='detalle')
             return (
               <button key={key} className={`nav-item${isActive?' active':''}`} onClick={() => goView(key)}>
@@ -1030,7 +1066,7 @@ export default function App() {
           </button>
           <img src="/1891_Amarillo.jpg" alt="1891" style={{height:28,width:'auto'}} />
           <div className="topbar-title">
-            {{panel:'PANEL',inventario:'INVENTARIO',detalle:'DETALLE',entregas:'ENTREGAS',movimientos:'MOVIMIENTOS',receptores:'RECEPTORES','usuarios-reg':'USUARIOS REGISTRADOS'}[view]}
+            {{panel:'PANEL',inventario:'INVENTARIO',detalle:'DETALLE',entregas:'ENTREGAS',movimientos:'MOVIMIENTOS',receptores:'RECEPTORES','usuarios-reg':'USUARIOS REGISTRADOS',utileria:'CAMISETAS UTILERÍA'}[view]}
           </div>
           <div className="topbar-spacer" />
           <div className="search-box">
@@ -1423,6 +1459,44 @@ export default function App() {
               ))}
             </div>
           )}
+          {/* CAMISETAS UTILERÍA */}
+          {view === 'utileria' && (
+            <div style={{display:'flex',flexDirection:'column',gap:12}}>
+              <div style={{display:'flex',gap:8,alignItems:'center',justifyContent:'space-between',flexWrap:'wrap'}}>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                  <button className={`chip${utiFilter===''?' active':''}`} onClick={()=>setUtiFilter('')}>Todas</button>
+                  {COMPETICIONES.map(c => (
+                    <button key={c} className={`chip${utiFilter===c?' active':''}`} onClick={()=>setUtiFilter(c)}>{c}</button>
+                  ))}
+                </div>
+                <button className="btn btn-dark" style={{flexShrink:0}} onClick={()=>{ setUtiForm({competicion:COMPETICIONES[0],numero:'',jugador:'',talle:'S',id:null}); setUtiModal(true) }}>+ Camiseta</button>
+              </div>
+              <div className="card" style={{overflow:'hidden'}}>
+                <div style={{display:'grid',gridTemplateColumns:'52px 1fr 60px 76px 36px',background:'#121212',padding:'9px 16px',gap:8}}>
+                  <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:.5}}>NRO.</div>
+                  <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:.5}}>JUGADOR / COMPETICIÓN</div>
+                  <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:.5}}>TALLE</div>
+                  <div></div>
+                  <div></div>
+                </div>
+                {utiFiltered.length === 0
+                  ? <div style={{padding:28,textAlign:'center',color:'#8a8a82',fontSize:13}}>No hay camisetas registradas{utiFilter ? ' para esta competición' : ''}.</div>
+                  : utiFiltered.map(c => (
+                      <div key={c.id} style={{display:'grid',gridTemplateColumns:'52px 1fr 60px 76px 36px',padding:'11px 16px',borderBottom:'1px solid #F0F0EC',alignItems:'center',gap:8}}>
+                        <div style={{fontWeight:800,fontSize:18,fontFamily:'IBM Plex Mono,monospace',color:'#1a1a1a'}}>{c.numero}</div>
+                        <div>
+                          <div style={{fontWeight:600,fontSize:13.5}}>{c.jugador || <span style={{color:'#aaa',fontStyle:'italic',fontWeight:400}}>Sin asignar</span>}</div>
+                          <div style={{fontSize:11,color:'#8a8a82',marginTop:2}}>{c.competicion}</div>
+                        </div>
+                        <div style={{fontSize:13,fontWeight:600}}>{c.talle}</div>
+                        <button className="btn btn-ghost" style={{padding:'4px 10px',fontSize:12}} onClick={()=>{setUtiForm({...c}); setUtiModal(true)}}>Editar</button>
+                        <button onClick={()=>deleteUti(c.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:18,color:'#C2473D',padding:'0 4px',lineHeight:1}}>×</button>
+                      </div>
+                    ))
+                }
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1485,6 +1559,46 @@ export default function App() {
           </div>
         )
       })()}
+
+      {/* Modal: Camiseta Utilería */}
+      {utiModal && (
+        <div className="modal-backdrop" onClick={()=>setUtiModal(false)}>
+          <div className="modal modal-sm" onClick={e=>e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">{utiForm.id !== null ? 'Editar camiseta' : 'Nueva camiseta'}</div>
+              <button className="modal-close" onClick={()=>setUtiModal(false)}>×</button>
+            </div>
+            <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:12}}>
+              <div className="form-group">
+                <label className="field-label">Competición</label>
+                <select className="field-input" value={utiForm.competicion} onChange={e=>setUtiForm(p=>({...p,competicion:e.target.value}))}>
+                  {COMPETICIONES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div className="form-cols-2">
+                <div className="form-group">
+                  <label className="field-label">Número</label>
+                  <input className="field-input" value={utiForm.numero} onChange={e=>setUtiForm(p=>({...p,numero:e.target.value}))} placeholder="10" />
+                </div>
+                <div className="form-group">
+                  <label className="field-label">Talle</label>
+                  <select className="field-input" value={utiForm.talle} onChange={e=>setUtiForm(p=>({...p,talle:e.target.value}))}>
+                    {[...TALLES_ADULTO,...TALLES_NINO].map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="field-label">Jugador / Asignado</label>
+                <input className="field-input" value={utiForm.jugador} onChange={e=>setUtiForm(p=>({...p,jugador:e.target.value}))} placeholder="Nombre del jugador" />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={()=>setUtiModal(false)}>Cancelar</button>
+              <button className="btn btn-dark" onClick={saveUti}>Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal: Detalle de receptor */}
       {selectedReceptor && (() => {
