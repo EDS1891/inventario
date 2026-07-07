@@ -1614,7 +1614,7 @@ export default function App() {
                     <option value="DORADA">DORADA</option>
                     <option value="NEGRA Y DORADA">NEGRA Y DORADA</option>
                     <option value="NEGRA Y AMARILLA">NEGRA Y AMARILLA</option>
-                    <option value="VERDE FLÚO">VERDE FLÚO</option>
+                    <option value="AMARILLA FLÚO">AMARILLA FLÚO</option>
                   </select>
                 </div>
                 <div className="form-group">
