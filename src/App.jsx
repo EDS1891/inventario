@@ -127,7 +127,7 @@ export default function App() {
   const [selectedDeliveryId, setSelectedDeliveryId] = useState(null)
   const [selectedReceptor, setSelectedReceptor] = useState(null)
   const [utiFilter, setUtiFilter] = useState('')
-  const [utiForm, setUtiForm] = useState({ competicion:'', numero:'', jugador:'', talle:'S', id:null })
+  const [utiForm, setUtiForm] = useState({ competicion:'', numero:'', jugador:'', talle:'S', modelo:'', estampado:'', parches:'', detalle:'', id:null })
   const [utiModal, setUtiModal] = useState(false)
   const [toast, setToast] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -1469,7 +1469,7 @@ export default function App() {
                     <button key={c} className={`chip${utiFilter===c?' active':''}`} onClick={()=>setUtiFilter(c)}>{c}</button>
                   ))}
                 </div>
-                <button className="btn btn-dark" style={{flexShrink:0}} onClick={()=>{ setUtiForm({competicion:COMPETICIONES[0],numero:'',jugador:'',talle:'S',id:null}); setUtiModal(true) }}>+ Camiseta</button>
+                <button className="btn btn-dark" style={{flexShrink:0}} onClick={()=>{ setUtiForm({competicion:COMPETICIONES[0],numero:'',jugador:'',talle:'S',modelo:'',estampado:'',parches:'',detalle:'',id:null}); setUtiModal(true) }}>+ Camiseta</button>
               </div>
               <div className="card" style={{overflow:'hidden'}}>
                 <div style={{display:'grid',gridTemplateColumns:'52px 1fr 60px 76px 36px',background:'#121212',padding:'9px 16px',gap:8}}>
@@ -1487,6 +1487,11 @@ export default function App() {
                         <div>
                           <div style={{fontWeight:600,fontSize:13.5}}>{c.jugador || <span style={{color:'#aaa',fontStyle:'italic',fontWeight:400}}>Sin asignar</span>}</div>
                           <div style={{fontSize:11,color:'#8a8a82',marginTop:2}}>{c.competicion}</div>
+                          {(c.modelo||c.estampado||c.parches||c.detalle) && (
+                            <div style={{fontSize:11,color:'#aaa',marginTop:2}}>
+                              {[c.modelo&&`Modelo: ${c.modelo}`,c.estampado&&`Estampado: ${c.estampado}`,c.parches&&`Parches: ${c.parches}`,c.detalle&&`Detalle: ${c.detalle}`].filter(Boolean).join(' · ')}
+                            </div>
+                          )}
                         </div>
                         <div style={{fontSize:13,fontWeight:600}}>{c.talle}</div>
                         <button className="btn btn-ghost" style={{padding:'4px 10px',fontSize:12}} onClick={()=>{setUtiForm({...c}); setUtiModal(true)}}>Editar</button>
@@ -1590,6 +1595,26 @@ export default function App() {
               <div className="form-group">
                 <label className="field-label">Jugador / Asignado</label>
                 <input className="field-input" value={utiForm.jugador} onChange={e=>setUtiForm(p=>({...p,jugador:e.target.value}))} placeholder="Nombre del jugador" />
+              </div>
+              <div className="form-cols-2">
+                <div className="form-group">
+                  <label className="field-label">Modelo</label>
+                  <input className="field-input" value={utiForm.modelo} onChange={e=>setUtiForm(p=>({...p,modelo:e.target.value}))} placeholder="" />
+                </div>
+                <div className="form-group">
+                  <label className="field-label">Estampado</label>
+                  <input className="field-input" value={utiForm.estampado} onChange={e=>setUtiForm(p=>({...p,estampado:e.target.value}))} placeholder="" />
+                </div>
+              </div>
+              <div className="form-cols-2">
+                <div className="form-group">
+                  <label className="field-label">Parches</label>
+                  <input className="field-input" value={utiForm.parches} onChange={e=>setUtiForm(p=>({...p,parches:e.target.value}))} placeholder="" />
+                </div>
+                <div className="form-group">
+                  <label className="field-label">Detalle</label>
+                  <input className="field-input" value={utiForm.detalle} onChange={e=>setUtiForm(p=>({...p,detalle:e.target.value}))} placeholder="" />
+                </div>
               </div>
             </div>
             <div className="modal-footer">
