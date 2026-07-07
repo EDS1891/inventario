@@ -1520,32 +1520,31 @@ export default function App() {
                 </div>
                 <button className="btn btn-dark" style={{flexShrink:0,marginTop:2}} onClick={()=>{ setUtiForm({tipo:'',competicion:COMPETICIONES[0],numero:'',jugador:'',talle:'S',modelo:'',estampado:'',parches:'',detalle:'',temporada:'',id:null}); setUtiModal(true) }}>+ Camiseta</button>
               </div>
-              <div className="card" style={{overflow:'hidden'}}>
-                <div style={{display:'grid',gridTemplateColumns:'52px 1fr 60px 76px 36px',background:'#121212',padding:'9px 16px',gap:8}}>
-                  <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:.5}}>NRO.</div>
-                  <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:.5}}>JUGADOR / COMPETICIÓN</div>
-                  <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:.5}}>TALLE</div>
-                  <div></div>
-                  <div></div>
+              <div className="card" style={{overflow:'auto'}}>
+                <div style={{display:'grid',gridTemplateColumns:'90px 70px 52px 1fr 110px 1fr 48px 70px 32px',background:'#121212',padding:'9px 16px',gap:8,minWidth:700}}>
+                  {['MODELO','TEMP.','NRO.','NOMBRE','ESTAMPADO','COMPETICIÓN','TALLE','',''].map((h,i) => (
+                    <div key={i} style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:.5}}>{h}</div>
+                  ))}
                 </div>
                 {utiFiltered.length === 0
                   ? <div style={{padding:28,textAlign:'center',color:'#8a8a82',fontSize:13}}>No hay camisetas que coincidan con los filtros.</div>
                   : utiFiltered.map(c => (
-                      <div key={c.id} style={{display:'grid',gridTemplateColumns:'52px 1fr 60px 76px 36px',padding:'11px 16px',borderBottom:'1px solid #F0F0EC',alignItems:'center',gap:8}}>
-                        <div style={{fontWeight:800,fontSize:18,fontFamily:'IBM Plex Mono,monospace',color:'#1a1a1a'}}>{c.numero}</div>
-                        <div>
-                          <div style={{fontWeight:600,fontSize:13.5,display:'flex',alignItems:'center',gap:6}}>
-                            {c.jugador || <span style={{color:'#aaa',fontStyle:'italic',fontWeight:400}}>Sin asignar</span>}
-                            {c.tipo && <span style={{fontSize:10,fontWeight:700,background:c.tipo==='GOLERO'?'#EDF7F2':'#F0F0EC',color:c.tipo==='GOLERO'?'#2e9b5e':'#6a6a62',border:'1px solid '+(c.tipo==='GOLERO'?'#2e9b5e':'#D0D0CA'),borderRadius:4,padding:'1px 6px'}}>{c.tipo}</span>}
-                          </div>
-                          <div style={{fontSize:11,color:'#8a8a82',marginTop:2}}>{c.competicion}</div>
+                      <div key={c.id} style={{display:'grid',gridTemplateColumns:'90px 70px 52px 1fr 110px 1fr 48px 70px 32px',padding:'10px 16px',borderBottom:'1px solid #F0F0EC',alignItems:'center',gap:8,minWidth:700}}>
+                        <div style={{fontSize:12,fontWeight:600,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.modelo||<span style={{color:'#ccc'}}>—</span>}</div>
+                        <div style={{fontSize:12,color:'#6a6a62'}}>{c.temporada||<span style={{color:'#ccc'}}>—</span>}</div>
+                        <div style={{fontWeight:800,fontSize:17,fontFamily:'IBM Plex Mono,monospace',color:'#1a1a1a'}}>{c.numero}</div>
+                        <div style={{fontWeight:600,fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:5}}>
+                          {c.jugador || <span style={{color:'#aaa',fontStyle:'italic',fontWeight:400}}>Sin asignar</span>}
+                          {c.tipo && <span style={{fontSize:10,fontWeight:700,background:c.tipo==='GOLERO'?'#EDF7F2':'#F0F0EC',color:c.tipo==='GOLERO'?'#2e9b5e':'#6a6a62',border:'1px solid '+(c.tipo==='GOLERO'?'#2e9b5e':'#D0D0CA'),borderRadius:4,padding:'1px 5px',flexShrink:0}}>{c.tipo}</span>}
                         </div>
-                        <div style={{fontSize:13,fontWeight:600}}>{c.talle}</div>
+                        <div style={{fontSize:12,color:'#6a6a62',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.estampado||<span style={{color:'#ccc'}}>—</span>}</div>
+                        <div style={{fontSize:12,color:'#6a6a62',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.competicion||<span style={{color:'#ccc'}}>—</span>}</div>
+                        <div style={{fontSize:13,fontWeight:700,textAlign:'center'}}>{c.talle}</div>
                         <button className="btn btn-ghost" style={{padding:'4px 10px',fontSize:12}} onClick={()=>{setUtiForm({...c}); setUtiModal(true)}}>Editar</button>
                         <button onClick={()=>deleteUti(c.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:18,color:'#C2473D',padding:'0 4px',lineHeight:1}}>×</button>
-                        {(c.modelo||c.estampado||c.parches||c.detalle) && (
-                          <div style={{gridColumn:'1 / -1',fontSize:11,color:'#8a8a82',paddingTop:2,borderTop:'1px dashed #F0F0EC',marginTop:4}}>
-                            {[c.modelo&&`Modelo: ${c.modelo}`,c.estampado&&`Estampado: ${c.estampado}`,c.parches&&`Parches: ${c.parches}`,c.detalle&&`Detalle: ${c.detalle}`].filter(Boolean).join('  ·  ')}
+                        {(c.parches||c.detalle) && (
+                          <div style={{gridColumn:'1 / -1',fontSize:11,color:'#8a8a82',paddingTop:4,borderTop:'1px dashed #F0F0EC',marginTop:2}}>
+                            {[c.parches&&`Parches: ${c.parches}`,c.detalle&&`Detalle: ${c.detalle}`].filter(Boolean).join('  ·  ')}
                           </div>
                         )}
                       </div>
