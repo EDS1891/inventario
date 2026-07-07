@@ -1472,6 +1472,11 @@ export default function App() {
           {/* CAMISETAS UTILERÍA */}
           {view === 'utileria' && (
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:180}}>
+                <div className="kpi-label">CAMISETAS REGISTRADAS</div>
+                <div className="kpi-value">{(db.camisetasUtileria||[]).length}</div>
+                <div className="kpi-sub">en utilería</div>
+              </div>
               <div style={{display:'flex',gap:8,alignItems:'flex-start',justifyContent:'space-between'}}>
                 <div style={{display:'flex',flexDirection:'column',gap:6,flex:1}}>
                   {/* Filtro: Competición */}
