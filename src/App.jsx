@@ -1603,6 +1603,11 @@ export default function App() {
                     <option value="">Seleccionar…</option>
                     <option value="TRADICIONAL">TRADICIONAL</option>
                     <option value="GRIS">GRIS</option>
+                    <option value="AMARILLA">AMARILLA</option>
+                    <option value="DORADA">DORADA</option>
+                    <option value="NEGRA Y DORADA">NEGRA Y DORADA</option>
+                    <option value="NEGRA Y AMARILLA">NEGRA Y AMARILLA</option>
+                    <option value="VERDE FLÚO">VERDE FLÚO</option>
                   </select>
                 </div>
                 <div className="form-group">
