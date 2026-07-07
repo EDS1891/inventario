@@ -127,7 +127,7 @@ export default function App() {
   const [selectedDeliveryId, setSelectedDeliveryId] = useState(null)
   const [selectedReceptor, setSelectedReceptor] = useState(null)
   const [utiFilter, setUtiFilter] = useState('')
-  const [utiForm, setUtiForm] = useState({ competicion:'', numero:'', jugador:'', talle:'S', modelo:'', estampado:'', parches:'', detalle:'', id:null })
+  const [utiForm, setUtiForm] = useState({ competicion:'', numero:'', jugador:'', talle:'S', modelo:'', estampado:'', parches:'', detalle:'', temporada:'', id:null })
   const [utiModal, setUtiModal] = useState(false)
   const [toast, setToast] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -1469,7 +1469,7 @@ export default function App() {
                     <button key={c} className={`chip${utiFilter===c?' active':''}`} onClick={()=>setUtiFilter(c)}>{c}</button>
                   ))}
                 </div>
-                <button className="btn btn-dark" style={{flexShrink:0}} onClick={()=>{ setUtiForm({competicion:COMPETICIONES[0],numero:'',jugador:'',talle:'S',modelo:'',estampado:'',parches:'',detalle:'',id:null}); setUtiModal(true) }}>+ Camiseta</button>
+                <button className="btn btn-dark" style={{flexShrink:0}} onClick={()=>{ setUtiForm({competicion:COMPETICIONES[0],numero:'',jugador:'',talle:'S',modelo:'',estampado:'',parches:'',detalle:'',temporada:'',id:null}); setUtiModal(true) }}>+ Camiseta</button>
               </div>
               <div className="card" style={{overflow:'hidden'}}>
                 <div style={{display:'grid',gridTemplateColumns:'52px 1fr 60px 76px 36px',background:'#121212',padding:'9px 16px',gap:8}}>
@@ -1595,6 +1595,13 @@ export default function App() {
               <div className="form-group">
                 <label className="field-label">Jugador / Asignado</label>
                 <input className="field-input" value={utiForm.jugador} onChange={e=>setUtiForm(p=>({...p,jugador:e.target.value}))} placeholder="Nombre del jugador" />
+              </div>
+              <div className="form-group">
+                <label className="field-label">Temporada</label>
+                <select className="field-input" value={utiForm.temporada} onChange={e=>setUtiForm(p=>({...p,temporada:e.target.value}))}>
+                  <option value="">Seleccionar…</option>
+                  {['2012/2013','2013/2014','2015/2016','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025','2026'].map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
               </div>
               <div className="form-cols-2">
                 <div className="form-group">
