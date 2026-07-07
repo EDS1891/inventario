@@ -129,6 +129,9 @@ export default function App() {
   const [selectedDeliveryId, setSelectedDeliveryId] = useState(null)
   const [selectedReceptor, setSelectedReceptor] = useState(null)
   const [utiFilter, setUtiFilter] = useState('')
+  const [utiFilterTipo, setUtiFilterTipo] = useState('')
+  const [utiFilterTemp, setUtiFilterTemp] = useState('')
+  const [utiFilterModelo, setUtiFilterModelo] = useState('')
   const [utiForm, setUtiForm] = useState({ tipo:'', competicion:'', numero:'', jugador:'', talle:'S', modelo:'', estampado:'', parches:'', detalle:'', temporada:'', id:null })
   const [utiModal, setUtiModal] = useState(false)
   const [toast, setToast] = useState('')
@@ -732,7 +735,12 @@ export default function App() {
     setDb(prev => ({...prev, camisetasUtileria: (prev.camisetasUtileria||[]).filter(c => c.id !== id)}))
     showToast('Camiseta eliminada.')
   }
-  const utiFiltered = (db.camisetasUtileria || []).filter(c => !utiFilter || c.competicion === utiFilter)
+  const utiFiltered = (db.camisetasUtileria || []).filter(c =>
+    (!utiFilter      || c.competicion === utiFilter) &&
+    (!utiFilterTipo  || c.tipo === utiFilterTipo) &&
+    (!utiFilterTemp  || c.temporada === utiFilterTemp) &&
+    (!utiFilterModelo|| c.modelo === utiFilterModelo)
+  )
 
   const receptorCards = RECEPTORES.map(name => {
     const ds = deliveries.filter(d => d.receptor===name)
@@ -1463,15 +1471,35 @@ export default function App() {
           )}
           {/* CAMISETAS UTILERÍA */}
           {view === 'utileria' && (
-            <div style={{display:'flex',flexDirection:'column',gap:12}}>
-              <div style={{display:'flex',gap:8,alignItems:'center',justifyContent:'space-between',flexWrap:'wrap'}}>
-                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                  <button className={`chip${utiFilter===''?' active':''}`} onClick={()=>setUtiFilter('')}>Todas</button>
-                  {COMPETICIONES.map(c => (
-                    <button key={c} className={`chip${utiFilter===c?' active':''}`} onClick={()=>setUtiFilter(c)}>{c}</button>
-                  ))}
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              <div style={{display:'flex',gap:8,alignItems:'flex-start',justifyContent:'space-between'}}>
+                <div style={{display:'flex',flexDirection:'column',gap:6,flex:1}}>
+                  {/* Filtro: Competición */}
+                  <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
+                    <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>COMPETICIÓN</span>
+                    <button className={`chip${utiFilter===''?' active':''}`} onClick={()=>setUtiFilter('')}>Todas</button>
+                    {COMPETICIONES.map(c => <button key={c} className={`chip${utiFilter===c?' active':''}`} onClick={()=>setUtiFilter(c)}>{c}</button>)}
+                  </div>
+                  {/* Filtro: Tipo */}
+                  <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
+                    <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>TIPO</span>
+                    <button className={`chip${utiFilterTipo===''?' active':''}`} onClick={()=>setUtiFilterTipo('')}>Todos</button>
+                    {['JUGADOR','GOLERO'].map(t => <button key={t} className={`chip${utiFilterTipo===t?' active':''}`} onClick={()=>setUtiFilterTipo(t)}>{t}</button>)}
+                  </div>
+                  {/* Filtro: Temporada */}
+                  <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
+                    <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>TEMPORADA</span>
+                    <button className={`chip${utiFilterTemp===''?' active':''}`} onClick={()=>setUtiFilterTemp('')}>Todas</button>
+                    {['2012/2013','2013/2014','2015/2016','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025','2026'].map(t => <button key={t} className={`chip${utiFilterTemp===t?' active':''}`} onClick={()=>setUtiFilterTemp(t)}>{t}</button>)}
+                  </div>
+                  {/* Filtro: Modelo */}
+                  <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
+                    <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>MODELO</span>
+                    <button className={`chip${utiFilterModelo===''?' active':''}`} onClick={()=>setUtiFilterModelo('')}>Todos</button>
+                    {[...new Set([...MODELOS_JUGADOR,...MODELOS_GOLERO])].map(m => <button key={m} className={`chip${utiFilterModelo===m?' active':''}`} onClick={()=>setUtiFilterModelo(m)}>{m}</button>)}
+                  </div>
                 </div>
-                <button className="btn btn-dark" style={{flexShrink:0}} onClick={()=>{ setUtiForm({tipo:'',competicion:COMPETICIONES[0],numero:'',jugador:'',talle:'S',modelo:'',estampado:'',parches:'',detalle:'',temporada:'',id:null}); setUtiModal(true) }}>+ Camiseta</button>
+                <button className="btn btn-dark" style={{flexShrink:0,marginTop:2}} onClick={()=>{ setUtiForm({tipo:'',competicion:COMPETICIONES[0],numero:'',jugador:'',talle:'S',modelo:'',estampado:'',parches:'',detalle:'',temporada:'',id:null}); setUtiModal(true) }}>+ Camiseta</button>
               </div>
               <div className="card" style={{overflow:'hidden'}}>
                 <div style={{display:'grid',gridTemplateColumns:'52px 1fr 60px 76px 36px',background:'#121212',padding:'9px 16px',gap:8}}>
@@ -1482,7 +1510,7 @@ export default function App() {
                   <div></div>
                 </div>
                 {utiFiltered.length === 0
-                  ? <div style={{padding:28,textAlign:'center',color:'#8a8a82',fontSize:13}}>No hay camisetas registradas{utiFilter ? ' para esta competición' : ''}.</div>
+                  ? <div style={{padding:28,textAlign:'center',color:'#8a8a82',fontSize:13}}>No hay camisetas que coincidan con los filtros.</div>
                   : utiFiltered.map(c => (
                       <div key={c.id} style={{display:'grid',gridTemplateColumns:'52px 1fr 60px 76px 36px',padding:'11px 16px',borderBottom:'1px solid #F0F0EC',alignItems:'center',gap:8}}>
                         <div style={{fontWeight:800,fontSize:18,fontFamily:'IBM Plex Mono,monospace',color:'#1a1a1a'}}>{c.numero}</div>
