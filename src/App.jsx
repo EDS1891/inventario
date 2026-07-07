@@ -1605,7 +1605,7 @@ export default function App() {
                 <div className="form-group">
                   <label className="field-label">Talle</label>
                   <select className="field-input" value={utiForm.talle} onChange={e=>setUtiForm(p=>({...p,talle:e.target.value}))}>
-                    {[...TALLES_ADULTO,...TALLES_NINO].map(t => <option key={t} value={t}>{t}</option>)}
+                    {['S','M','L','XL'].map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
               </div>
