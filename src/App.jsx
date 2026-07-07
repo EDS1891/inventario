@@ -16,6 +16,8 @@ const ALTURAS = ['A','B','C','D','E','O']
 const DEFAULT_USERS = [{ username:'compras', password:'peniarol1891', role:'admin', displayName:'Compras Peñarol', status:'aprobado' }]
 const EMPTY_DB = { articles:[], deliveries:[], movimientos:[], nextId:1, nextDel:1, nextMov:1, users: DEFAULT_USERS, camisetasUtileria:[] }
 const COMPETICIONES = ['CAMPEONATO URUGUAYO','CONMEBOL','COPA LIBERTADORES FEMENINA','COPA LIBERTADORES FÚTBOL SALA','COPA INTERCONTINENTAL SUB 20']
+const MODELOS_JUGADOR = ['TRADICIONAL','GRIS','AMARILLA','DORADA','NEGRA Y DORADA','NEGRA Y AMARILLA','AMARILLA FLÚO']
+const MODELOS_GOLERO  = ['VERDE','NARANJA','NEGRO','GRIS','ROSADO','CREMA','AMARILLO FLÚO','AMARILLO']
 
 const USERS_KEY = 'dep_usuarios_v1'
 const SESSION_KEY = 'dep_session'
@@ -127,7 +129,7 @@ export default function App() {
   const [selectedDeliveryId, setSelectedDeliveryId] = useState(null)
   const [selectedReceptor, setSelectedReceptor] = useState(null)
   const [utiFilter, setUtiFilter] = useState('')
-  const [utiForm, setUtiForm] = useState({ competicion:'', numero:'', jugador:'', talle:'S', modelo:'', estampado:'', parches:'', detalle:'', temporada:'', id:null })
+  const [utiForm, setUtiForm] = useState({ tipo:'', competicion:'', numero:'', jugador:'', talle:'S', modelo:'', estampado:'', parches:'', detalle:'', temporada:'', id:null })
   const [utiModal, setUtiModal] = useState(false)
   const [toast, setToast] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -1469,7 +1471,7 @@ export default function App() {
                     <button key={c} className={`chip${utiFilter===c?' active':''}`} onClick={()=>setUtiFilter(c)}>{c}</button>
                   ))}
                 </div>
-                <button className="btn btn-dark" style={{flexShrink:0}} onClick={()=>{ setUtiForm({competicion:COMPETICIONES[0],numero:'',jugador:'',talle:'S',modelo:'',estampado:'',parches:'',detalle:'',temporada:'',id:null}); setUtiModal(true) }}>+ Camiseta</button>
+                <button className="btn btn-dark" style={{flexShrink:0}} onClick={()=>{ setUtiForm({tipo:'',competicion:COMPETICIONES[0],numero:'',jugador:'',talle:'S',modelo:'',estampado:'',parches:'',detalle:'',temporada:'',id:null}); setUtiModal(true) }}>+ Camiseta</button>
               </div>
               <div className="card" style={{overflow:'hidden'}}>
                 <div style={{display:'grid',gridTemplateColumns:'52px 1fr 60px 76px 36px',background:'#121212',padding:'9px 16px',gap:8}}>
@@ -1485,7 +1487,10 @@ export default function App() {
                       <div key={c.id} style={{display:'grid',gridTemplateColumns:'52px 1fr 60px 76px 36px',padding:'11px 16px',borderBottom:'1px solid #F0F0EC',alignItems:'center',gap:8}}>
                         <div style={{fontWeight:800,fontSize:18,fontFamily:'IBM Plex Mono,monospace',color:'#1a1a1a'}}>{c.numero}</div>
                         <div>
-                          <div style={{fontWeight:600,fontSize:13.5}}>{c.jugador || <span style={{color:'#aaa',fontStyle:'italic',fontWeight:400}}>Sin asignar</span>}</div>
+                          <div style={{fontWeight:600,fontSize:13.5,display:'flex',alignItems:'center',gap:6}}>
+                            {c.jugador || <span style={{color:'#aaa',fontStyle:'italic',fontWeight:400}}>Sin asignar</span>}
+                            {c.tipo && <span style={{fontSize:10,fontWeight:700,background:c.tipo==='GOLERO'?'#EDF7F2':'#F0F0EC',color:c.tipo==='GOLERO'?'#2e9b5e':'#6a6a62',border:'1px solid '+(c.tipo==='GOLERO'?'#2e9b5e':'#D0D0CA'),borderRadius:4,padding:'1px 6px'}}>{c.tipo}</span>}
+                          </div>
                           <div style={{fontSize:11,color:'#8a8a82',marginTop:2}}>{c.competicion}</div>
                           {(c.modelo||c.estampado||c.parches||c.detalle) && (
                             <div style={{fontSize:11,color:'#aaa',marginTop:2}}>
@@ -1575,6 +1580,18 @@ export default function App() {
             </div>
             <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:12}}>
               <div className="form-group">
+                <label className="field-label">Tipo</label>
+                <div style={{display:'flex',gap:8}}>
+                  {['JUGADOR','GOLERO'].map(t => (
+                    <button key={t} className={`talle-btn${utiForm.tipo===t?' active':''}`}
+                      style={{flex:1,padding:'10px 0',fontSize:13,fontWeight:700}}
+                      onClick={()=>setUtiForm(p=>({...p,tipo:t,modelo:''}))}>
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="form-group">
                 <label className="field-label">Competición</label>
                 <select className="field-input" value={utiForm.competicion} onChange={e=>setUtiForm(p=>({...p,competicion:e.target.value}))}>
                   {COMPETICIONES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -1608,13 +1625,7 @@ export default function App() {
                   <label className="field-label">Modelo</label>
                   <select className="field-input" value={utiForm.modelo} onChange={e=>setUtiForm(p=>({...p,modelo:e.target.value}))}>
                     <option value="">Seleccionar…</option>
-                    <option value="TRADICIONAL">TRADICIONAL</option>
-                    <option value="GRIS">GRIS</option>
-                    <option value="AMARILLA">AMARILLA</option>
-                    <option value="DORADA">DORADA</option>
-                    <option value="NEGRA Y DORADA">NEGRA Y DORADA</option>
-                    <option value="NEGRA Y AMARILLA">NEGRA Y AMARILLA</option>
-                    <option value="AMARILLA FLÚO">AMARILLA FLÚO</option>
+                    {(utiForm.tipo==='GOLERO' ? MODELOS_GOLERO : MODELOS_JUGADOR).map(m => <option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
