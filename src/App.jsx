@@ -1531,15 +1531,15 @@ export default function App() {
                   : utiFiltered.map(c => (
                       <div key={c.id} style={{display:'grid',gridTemplateColumns:'90px 70px 52px 1fr 110px 1fr 48px 70px 32px',padding:'10px 16px',borderBottom:'1px solid #F0F0EC',alignItems:'center',gap:8,minWidth:700}}>
                         <div style={{fontSize:12,fontWeight:600,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.modelo||<span style={{color:'#ccc'}}>—</span>}</div>
-                        <div style={{fontSize:12,color:'#6a6a62'}}>{c.temporada||<span style={{color:'#ccc'}}>—</span>}</div>
+                        <div style={{fontSize:12,color:'#1a1a1a'}}>{c.temporada||<span style={{color:'#ccc'}}>—</span>}</div>
                         <div style={{fontWeight:800,fontSize:17,fontFamily:'IBM Plex Mono,monospace',color:'#1a1a1a'}}>{c.numero}</div>
                         <div style={{fontWeight:600,fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',display:'flex',alignItems:'center',gap:5}}>
                           {c.jugador || <span style={{color:'#aaa',fontStyle:'italic',fontWeight:400}}>Sin asignar</span>}
                           {c.tipo && <span style={{fontSize:10,fontWeight:700,background:c.tipo==='GOLERO'?'#EDF7F2':'#F0F0EC',color:c.tipo==='GOLERO'?'#2e9b5e':'#6a6a62',border:'1px solid '+(c.tipo==='GOLERO'?'#2e9b5e':'#D0D0CA'),borderRadius:4,padding:'1px 5px',flexShrink:0}}>{c.tipo}</span>}
                         </div>
-                        <div style={{fontSize:12,color:'#6a6a62',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.estampado||<span style={{color:'#ccc'}}>—</span>}</div>
-                        <div style={{fontSize:12,color:'#6a6a62',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.competicion||<span style={{color:'#ccc'}}>—</span>}</div>
-                        <div style={{fontSize:13,fontWeight:700,textAlign:'center'}}>{c.talle}</div>
+                        <div style={{fontSize:12,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.estampado||<span style={{color:'#ccc'}}>—</span>}</div>
+                        <div style={{fontSize:12,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.competicion||<span style={{color:'#ccc'}}>—</span>}</div>
+                        <div style={{fontSize:13,fontWeight:700,textAlign:'center',color:'#1a1a1a'}}>{c.talle}</div>
                         <button className="btn btn-ghost" style={{padding:'4px 10px',fontSize:12}} onClick={()=>{setUtiForm({...c}); setUtiModal(true)}}>Editar</button>
                         <button onClick={()=>deleteUti(c.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:18,color:'#C2473D',padding:'0 4px',lineHeight:1}}>×</button>
                         {(c.parches||c.detalle) && (
