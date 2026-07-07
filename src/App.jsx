@@ -1667,18 +1667,16 @@ export default function App() {
                   {['2012/2013','2013/2014','2015/2016','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025','2026'].map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
-              <div className="form-cols-2">
-                <div className="form-group">
-                  <label className="field-label">Modelo</label>
-                  <select className="field-input" value={utiForm.modelo} onChange={e=>setUtiForm(p=>({...p,modelo:e.target.value}))}>
-                    <option value="">Seleccionar…</option>
-                    {(utiForm.tipo==='GOLERO' ? MODELOS_GOLERO : MODELOS_JUGADOR).map(m => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="field-label">Estampado</label>
-                  <input className="field-input" value={utiForm.estampado} onChange={e=>setUtiForm(p=>({...p,estampado:e.target.value}))} placeholder="" />
-                </div>
+              <div className="form-group">
+                <label className="field-label">Modelo</label>
+                <select className="field-input" value={utiForm.modelo} onChange={e=>setUtiForm(p=>({...p,modelo:e.target.value}))}>
+                  <option value="">Seleccionar…</option>
+                  {(utiForm.tipo==='GOLERO' ? MODELOS_GOLERO : MODELOS_JUGADOR).map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="field-label">Estampado</label>
+                <input className="field-input" value={utiForm.estampado} onChange={e=>setUtiForm(p=>({...p,estampado:e.target.value}))} placeholder="" />
               </div>
               <div className="form-cols-2">
                 <div className="form-group">
