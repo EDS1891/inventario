@@ -1599,7 +1599,11 @@ export default function App() {
               <div className="form-cols-2">
                 <div className="form-group">
                   <label className="field-label">Modelo</label>
-                  <input className="field-input" value={utiForm.modelo} onChange={e=>setUtiForm(p=>({...p,modelo:e.target.value}))} placeholder="" />
+                  <select className="field-input" value={utiForm.modelo} onChange={e=>setUtiForm(p=>({...p,modelo:e.target.value}))}>
+                    <option value="">Seleccionar…</option>
+                    <option value="TRADICIONAL">TRADICIONAL</option>
+                    <option value="GRIS">GRIS</option>
+                  </select>
                 </div>
                 <div className="form-group">
                   <label className="field-label">Estampado</label>
