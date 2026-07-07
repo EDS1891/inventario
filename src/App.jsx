@@ -120,6 +120,7 @@ export default function App() {
   const [selectedCode, setSelectedCode] = useState(null)
   const [search, setSearch] = useState('')
   const [cat, setCat] = useState('Todas')
+  const [filterUbic, setFilterUbic] = useState('')
   const [modal, setModal] = useState(null)
   const [confirm, setConfirm] = useState(null)
   const [editing, setEditing] = useState(null)
@@ -614,6 +615,7 @@ export default function App() {
   const q = search.trim().toLowerCase()
   let filtered = articles.filter(a => cat==='Todas' || a.cat===cat)
   if(q) filtered = filtered.filter(a => a.name.toLowerCase().includes(q) || a.code.toLowerCase().includes(q) || (a.ubic||'').toLowerCase().includes(q))
+  if(filterUbic) filtered = filtered.filter(a => (a.ubic||'') === filterUbic)
 
   const parseUbic = u => {
     if(!u || u==='—') return { n: Infinity, l: '' }
@@ -624,6 +626,12 @@ export default function App() {
     const ua = parseUbic(a.ubic), ub = parseUbic(b.ubic)
     if(ua.n !== ub.n) return ua.n - ub.n
     return ua.l.localeCompare(ub.l)
+  })
+
+  const availableUbics = [...new Set(articles.map(a => a.ubic).filter(Boolean))].sort((a,b) => {
+    const pa = parseUbic(a), pb = parseUbic(b)
+    if(pa.n !== pb.n) return pa.n - pb.n
+    return pa.l.localeCompare(pb.l)
   })
 
   // Group by code for inventory rows
@@ -1205,6 +1213,12 @@ export default function App() {
                 {['Todas',...CATEGORIAS].map(c => (
                   <button key={c} className={`chip${cat===c?' active':''}`} onClick={() => setCat(c)}>{c}</button>
                 ))}
+                <select className="field-input" style={{height:32,fontSize:12.5,padding:'0 8px',minWidth:110,maxWidth:140}}
+                  value={filterUbic} onChange={e => setFilterUbic(e.target.value)}>
+                  <option value="">Ubicación…</option>
+                  {availableUbics.map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+                {filterUbic && <button className="chip active" onClick={()=>setFilterUbic('')}>× {filterUbic}</button>}
                 <div style={{flex:1}}/>
                 <button className="btn btn-ghost" style={{fontSize:12.5,padding:'5px 12px'}} onClick={exportExcel}>↓ Exportar Excel</button>
               </div>
