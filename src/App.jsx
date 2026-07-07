@@ -1661,6 +1661,10 @@ export default function App() {
                 <input className="field-input" value={utiForm.jugador} onChange={e=>setUtiForm(p=>({...p,jugador:e.target.value}))} placeholder="Nombre del jugador" />
               </div>
               <div className="form-group">
+                <label className="field-label">Estampado</label>
+                <input className="field-input" value={utiForm.estampado} onChange={e=>setUtiForm(p=>({...p,estampado:e.target.value}))} placeholder="" />
+              </div>
+              <div className="form-group">
                 <label className="field-label">Temporada</label>
                 <select className="field-input" value={utiForm.temporada} onChange={e=>setUtiForm(p=>({...p,temporada:e.target.value}))}>
                   <option value="">Seleccionar…</option>
@@ -1673,10 +1677,6 @@ export default function App() {
                   <option value="">Seleccionar…</option>
                   {(utiForm.tipo==='GOLERO' ? MODELOS_GOLERO : MODELOS_JUGADOR).map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
-              </div>
-              <div className="form-group">
-                <label className="field-label">Estampado</label>
-                <input className="field-input" value={utiForm.estampado} onChange={e=>setUtiForm(p=>({...p,estampado:e.target.value}))} placeholder="" />
               </div>
               <div className="form-cols-2">
                 <div className="form-group">
