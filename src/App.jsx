@@ -1678,15 +1678,13 @@ export default function App() {
                   {(utiForm.tipo==='GOLERO' ? MODELOS_GOLERO : MODELOS_JUGADOR).map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
               </div>
-              <div className="form-cols-2">
-                <div className="form-group">
-                  <label className="field-label">Parches</label>
-                  <input className="field-input" value={utiForm.parches} onChange={e=>setUtiForm(p=>({...p,parches:e.target.value}))} placeholder="" />
-                </div>
-                <div className="form-group">
-                  <label className="field-label">Detalle</label>
-                  <input className="field-input" value={utiForm.detalle} onChange={e=>setUtiForm(p=>({...p,detalle:e.target.value}))} placeholder="" />
-                </div>
+              <div className="form-group">
+                <label className="field-label">Parches</label>
+                <input className="field-input" value={utiForm.parches} onChange={e=>setUtiForm(p=>({...p,parches:e.target.value}))} placeholder="" />
+              </div>
+              <div className="form-group">
+                <label className="field-label">Detalle</label>
+                <input className="field-input" value={utiForm.detalle} onChange={e=>setUtiForm(p=>({...p,detalle:e.target.value}))} placeholder="" />
               </div>
             </div>
             <div className="modal-footer">
