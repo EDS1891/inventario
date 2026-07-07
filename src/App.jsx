@@ -1539,15 +1539,15 @@ export default function App() {
                             {c.tipo && <span style={{fontSize:10,fontWeight:700,background:c.tipo==='GOLERO'?'#EDF7F2':'#F0F0EC',color:c.tipo==='GOLERO'?'#2e9b5e':'#6a6a62',border:'1px solid '+(c.tipo==='GOLERO'?'#2e9b5e':'#D0D0CA'),borderRadius:4,padding:'1px 6px'}}>{c.tipo}</span>}
                           </div>
                           <div style={{fontSize:11,color:'#8a8a82',marginTop:2}}>{c.competicion}</div>
-                          {(c.modelo||c.estampado||c.parches||c.detalle) && (
-                            <div style={{fontSize:11,color:'#aaa',marginTop:2}}>
-                              {[c.modelo&&`Modelo: ${c.modelo}`,c.estampado&&`Estampado: ${c.estampado}`,c.parches&&`Parches: ${c.parches}`,c.detalle&&`Detalle: ${c.detalle}`].filter(Boolean).join(' · ')}
-                            </div>
-                          )}
                         </div>
                         <div style={{fontSize:13,fontWeight:600}}>{c.talle}</div>
                         <button className="btn btn-ghost" style={{padding:'4px 10px',fontSize:12}} onClick={()=>{setUtiForm({...c}); setUtiModal(true)}}>Editar</button>
                         <button onClick={()=>deleteUti(c.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:18,color:'#C2473D',padding:'0 4px',lineHeight:1}}>×</button>
+                        {(c.modelo||c.estampado||c.parches||c.detalle) && (
+                          <div style={{gridColumn:'1 / -1',fontSize:11,color:'#8a8a82',paddingTop:2,borderTop:'1px dashed #F0F0EC',marginTop:4}}>
+                            {[c.modelo&&`Modelo: ${c.modelo}`,c.estampado&&`Estampado: ${c.estampado}`,c.parches&&`Parches: ${c.parches}`,c.detalle&&`Detalle: ${c.detalle}`].filter(Boolean).join('  ·  ')}
+                          </div>
+                        )}
                       </div>
                     ))
                 }
