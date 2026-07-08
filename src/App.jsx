@@ -8,7 +8,8 @@ const TALLES_NINO   = ['2','4','6','8','10','12','14']
 const RECEPTORES = ['1° División','3° División','Juveniles','Captación','Femenino','Juveniles Femenino','Fútbol Sala Masculino','Fútbol Sala Femenino','Basket','Deportes Anexos','Funcionarios','Protocolo']
 const CATEGORIAS = ['Entrenamiento','Juego','Casual']
 const OCUPACIONES = ['3° División','Juveniles','Juveniles Femenino','Captacion']
-const DIVISIONES = ['Sub 19','Sub 17','Sub 16','Sub 15','Sub 14']
+const DIVISIONES            = ['Sub 19','Sub 17','Sub 16','Sub 15','Sub 14']
+const DIVISIONES_FEM        = ['Sub 19','Sub 16','Sub 14']
 const CARGOS_REG = ['Coordinación','Director Técnico','Ayudante Técnico','Videoanalista','Preparador Físico','Entrenador de Arqueros','Doctor/a','Kinesiólogo/a','Utilero']
 const ESTANTES = ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','50','51']
 const ALTURAS = ['A','B','C','D','E','O']
@@ -905,7 +906,7 @@ export default function App() {
                 <label className="field-label" style={{color:'#8a8a82'}}>DIVISIÓN</label>
                 <select className="field-input" value={regForm.division} onChange={e=>setRegForm(p=>({...p,division:e.target.value,err:''}))}>
                   <option value="">Seleccioná tu división…</option>
-                  {DIVISIONES.map(d => <option key={d} value={d}>{d}</option>)}
+                  {(regForm.categoria === 'Juveniles Femenino' ? DIVISIONES_FEM : DIVISIONES).map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
             )}
