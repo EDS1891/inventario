@@ -1121,8 +1121,8 @@ export default function App() {
         </nav>
         <div className="sidebar-user">
           <div className="user-avatar">{ini(currentUser?.displayName || session || '')}</div>
-          <div style={{flex:1,minWidth:0}}>
-            <div className="user-name">{(currentUser?.displayName || session || '').toUpperCase()}</div>
+          <div style={{flex:1,minWidth:0}} title={`${currentUser?.displayName || session}\n${session}`}>
+            <div className="user-name" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{currentUser?.displayName || session}</div>
             <div className="user-role" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{session}</div>
           </div>
           <button title="Sincronizar con servidor" onClick={() => saveToSupabase(db).then(ok => showToast(ok ? 'Datos sincronizados.' : 'Error al sincronizar.'))} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 4px',flexShrink:0}}>↺</button>
