@@ -1119,16 +1119,20 @@ export default function App() {
             )
           })}
         </nav>
-        <div className="sidebar-user">
-          <div className="user-avatar">{ini(currentUser?.displayName || session || '')}</div>
-          <div style={{flex:1,minWidth:0}} title={`${currentUser?.displayName || session}\n${session}`}>
-            <div className="user-name" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{currentUser?.displayName || session}</div>
-            <div className="user-role" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{session}</div>
+        <div className="sidebar-user" style={{flexDirection:'column',gap:10}}>
+          <div style={{display:'flex',alignItems:'center',gap:11,minWidth:0}} title={`${currentUser?.displayName || session}\n${session}`}>
+            <div className="user-avatar" style={{flexShrink:0}}>{ini(currentUser?.displayName || session || '')}</div>
+            <div style={{flex:1,minWidth:0}}>
+              <div className="user-name" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{currentUser?.displayName || session}</div>
+              <div className="user-role" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{session}</div>
+            </div>
           </div>
-          <button title="Sincronizar con servidor" onClick={() => saveToSupabase(db).then(ok => showToast(ok ? 'Datos sincronizados.' : 'Error al sincronizar.'))} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 4px',flexShrink:0}}>↺</button>
-          <button title="Cambiar contraseña" onClick={()=>{setChangePassForm({current:'',newPass:'',newPass2:'',err:''});setModal('cambiar-pass')}} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:16,padding:'0 4px',flexShrink:0}}>🔑</button>
-          <button title="Gestionar usuarios" onClick={openUserMgmt} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 4px',flexShrink:0}}>⚙</button>
-          <button title="Cerrar sesión" onClick={doLogout} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 4px',flexShrink:0}}>⏻</button>
+          <div style={{display:'flex',justifyContent:'flex-end',gap:2}}>
+            <button title="Sincronizar con servidor" onClick={() => saveToSupabase(db).then(ok => showToast(ok ? 'Datos sincronizados.' : 'Error al sincronizar.'))} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 6px'}}>↺</button>
+            <button title="Cambiar contraseña" onClick={()=>{setChangePassForm({current:'',newPass:'',newPass2:'',err:''});setModal('cambiar-pass')}} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:16,padding:'0 6px'}}>🔑</button>
+            <button title="Gestionar usuarios" onClick={openUserMgmt} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 6px'}}>⚙</button>
+            <button title="Cerrar sesión" onClick={doLogout} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 6px'}}>⏻</button>
+          </div>
         </div>
       </aside>
 
