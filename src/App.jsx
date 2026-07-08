@@ -321,6 +321,7 @@ export default function App() {
     if(!nd.persona.trim()) { showToast('Ingresá el nombre del integrante.'); return }
     if(!nd.receptor) { showToast('Elegí un grupo / plantel.'); return }
     if(nd.lines.length === 0) { showToast('Agregá al menos un artículo.'); return }
+    let newDbState = null
     setDb(s => {
       const articles = s.articles.map(a => ({...a, sizes: a.sizes.map(z => ({...z}))}))
       const movimientos = [...s.movimientos]
@@ -340,13 +341,16 @@ export default function App() {
         }
       })
       const activeArticles = articles.filter(a => total(a) > 0)
-      if(esDev) return { ...s, articles:activeArticles, movimientos, modal:null, nextMov:mid }
+      if(esDev) { const r = { ...s, articles:activeArticles, movimientos, modal:null, nextMov:mid }; newDbState = r; return r }
       const toUser = nd.toUser || null
       const status = toUser ? 'pendiente' : 'aceptado'
       const confirmedAt = toUser ? null : fecha
       const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, lines:[...nd.lines], toUser, status, confirmedAt}, ...s.deliveries]
-      return { ...s, articles:activeArticles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid }
+      const r = { ...s, articles:activeArticles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid }
+      newDbState = r; return r
     })
+    // Guardar inmediatamente en Supabase sin esperar el debounce de 800ms
+    if (newDbState) saveToSupabase(newDbState)
     // Enviar email de notificación si la entrega va a un usuario específico
     if (nd.toUser && nd.mode !== 'devolucion') {
       const recipient = db.users.find(u => u.username === nd.toUser)
