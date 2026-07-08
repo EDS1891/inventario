@@ -142,6 +142,7 @@ export default function App() {
   const saveTimer = useRef(null)
   const saveEnabled = useRef(false)
   const initialLoadDone = useRef(false)
+  const hasPendingSave = useRef(false)
   const dbRef = useRef(db)
 
   // delivery/devolución form
@@ -170,23 +171,27 @@ export default function App() {
   }, [])
 
   // Save to Supabase whenever data changes (debounced 800ms).
-  // Skip the first fire right after the initial load — that would just re-write what we
-  // just read from Supabase and could overwrite a newer delivery another session saved.
+  // Skip the first fire right after the initial load to avoid overwriting data that
+  // another session saved between our load and our first debounce tick.
   useEffect(() => {
     if (loading || !saveEnabled.current) return
     if (!initialLoadDone.current) { initialLoadDone.current = true; return }
     clearTimeout(saveTimer.current)
+    hasPendingSave.current = true
     saveTimer.current = setTimeout(async () => {
+      hasPendingSave.current = false
       const ok = await saveToSupabase(db)
       if (!ok) showToast('Error al guardar. Verificá la conexión.')
     }, 800)
   }, [db, loading])
 
-  // Flush any pending save immediately when tab is hidden (mobile: switch app / close tab)
+  // Flush any pending save immediately when tab is hidden (mobile: switch app / close tab).
+  // Only flush if there is actually a pending debounce save — never write stale load data.
   useEffect(() => {
     const flush = () => {
-      if (!saveEnabled.current) return
+      if (!saveEnabled.current || !hasPendingSave.current) return
       clearTimeout(saveTimer.current)
+      hasPendingSave.current = false
       saveToSupabase(dbRef.current)
     }
     document.addEventListener('visibilitychange', flush)
