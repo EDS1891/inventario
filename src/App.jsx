@@ -602,7 +602,7 @@ export default function App() {
   const isSoloVista = currentUser?.role === 'solo-vista'
 
   // Receptor users list (for the delivery modal selector)
-  const receptorUsers = allUsers.filter(u => (u.role === 'receptor' || u.role === 'solo-vista') && u.status === 'aprobado')
+  const receptorUsers = allUsers.filter(u => u.status === 'aprobado')
 
   // KPIs: count unique codes, group by code for category totals
   const byCodeMap = {}
