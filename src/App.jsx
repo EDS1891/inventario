@@ -1032,6 +1032,42 @@ export default function App() {
           </div>
         </div>
 
+        {/* Rechazar modal */}
+        {rechazarModal.delId !== null && (
+          <div className="modal-overlay" onClick={() => setRechazarModal({ delId: null, motivo: '' })}>
+            <div className="modal-box" onClick={e => e.stopPropagation()} style={{maxWidth:420}}>
+              <div className="modal-header">
+                <div className="modal-title">Motivo de rechazo</div>
+                <button className="modal-close" onClick={() => setRechazarModal({ delId: null, motivo: '' })}>×</button>
+              </div>
+              <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:14}}>
+                <p style={{margin:0,fontSize:13.5,color:'#6a6a62'}}>Explicá brevemente por qué rechazás esta entrega.</p>
+                <div className="form-group">
+                  <label className="field-label">Motivo</label>
+                  <textarea
+                    className="field-input"
+                    rows={3}
+                    style={{resize:'vertical',fontFamily:'inherit'}}
+                    placeholder="Ej: Talle incorrecto, artículo dañado…"
+                    value={rechazarModal.motivo}
+                    onChange={e => setRechazarModal(p => ({...p, motivo: e.target.value}))}
+                  />
+                </div>
+                {!rechazarModal.motivo.trim() && (
+                  <div style={{fontSize:12,color:'#8a8a82'}}>El motivo es obligatorio para rechazar.</div>
+                )}
+                <div style={{display:'flex',gap:10}}>
+                  <button className="btn btn-ghost" style={{flex:1}} onClick={() => setRechazarModal({ delId: null, motivo: '' })}>Cancelar</button>
+                  <button
+                    style={{flex:1,padding:'10px 0',borderRadius:8,border:'none',cursor:rechazarModal.motivo.trim()?'pointer':'not-allowed',fontWeight:700,fontSize:14,background:rechazarModal.motivo.trim()?'#C2473D':'#e0a09a',color:'#fff'}}
+                    onClick={() => { if(rechazarModal.motivo.trim()) receptorRechazar(rechazarModal.delId, rechazarModal.motivo.trim()) }}
+                  >✕ Rechazar entrega</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Toast */}
         {toast && (
           <div className="toast">
