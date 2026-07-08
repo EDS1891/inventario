@@ -1667,6 +1667,7 @@ export default function App() {
                 <div>
                   <div className="modal-title">{d.persona}</div>
                   <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>{d.receptor} · {d.fecha}</div>
+                  {d.creadoPor && <div style={{fontSize:12,color:'#aaa',marginTop:2}}>Registrado por: {d.creadoPor}</div>}
                 </div>
                 <span style={{...stStyle,borderRadius:5,padding:'3px 9px',fontSize:11,fontWeight:700,marginLeft:'auto',marginRight:12,whiteSpace:'nowrap'}}>{stLabel}</span>
                 <button className="modal-close" onClick={() => setSelectedDeliveryId(null)}>×</button>
