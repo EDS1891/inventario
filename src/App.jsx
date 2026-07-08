@@ -141,6 +141,7 @@ export default function App() {
   const toastTimer = useRef(null)
   const saveTimer = useRef(null)
   const saveEnabled = useRef(false)
+  const initialLoadDone = useRef(false)
   const dbRef = useRef(db)
 
   // delivery/devolución form
@@ -168,9 +169,12 @@ export default function App() {
     })
   }, [])
 
-  // Save to Supabase whenever data changes (debounced 800ms)
+  // Save to Supabase whenever data changes (debounced 800ms).
+  // Skip the first fire right after the initial load — that would just re-write what we
+  // just read from Supabase and could overwrite a newer delivery another session saved.
   useEffect(() => {
     if (loading || !saveEnabled.current) return
+    if (!initialLoadDone.current) { initialLoadDone.current = true; return }
     clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(async () => {
       const ok = await saveToSupabase(db)
@@ -963,6 +967,7 @@ export default function App() {
             <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:14,color:'#FFD200',letterSpacing:'.05em'}}>DEPÓSITO · INDUMENTARIA</div>
             <div style={{fontSize:13,color:'#fff',marginTop:2}}>Hola, <b>{currentUser?.displayName || session}</b></div>
           </div>
+          <button onClick={() => window.location.reload()} style={{background:'#2a2a2a',border:'1px solid #3a3a3a',color:'#ccc',borderRadius:8,padding:'8px 14px',cursor:'pointer',fontSize:13,marginRight:8}}>↺</button>
           <button onClick={doLogout} style={{background:'#2a2a2a',border:'1px solid #3a3a3a',color:'#ccc',borderRadius:8,padding:'8px 14px',cursor:'pointer',fontSize:13}}>Cerrar sesión</button>
         </div>
 
