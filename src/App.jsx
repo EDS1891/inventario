@@ -1448,7 +1448,7 @@ export default function App() {
               <div className="table-header del-cols">
                 <div>FECHA</div><div>INTEGRANTE / GRUPO</div>
                 <div className="del-col-detail">DETALLE</div>
-                <div className="del-col-por">POR</div>
+                <div className="del-col-por">USUARIO</div>
                 <div style={{textAlign:'right'}}>UNID.</div><div/>
               </div>
               {filteredDeliveryRows.map(d => (
