@@ -1856,7 +1856,7 @@ export default function App() {
                   {RECEPTORES.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
-              {!ndIsDev && receptorUsers.length > 0 && (
+              {!ndIsDev && (
                 <div className="form-group">
                   <label className="field-label">Enviar a usuario registrado <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional)</span></label>
                   <select className="field-input" value={nd.toUser} onChange={e => {
@@ -1868,6 +1868,7 @@ export default function App() {
                     <option value="">Sin usuario específico</option>
                     {receptorUsers.map(u => <option key={u.username} value={u.username}>{u.displayName} ({u.username})</option>)}
                   </select>
+                  {receptorUsers.length === 0 && <div style={{marginTop:6,fontSize:12,color:'#8a8a82'}}>No hay usuarios receptores registrados aún.</div>}
                   {nd.toUser && <div style={{marginTop:6,fontSize:12,color:'#7a5800',background:'#FFF8D6',border:'1px solid #FFD200',borderRadius:6,padding:'6px 10px'}}>La entrega quedará pendiente de confirmación por el receptor.</div>}
                 </div>
               )}
