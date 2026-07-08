@@ -588,10 +588,11 @@ export default function App() {
   // Current user role
   const allUsers = db.users
   const currentUser = allUsers.find(u => u.username === session) || null
-  const isReceptor = currentUser?.role === 'receptor'
+  const isReceptor  = currentUser?.role === 'receptor'
+  const isSoloVista = currentUser?.role === 'solo-vista'
 
   // Receptor users list (for the delivery modal selector)
-  const receptorUsers = allUsers.filter(u => u.role === 'receptor')
+  const receptorUsers = allUsers.filter(u => u.role === 'receptor' || u.role === 'solo-vista')
 
   // KPIs: count unique codes, group by code for category totals
   const byCodeMap = {}
@@ -1091,9 +1092,9 @@ export default function App() {
             <span className="search-icon" />
             <input value={search} onChange={e => { setSearch(e.target.value); if((view==='panel'||view==='detalle')&&e.target.value) setView('inventario') }} placeholder="Buscar…" />
           </div>
-          <button className="btn btn-ghost" onClick={openArticulo}>+<span className="btn-label"> Artículo</span></button>
-          <button className="btn btn-ghost" onClick={openDevolucion}>↩<span className="btn-label"> Dev.</span></button>
-          <button className="btn btn-yellow" onClick={openEntrega}>+<span className="btn-label"> Entrega</span></button>
+          {!isSoloVista && <button className="btn btn-ghost" onClick={openArticulo}>+<span className="btn-label"> Artículo</span></button>}
+          {!isSoloVista && <button className="btn btn-ghost" onClick={openDevolucion}>↩<span className="btn-label"> Dev.</span></button>}
+          {!isSoloVista && <button className="btn btn-yellow" onClick={openEntrega}>+<span className="btn-label"> Entrega</span></button>}
         </header>
 
         <div className="content">
@@ -1156,7 +1157,32 @@ export default function App() {
                     ))
                   }
                 </div>
-                {!isReceptor && pendingApprovals.length > 0 && (
+                {isSoloVista && (() => {
+                  const myPending = db.deliveries.filter(d => d.toUser === session && (d.status||'aceptado') === 'pendiente')
+                  if (!myPending.length) return null
+                  return (
+                    <div className="card" style={{marginTop:16}}>
+                      <div className="card-header">
+                        <div className="card-title">Entregas pendientes de confirmación</div>
+                        <div className="card-spacer"/>
+                        <span className="badge" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200'}}>{myPending.length}</span>
+                      </div>
+                      {myPending.map(d => (
+                        <div key={d.id} className="table-row" style={{gridTemplateColumns:'1fr auto'}}>
+                          <div>
+                            <div style={{fontWeight:600,fontSize:13.5}}>Entrega #{d.id} — {d.receptor}</div>
+                            <div style={{fontSize:11.5,color:'#8a8a82'}}>{d.fecha} · {d.lines.length} artículo{d.lines.length!==1?'s':''}</div>
+                          </div>
+                          <div style={{display:'flex',gap:6}}>
+                            <button onClick={()=>receptorAceptar(d.id)} style={{padding:'4px 10px',borderRadius:5,border:'none',cursor:'pointer',fontWeight:700,fontSize:11.5,background:'#2e9b5e',color:'#fff'}}>✓ Aceptar</button>
+                            <button onClick={()=>receptorRechazar(d.id)} style={{padding:'4px 10px',borderRadius:5,border:'1px solid #C2473D',cursor:'pointer',fontWeight:700,fontSize:11.5,background:'none',color:'#C2473D'}}>✕ Rechazar</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+                {!isReceptor && !isSoloVista && pendingApprovals.length > 0 && (
                   <div className="card" style={{marginTop:16}}>
                     <div className="card-header">
                       <div className="card-title">Solicitudes de acceso pendientes</div>
@@ -1304,9 +1330,9 @@ export default function App() {
                           ))}
                           {/* Botones por ubicación */}
                           <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:16}}>
-                            <button className="btn btn-yellow" onClick={() => { setSelectedId(entry.id); openReponer() }}>＋ Registrar entrada</button>
-                            <button className="btn btn-dark" onClick={() => { setSelectedId(entry.id); openAjuste() }}>Ajustar stock</button>
-                            <button className="btn btn-ghost" onClick={() => { setSelectedId(entry.id); openMover() }}>⇄ Cambiar de ubicación</button>
+                            {!isSoloVista && <button className="btn btn-yellow" onClick={() => { setSelectedId(entry.id); openReponer() }}>＋ Registrar entrada</button>}
+                            {!isSoloVista && <button className="btn btn-dark" onClick={() => { setSelectedId(entry.id); openAjuste() }}>Ajustar stock</button>}
+                            {!isSoloVista && <button className="btn btn-ghost" onClick={() => { setSelectedId(entry.id); openMover() }}>⇄ Cambiar de ubicación</button>}
                           </div>
                         </div>
                       )
@@ -1314,9 +1340,9 @@ export default function App() {
 
                     {/* Acciones globales */}
                     <div className="detail-actions" style={{marginTop:24,paddingTop:20,borderTop:'1px solid #E7E7E3'}}>
-                      <button className="btn btn-ghost" onClick={openEntregaFromDetail}>Registrar entrega</button>
-                      <button className="btn btn-ghost" onClick={openDevolucionFromDetail}>↩ Devolución</button>
-                      <button className="btn btn-ghost btn-full" onClick={() => { setSelectedId(detail.entries[0].id); openEdit() }}>✎ Editar artículo</button>
+                      {!isSoloVista && <button className="btn btn-ghost" onClick={openEntregaFromDetail}>Registrar entrega</button>}
+                      {!isSoloVista && <button className="btn btn-ghost" onClick={openDevolucionFromDetail}>↩ Devolución</button>}
+                      {!isSoloVista && <button className="btn btn-ghost btn-full" onClick={() => { setSelectedId(detail.entries[0].id); openEdit() }}>✎ Editar artículo</button>}
                     </div>
                   </div>
                 </div>
@@ -1333,7 +1359,7 @@ export default function App() {
                       <div className="mono" style={{fontWeight:700,fontSize:14,color:m.tipo==='entrada'?'#2e9b5e':'#C2473D',flexShrink:0}}>
                         {m.tipo==='entrada'?'+':'−'}{m.qty}
                       </div>
-                      <button className="btn-del" onClick={() => m.delId ? askDeleteDelivery(m.delId) : askDeleteMov(m.id)}>✕</button>
+                      {!isSoloVista && <button className="btn-del" onClick={() => m.delId ? askDeleteDelivery(m.delId) : askDeleteMov(m.id)}>✕</button>}
                     </div>
                   ))}
                 </div>
@@ -1381,7 +1407,7 @@ export default function App() {
                   <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{d.totalUd}</div>
                   <div style={{display:'flex',justifyContent:'flex-end',alignItems:'center',gap:6}}>
                     {(() => { const st=d.status||'aceptado'; return st==='pendiente'?<span style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Pendiente</span>:st==='rechazado'?<span style={{background:'#FBEAE8',color:'#C2473D',border:'1px solid #C2473D',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Rechazado</span>:<span style={{background:'#EDF7F2',color:'#2e9b5e',border:'1px solid #2e9b5e',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Aceptado</span> })()}
-                    <button className="btn-del" onClick={e => { e.stopPropagation(); askDeleteDelivery(d.id) }}>✕</button>
+                    {!isSoloVista && <button className="btn-del" onClick={e => { e.stopPropagation(); askDeleteDelivery(d.id) }}>✕</button>}
                   </div>
                 </div>
               ))}
@@ -1424,7 +1450,7 @@ export default function App() {
                         </span>
                       </div>
                       <div style={{display:'flex',justifyContent:'flex-end'}}>
-                        <button className="btn-del" style={{width:28,height:28}} onClick={() => m.delId ? askDeleteDelivery(m.delId) : askDeleteMov(m.id)}>✕</button>
+                        {!isSoloVista && <button className="btn-del" style={{width:28,height:28}} onClick={() => m.delId ? askDeleteDelivery(m.delId) : askDeleteMov(m.id)}>✕</button>}
                       </div>
                     </div>
                   )
@@ -1461,8 +1487,8 @@ export default function App() {
                       </div>
                     )}
                   </div>
-                  <span style={{background:u.role==='admin'?'#121212':'#EDF7F2',color:u.role==='admin'?'#FFD200':'#2e9b5e',border:'1px solid '+(u.role==='admin'?'#3a3a3a':'#2e9b5e'),borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700,flexShrink:0}}>
-                    {u.role==='admin'?'Admin':'Receptor'}
+                  <span style={{background:u.role==='admin'?'#121212':u.role==='solo-vista'?'#EEF2FF':'#EDF7F2',color:u.role==='admin'?'#FFD200':u.role==='solo-vista'?'#4338ca':'#2e9b5e',border:'1px solid '+(u.role==='admin'?'#3a3a3a':u.role==='solo-vista'?'#6366f1':'#2e9b5e'),borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700,flexShrink:0}}>
+                    {u.role==='admin'?'Admin':u.role==='solo-vista'?'Solo Vista':'Receptor'}
                   </span>
                 </div>
               ))}
@@ -1518,7 +1544,7 @@ export default function App() {
                     {[...new Set([...MODELOS_JUGADOR,...MODELOS_GOLERO])].map(m => <button key={m} className={`chip${utiFilterModelo===m?' active':''}`} onClick={()=>setUtiFilterModelo(m)}>{m}</button>)}
                   </div>
                 </div>
-                <button className="btn btn-dark" style={{flexShrink:0,marginTop:2}} onClick={()=>{ setUtiForm({tipo:'',competicion:COMPETICIONES[0],numero:'',jugador:'',talle:'S',modelo:'',estampado:'',parches:'',detalle:'',temporada:'',id:null}); setUtiModal(true) }}>+ Camiseta</button>
+                {!isSoloVista && <button className="btn btn-dark" style={{flexShrink:0,marginTop:2}} onClick={()=>{ setUtiForm({tipo:'',competicion:COMPETICIONES[0],numero:'',jugador:'',talle:'S',modelo:'',estampado:'',parches:'',detalle:'',temporada:'',id:null}); setUtiModal(true) }}>+ Camiseta</button>}
               </div>
               <div className="card" style={{overflow:'auto'}}>
                 <div style={{display:'grid',gridTemplateColumns:'62px 90px 50px 46px 1fr 110px 1fr 44px 1fr 65px 28px',background:'#121212',padding:'9px 16px',gap:8,minWidth:860}}>
@@ -1541,8 +1567,8 @@ export default function App() {
                         <div style={{fontSize:12,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.competicion||<span style={{color:'#ccc'}}>—</span>}</div>
                         <div style={{fontSize:13,fontWeight:700,textAlign:'center',color:'#1a1a1a'}}>{c.talle}</div>
                         <div style={{fontSize:12,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.parches||<span style={{color:'#ccc'}}>—</span>}</div>
-                        <button className="btn btn-ghost" style={{padding:'4px 10px',fontSize:12}} onClick={()=>{setUtiForm({...c}); setUtiModal(true)}}>Editar</button>
-                        <button onClick={()=>deleteUti(c.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:18,color:'#C2473D',padding:'0 4px',lineHeight:1}}>×</button>
+                        {!isSoloVista && <button className="btn btn-ghost" style={{padding:'4px 10px',fontSize:12}} onClick={()=>{setUtiForm({...c}); setUtiModal(true)}}>Editar</button>}
+                        {!isSoloVista && <button onClick={()=>deleteUti(c.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:18,color:'#C2473D',padding:'0 4px',lineHeight:1}}>×</button>}
                         {c.detalle && (
                           <div style={{gridColumn:'1 / -1',fontSize:11,color:'#8a8a82',paddingTop:4,borderTop:'1px dashed #F0F0EC',marginTop:2}}>
                             {`Detalle: ${c.detalle}`}
@@ -2206,13 +2232,13 @@ export default function App() {
                         )}
                         {u.telefono && <div style={{fontSize:11.5,color:'#8a8a82'}}>{u.telefono}</div>}
                       </div>
-                      <span style={{background:u.role==='admin'?'#121212':'#EDF7F2',color:u.role==='admin'?'#FFD200':'#2e9b5e',border:'1px solid '+(u.role==='admin'?'#3a3a3a':'#2e9b5e'),borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700,flexShrink:0}}>{u.role==='admin'?'Admin':'Receptor'}</span>
+                      <span style={{background:u.role==='admin'?'#121212':u.role==='solo-vista'?'#EEF2FF':'#EDF7F2',color:u.role==='admin'?'#FFD200':u.role==='solo-vista'?'#4338ca':'#2e9b5e',border:'1px solid '+(u.role==='admin'?'#3a3a3a':u.role==='solo-vista'?'#6366f1':'#2e9b5e'),borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700,flexShrink:0}}>{u.role==='admin'?'Admin':u.role==='solo-vista'?'Solo Vista':'Receptor'}</span>
                       {u.username === session && <span className="badge gray">Vos</span>}
                       {u.username !== session && <button className="btn-del" onClick={()=>deleteUser(u.username)}>✕</button>}
                     </div>
                     {session === 'compras' && u.username !== 'compras' && (
                       <div style={{display:'flex',gap:6,marginTop:8,paddingLeft:42}}>
-                        {[['admin','Administrador'],['receptor','Receptor']].map(([v,label]) => (
+                        {[['admin','Administrador'],['solo-vista','Solo Vista'],['receptor','Receptor']].map(([v,label]) => (
                           <button key={v} onClick={()=>{
                             const list = userMgmt.list.map(x => x.username===u.username?{...x,role:v}:x)
                             saveUsers(list)
@@ -2247,7 +2273,7 @@ export default function App() {
                   <div className="form-group">
                     <label className="field-label">Rol</label>
                     <div style={{display:'flex',gap:8}}>
-                      {[['admin','Administrador'],['receptor','Receptor']].map(([v,label]) => (
+                      {[['admin','Administrador'],['solo-vista','Solo Vista'],['receptor','Receptor']].map(([v,label]) => (
                         <button key={v} style={{flex:1,padding:'8px 0',borderRadius:6,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:13,
                           background:(userMgmt.newRole||'receptor')===v?'#FFD200':'#F5F5F0',
                           borderColor:(userMgmt.newRole||'receptor')===v?'#e6be00':'#E0E0DA',
