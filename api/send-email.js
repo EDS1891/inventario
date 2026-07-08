@@ -56,7 +56,7 @@ export default async function handler(req, res) {
           </a>
         </div>
         <div style="padding:16px 24px;background:#f0f0f0;font-size:12px;color:#888;text-align:center">
-          Depósito Peñarol &nbsp;·&nbsp; edominguez@capenarol.com.uy
+          ENTREGAS INDUMENTARIA PEÑAROL
         </div>
       </div>
     `
