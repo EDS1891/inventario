@@ -10,7 +10,8 @@ const CATEGORIAS = ['Entrenamiento','Juego','Casual']
 const OCUPACIONES = ['3° División','Juveniles','Juveniles Femenino','Captacion']
 const DIVISIONES            = ['Sub 19','Sub 17','Sub 16','Sub 15','Sub 14']
 const DIVISIONES_FEM        = ['Sub 19','Sub 16','Sub 14']
-const CARGOS_REG = ['Coordinación','Director Técnico','Ayudante Técnico','Videoanalista','Preparador Físico','Entrenador de Arqueros','Doctor/a','Kinesiólogo/a','Utilero']
+const CARGOS_REG = ['Coordinación','Director Técnico','Ayudante Técnico','Videoanalista','Preparador Físico','Entrenador de Arqueros','Doctor/a','Kinesiólogo/a','Utilero','Administración Palacio']
+const CARGOS_SIN_SECTOR = ['Administración Palacio']
 const ESTANTES = ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','50','51']
 const ALTURAS = ['A','B','C','D','E','O']
 
@@ -219,8 +220,8 @@ export default function App() {
     if(!email.trim() || !email.includes('@')) { setRegForm(p=>({...p,err:'Ingresá un correo electrónico válido.'})); return }
     if(!telefono.trim()) { setRegForm(p=>({...p,err:'Ingresá tu teléfono.'})); return }
     if(!cargo) { setRegForm(p=>({...p,err:'Seleccioná tu cargo.'})); return }
-    if(!categoria) { setRegForm(p=>({...p,err:'Seleccioná tu sector.'})); return }
-    if(['Juveniles','Juveniles Femenino'].includes(categoria) && cargo !== 'Coordinación' && !division) { setRegForm(p=>({...p,err:'Seleccioná tu división.'})); return }
+    if(!CARGOS_SIN_SECTOR.includes(cargo) && !categoria) { setRegForm(p=>({...p,err:'Seleccioná tu sector.'})); return }
+    if(!CARGOS_SIN_SECTOR.includes(cargo) && ['Juveniles','Juveniles Femenino'].includes(categoria) && cargo !== 'Coordinación' && !division) { setRegForm(p=>({...p,err:'Seleccioná tu división.'})); return }
     if(!pass || pass.length < 6) { setRegForm(p=>({...p,err:'La contraseña debe tener al menos 6 caracteres.'})); return }
     if(pass !== pass2) { setRegForm(p=>({...p,err:'Las contraseñas no coinciden.'})); return }
     const username = email.trim().toLowerCase()
@@ -894,6 +895,7 @@ export default function App() {
                 </select>
               </div>
             </div>
+            {!CARGOS_SIN_SECTOR.includes(regForm.cargo) && (
             <div className="form-group">
               <label className="field-label" style={{color:'#8a8a82'}}>SECTOR</label>
               <select className="field-input" value={regForm.categoria} onChange={e=>setRegForm(p=>({...p,categoria:e.target.value,division:'',err:''}))}>
@@ -901,7 +903,8 @@ export default function App() {
                 {OCUPACIONES.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
             </div>
-            {['Juveniles','Juveniles Femenino'].includes(regForm.categoria) && regForm.cargo !== 'Coordinación' && (
+            )}
+            {!CARGOS_SIN_SECTOR.includes(regForm.cargo) && ['Juveniles','Juveniles Femenino'].includes(regForm.categoria) && regForm.cargo !== 'Coordinación' && (
               <div className="form-group">
                 <label className="field-label" style={{color:'#8a8a82'}}>DIVISIÓN</label>
                 <select className="field-input" value={regForm.division} onChange={e=>setRegForm(p=>({...p,division:e.target.value,err:''}))}>
