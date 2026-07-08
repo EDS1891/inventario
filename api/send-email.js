@@ -54,6 +54,11 @@ export default async function handler(req, res) {
           <a href="https://inventario-eds1891.vercel.app" style="display:inline-block;background:#FFD200;color:#121212;font-weight:bold;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px">
             Aceptar o rechazar entrega
           </a>
+          <div style="margin-top:20px;padding:12px 16px;background:#f0f4ff;border:1px solid #c7d4f0;border-radius:8px;font-size:13px;color:#444">
+            <strong>Para ingresar al sistema usá:</strong><br/>
+            Usuario: <span style="font-family:monospace;color:#1a1a1a">${to}</span><br/>
+            Contraseña: la que elegiste al registrarte
+          </div>
         </div>
         <div style="padding:16px 24px;background:#f0f0f0;font-size:12px;color:#888;text-align:center">
           ENTREGAS INDUMENTARIA PEÑAROL
