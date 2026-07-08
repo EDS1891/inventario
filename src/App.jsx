@@ -208,6 +208,8 @@ export default function App() {
 
   const saveUsers = (list) => {
     setDb(prev => ({ ...prev, users: list }))
+    supabase.from('deposito_state').upsert({ id: 2, deliveries: list })
+      .then(({ error }) => { if (error) console.error('Error guardando usuarios:', error.message) })
   }
   const doLogin = () => {
     const found = db.users.find(u => u.username.toLowerCase() === loginForm.user.toLowerCase() && u.password === loginForm.pass)
@@ -228,12 +230,7 @@ export default function App() {
     const username = email.trim().toLowerCase()
     if(db.users.find(u => u.username.toLowerCase() === username)) { setRegForm(p=>({...p,err:'Ya existe una cuenta con ese correo.'})); return }
     const newUser = { username, password:pass, role:'receptor', displayName:displayName.trim(), email:username, telefono:telefono.trim(), cargo, categoria, division, status:'pendiente' }
-    const newUsers = [...db.users, newUser]
-    saveUsers(newUsers)
-    // Guardar directo en Supabase sin depender del debounce
-    supabase.from('deposito_state').upsert({ id: 2, deliveries: newUsers }).then(({ error }) => {
-      if (error) console.error('Error guardando usuario:', error.message)
-    })
+    saveUsers([...db.users, newUser])
     setLoginView('registered')
     setRegForm({ displayName:'', email:'', telefono:'', cargo:'', categoria:'', division:'', pass:'', pass2:'', err:'' })
   }
