@@ -363,19 +363,20 @@ export default function App() {
     // Enviar email de notificación si la entrega va a un usuario específico
     if (nd.toUser && nd.mode !== 'devolucion') {
       const recipient = db.users.find(u => u.username === nd.toUser)
-      if (recipient?.email) {
+      const recipientEmail = recipient?.email || (recipient?.username?.includes('@') ? recipient?.username : null)
+      if (recipientEmail) {
         fetch('/api/send-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            to: recipient.email,
+            to: recipientEmail,
             displayName: recipient.displayName || recipient.username,
             lines: nd.lines,
             delId: db.nextDel,
           })
         })
         .then(r => r.json())
-        .then(d => { if (d.ok) { showToast('Email de notificación enviado a ' + recipient.email) } else { showToast('Error al enviar email: ' + (d.error || 'error desconocido')) } })
+        .then(d => { if (d.ok) { showToast('Email de notificación enviado a ' + recipientEmail) } else { showToast('Error al enviar email: ' + (d.error || 'error desconocido')) } })
         .catch(() => showToast('No se pudo conectar con el servidor de email.'))
       }
     }
@@ -1216,7 +1217,7 @@ export default function App() {
                     ))
                   }
                 </div>
-                {isSoloVista && (() => {
+                {!isReceptor && (() => {
                   const myPending = db.deliveries.filter(d => d.toUser === session && (d.status||'aceptado') === 'pendiente')
                   if (!myPending.length) return null
                   return (
@@ -1234,7 +1235,7 @@ export default function App() {
                           </div>
                           <div style={{display:'flex',gap:6}}>
                             <button onClick={()=>receptorAceptar(d.id)} style={{padding:'4px 10px',borderRadius:5,border:'none',cursor:'pointer',fontWeight:700,fontSize:11.5,background:'#2e9b5e',color:'#fff'}}>✓ Aceptar</button>
-                            <button onClick={()=>receptorRechazar(d.id)} style={{padding:'4px 10px',borderRadius:5,border:'1px solid #C2473D',cursor:'pointer',fontWeight:700,fontSize:11.5,background:'none',color:'#C2473D'}}>✕ Rechazar</button>
+                            <button onClick={()=>setRechazarModal({delId:d.id,motivo:''})} style={{padding:'4px 10px',borderRadius:5,border:'1px solid #C2473D',cursor:'pointer',fontWeight:700,fontSize:11.5,background:'none',color:'#C2473D'}}>✕ Rechazar</button>
                           </div>
                         </div>
                       ))}
