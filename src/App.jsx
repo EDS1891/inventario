@@ -1544,7 +1544,7 @@ export default function App() {
                       </div>
                     )}
                     {u.telefono && <div style={{fontSize:12,color:'#8a8a82',marginTop:2}}>{u.telefono}</div>}
-                    {u.status==='pendiente' && session==='compras' && (
+                    {u.status==='pendiente' && currentUser?.role==='admin' && (
                       <div style={{display:'flex',gap:8,marginTop:10}}>
                         <button onClick={()=>approveUser(u.username)} style={{padding:'5px 14px',borderRadius:5,border:'none',cursor:'pointer',fontWeight:700,fontSize:12,background:'#FFD200',color:'#121212'}}>Aprobar</button>
                         <button onClick={()=>rejectUser(u.username)} style={{padding:'5px 14px',borderRadius:5,border:'1px solid #C2473D',cursor:'pointer',fontWeight:700,fontSize:12,background:'none',color:'#C2473D'}}>Rechazar</button>
@@ -2306,7 +2306,7 @@ export default function App() {
                       {u.username === session && <span className="badge gray">Vos</span>}
                       {u.username !== session && <button className="btn-del" onClick={()=>deleteUser(u.username)}>✕</button>}
                     </div>
-                    {session === 'compras' && u.username !== 'compras' && (
+                    {currentUser?.role === 'admin' && u.username !== session && (
                       <div style={{display:'flex',gap:6,marginTop:8,paddingLeft:42}}>
                         {[['admin','Administrador'],['solo-vista','Solo Vista'],['receptor','Receptor']].map(([v,label]) => (
                           <button key={v} onClick={()=>{
@@ -2339,7 +2339,7 @@ export default function App() {
                     <label className="field-label">Nombre completo</label>
                     <input className="field-input" value={userMgmt.newDisplayName||''} onChange={e=>setUserMgmt(p=>({...p,newDisplayName:e.target.value,err:''}))} placeholder="Ej. Juan Pérez" />
                   </div>
-                  {session === 'compras' && (
+                  {currentUser?.role === 'admin' && (
                   <div className="form-group">
                     <label className="field-label">Rol</label>
                     <div style={{display:'flex',gap:8}}>
