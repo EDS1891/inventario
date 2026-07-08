@@ -58,7 +58,8 @@ async function loadFromSupabase() {
 }
 
 async function saveToSupabase(db) {
-  const [r1, r2, r3] = await Promise.all([
+  // Row id=2 (users) is managed exclusively by saveUsers() to avoid session-collision overwrites
+  const [r1, r3] = await Promise.all([
     supabase.from('deposito_state').upsert({
       id: 1,
       articles: db.articles,
@@ -67,16 +68,6 @@ async function saveToSupabase(db) {
       next_id: db.nextId,
       next_del: db.nextDel,
       next_mov: db.nextMov,
-      updated_at: new Date().toISOString(),
-    }),
-    supabase.from('deposito_state').upsert({
-      id: 2,
-      articles: [],
-      deliveries: db.users,
-      movimientos: [],
-      next_id: 0,
-      next_del: 0,
-      next_mov: 0,
       updated_at: new Date().toISOString(),
     }),
     supabase.from('deposito_state').upsert({
@@ -90,7 +81,7 @@ async function saveToSupabase(db) {
       updated_at: new Date().toISOString(),
     }),
   ])
-  return !r1.error && !r2.error && !r3.error
+  return !r1.error && !r3.error
 }
 
 function fmt(n) { return Number(n).toLocaleString('es-UY') }
