@@ -1448,6 +1448,7 @@ export default function App() {
               <div className="table-header del-cols">
                 <div>FECHA</div><div>INTEGRANTE / GRUPO</div>
                 <div className="del-col-detail">DETALLE</div>
+                <div className="del-col-por">POR</div>
                 <div style={{textAlign:'right'}}>UNID.</div><div/>
               </div>
               {filteredDeliveryRows.map(d => (
@@ -1460,11 +1461,11 @@ export default function App() {
                       <div style={{fontSize:11.5,color:'#8a8a82'}}>
                         {d.receptor}
                         {d.paga !== null && d.paga !== undefined && <span style={{marginLeft:6,fontWeight:600,color:d.paga==='si'?'#2e9b5e':'#C2473D'}}>· Paga: {d.paga==='si'?'Sí':'No'}{d.paga==='si'&&d.monto>0?' — $ '+d.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}):''}</span>}
-                        {d.creadoPor && <span style={{marginLeft:6,color:'#aaa'}}>· Por: {d.creadoPor}</span>}
                       </div>
                     </div>
                   </div>
                   <div className="del-col-detail" style={{color:'#6a6a62',fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.resumen}</div>
+                  <div className="del-col-por" style={{fontSize:12.5,color:'#8a8a82',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.creadoPor || '—'}</div>
                   <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{d.totalUd}</div>
                   <div style={{display:'flex',justifyContent:'flex-end',alignItems:'center',gap:6}}>
                     {(() => { const st=d.status||'aceptado'; return st==='pendiente'?<span style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Pendiente</span>:st==='rechazado'?<span style={{background:'#FBEAE8',color:'#C2473D',border:'1px solid #C2473D',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Rechazado</span>:<span style={{background:'#EDF7F2',color:'#2e9b5e',border:'1px solid #2e9b5e',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Aceptado</span> })()}

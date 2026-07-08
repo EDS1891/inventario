@@ -238,7 +238,7 @@ nav.sidebar-nav {
 
 /* Inventory table columns */
 .inv-cols { grid-template-columns: 1.1fr 1.85fr .7fr 1.25fr .8fr .65fr .85fr .75fr; }
-.del-cols { grid-template-columns: 1fr 1.6fr 2.3fr .7fr 44px; }
+.del-cols { grid-template-columns: 1fr 1.6fr 1.8fr 1.1fr .7fr 44px; }
 .mov-cols { grid-template-columns: 0.95fr 2.4fr 1fr .7fr .7fr 44px; }
 
 /* ---- Badge ---- */
@@ -534,7 +534,7 @@ select.field-input { cursor: pointer; }
   .inv-col-ubic, .inv-col-cat, .inv-col-sizes, .inv-col-precio { display: none; }
 
   .del-cols { grid-template-columns: 80px 1fr 50px 34px; }
-  .del-col-detail { display: none; }
+  .del-col-detail, .del-col-por { display: none; }
 
   .mov-cols { grid-template-columns: 80px 1fr 60px 44px; }
   .mov-col-talle, .mov-col-tipo { display: none; }
