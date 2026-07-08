@@ -228,7 +228,12 @@ export default function App() {
     const username = email.trim().toLowerCase()
     if(db.users.find(u => u.username.toLowerCase() === username)) { setRegForm(p=>({...p,err:'Ya existe una cuenta con ese correo.'})); return }
     const newUser = { username, password:pass, role:'receptor', displayName:displayName.trim(), email:username, telefono:telefono.trim(), cargo, categoria, division, status:'pendiente' }
-    saveUsers([...db.users, newUser])
+    const newUsers = [...db.users, newUser]
+    saveUsers(newUsers)
+    // Guardar directo en Supabase sin depender del debounce
+    supabase.from('deposito_state').upsert({ id: 2, deliveries: newUsers }).then(({ error }) => {
+      if (error) console.error('Error guardando usuario:', error.message)
+    })
     setLoginView('registered')
     setRegForm({ displayName:'', email:'', telefono:'', cargo:'', categoria:'', division:'', pass:'', pass2:'', err:'' })
   }
