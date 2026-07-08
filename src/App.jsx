@@ -344,9 +344,9 @@ export default function App() {
         const z = a && a.sizes.find(x => x.talle === l.talle)
         if(z) z.qty = esDev ? z.qty + l.qty : Math.max(0, z.qty - l.qty)
         if(esDev) {
-          movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'entrada', fecha, talle:l.talle, qty:l.qty, detalle:'Devolución de '+nd.persona+' ('+nd.receptor+')'})
+          movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'entrada', fecha, talle:l.talle, qty:l.qty, detalle:'Devolución de '+nd.persona+' ('+nd.receptor+')', creadoPor:currentUser?.displayName||session})
         } else {
-          movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'salida', fecha, talle:l.talle, qty:l.qty, detalle:'Entrega a '+nd.persona+' ('+nd.receptor+')', delId:s.nextDel})
+          movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'salida', fecha, talle:l.talle, qty:l.qty, detalle:'Entrega a '+nd.persona+' ('+nd.receptor+')', delId:s.nextDel, creadoPor:currentUser?.displayName||session})
         }
       })
       const activeArticles = articles.filter(a => total(a) > 0)
@@ -354,7 +354,7 @@ export default function App() {
       const toUser = nd.toUser || null
       const status = toUser ? 'pendiente' : 'aceptado'
       const confirmedAt = toUser ? null : fecha
-      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, lines:[...nd.lines], toUser, status, confirmedAt}, ...s.deliveries]
+      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, lines:[...nd.lines], toUser, status, confirmedAt, creadoPor:currentUser?.displayName||session}, ...s.deliveries]
       const r = { ...s, articles:activeArticles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid }
       newDbState = r; return r
     })
@@ -429,7 +429,7 @@ export default function App() {
         if(a.id !== selectedId) return a
         return {...a, sizes: a.sizes.map(z => { const e=entries.find(e=>e.talle===z.talle); return e ? {...z, qty:z.qty+e.q} : z })}
       })
-      const newMovs = entries.map(e => ({id:nextMov++, code, name:artName, tipo:'entrada', fecha, talle:e.talle, qty:e.q, detalle:'Ingreso de stock'}))
+      const newMovs = entries.map(e => ({id:nextMov++, code, name:artName, tipo:'entrada', fecha, talle:e.talle, qty:e.q, detalle:'Ingreso de stock', creadoPor:currentUser?.displayName||session}))
       return { ...s, articles, movimientos:[...newMovs,...s.movimientos], nextMov }
     })
     setModal(null)
@@ -451,7 +451,7 @@ export default function App() {
       const artName = selA.name
       const articles = s.articles.map(a => { if(a.id!==selectedId) return a; return {...a, sizes:a.sizes.map(z => z.talle===aj.talle?{...z,qty:Math.max(0,q)}:z)} })
       const activeArticles = articles.filter(a => total(a) > 0)
-      const movimientos = [{id:s.nextMov, code, name:artName, tipo:(delta>0?'entrada':'salida'), fecha, talle:aj.talle, qty:Math.abs(delta), detalle:'Ajuste por recuento (de '+cur+' a '+q+')'}, ...s.movimientos]
+      const movimientos = [{id:s.nextMov, code, name:artName, tipo:(delta>0?'entrada':'salida'), fecha, talle:aj.talle, qty:Math.abs(delta), detalle:'Ajuste por recuento (de '+cur+' a '+q+')', creadoPor:currentUser?.displayName||session}, ...s.movimientos]
       return { ...s, articles:activeArticles, movimientos, nextMov:s.nextMov+1 }
     })
     setModal(null)
@@ -1460,6 +1460,7 @@ export default function App() {
                       <div style={{fontSize:11.5,color:'#8a8a82'}}>
                         {d.receptor}
                         {d.paga !== null && d.paga !== undefined && <span style={{marginLeft:6,fontWeight:600,color:d.paga==='si'?'#2e9b5e':'#C2473D'}}>· Paga: {d.paga==='si'?'Sí':'No'}{d.paga==='si'&&d.monto>0?' — $ '+d.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}):''}</span>}
+                        {d.creadoPor && <span style={{marginLeft:6,color:'#aaa'}}>· Por: {d.creadoPor}</span>}
                       </div>
                     </div>
                   </div>
@@ -1500,7 +1501,7 @@ export default function App() {
                       <div className="mono" style={{fontSize:12.5,color:'#6a6a62'}}>{m.fecha}</div>
                       <div style={{minWidth:0}}>
                         <div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.name||codeName[m.code]||m.code}</div>
-                        <div style={{fontSize:11.5,color:'#8a8a82',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.detalle}</div>
+                        <div style={{fontSize:11.5,color:'#8a8a82',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.detalle}{m.creadoPor ? ' · Por: '+m.creadoPor : ''}</div>
                       </div>
                       <div className="mov-col-tipo"><span className={`badge ${kindClass}`}>{kindLabel}</span></div>
                       <div className="mov-col-talle" style={{color:'#6a6a62'}}>{m.talle}</div>
