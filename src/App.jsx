@@ -1491,6 +1491,7 @@ export default function App() {
                   <div>FECHA</div><div>ARTÍCULO / DETALLE</div>
                   <div className="mov-col-tipo">TIPO</div>
                   <div className="mov-col-talle">TALLE</div>
+                  <div className="mov-col-por">USUARIO</div>
                   <div style={{textAlign:'right'}}>CANT.</div><div/>
                 </div>
                 {movRows.map(m => {
@@ -1502,10 +1503,11 @@ export default function App() {
                       <div className="mono" style={{fontSize:12.5,color:'#6a6a62'}}>{m.fecha}</div>
                       <div style={{minWidth:0}}>
                         <div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.name||codeName[m.code]||m.code}</div>
-                        <div style={{fontSize:11.5,color:'#8a8a82',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.detalle}{m.creadoPor ? ' · Por: '+m.creadoPor : ''}</div>
+                        <div style={{fontSize:11.5,color:'#8a8a82',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.detalle}</div>
                       </div>
                       <div className="mov-col-tipo"><span className={`badge ${kindClass}`}>{kindLabel}</span></div>
                       <div className="mov-col-talle" style={{color:'#6a6a62'}}>{m.talle}</div>
+                      <div className="mov-col-por" style={{fontSize:12.5,color:'#8a8a82',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.creadoPor || '—'}</div>
                       <div style={{textAlign:'right'}}>
                         <span className="mono" style={{fontWeight:700,fontSize:14,color:m.tipo==='entrada'?'#2e9b5e':'#C2473D'}}>
                           {m.tipo==='entrada'?'+':'−'}{m.qty}
