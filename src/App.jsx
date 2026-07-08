@@ -219,7 +219,7 @@ export default function App() {
     if(!telefono.trim()) { setRegForm(p=>({...p,err:'Ingresá tu teléfono.'})); return }
     if(!cargo) { setRegForm(p=>({...p,err:'Seleccioná tu cargo.'})); return }
     if(!categoria) { setRegForm(p=>({...p,err:'Seleccioná tu sector.'})); return }
-    if(!division) { setRegForm(p=>({...p,err:'Seleccioná tu división.'})); return }
+    if(['Juveniles','Juveniles Femenino'].includes(categoria) && !division) { setRegForm(p=>({...p,err:'Seleccioná tu división.'})); return }
     if(!pass || pass.length < 6) { setRegForm(p=>({...p,err:'La contraseña debe tener al menos 6 caracteres.'})); return }
     if(pass !== pass2) { setRegForm(p=>({...p,err:'Las contraseñas no coinciden.'})); return }
     const username = email.trim().toLowerCase()
@@ -899,7 +899,7 @@ export default function App() {
                 {OCUPACIONES.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
             </div>
-            {regForm.categoria && regForm.categoria !== '3° División' && (
+            {['Juveniles','Juveniles Femenino'].includes(regForm.categoria) && (
               <div className="form-group">
                 <label className="field-label" style={{color:'#8a8a82'}}>DIVISIÓN</label>
                 <select className="field-input" value={regForm.division} onChange={e=>setRegForm(p=>({...p,division:e.target.value,err:''}))}>
