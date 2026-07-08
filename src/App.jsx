@@ -137,6 +137,7 @@ export default function App() {
   const [utiFilterModelo, setUtiFilterModelo] = useState('')
   const [utiForm, setUtiForm] = useState({ tipo:'', competicion:'', numero:'', jugador:'', talle:'S', modelo:'', estampado:'', parches:'', detalle:'', temporada:'', id:null })
   const [utiModal, setUtiModal] = useState(false)
+  const [rechazarModal, setRechazarModal] = useState({ delId: null, motivo: '' })
   const [toast, setToast] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [session, setSession] = useState(() => localStorage.getItem(SESSION_KEY) || null)
@@ -571,15 +572,16 @@ export default function App() {
     })
     showToast('Entrega aceptada.')
   }
-  const receptorRechazar = (delId) => {
+  const receptorRechazar = (delId, motivo) => {
     setDb(s => {
       const del = s.deliveries.find(d => d.id === delId); if(!del) return {...s}
       // revert stock
       const articles = s.articles.map(a => ({...a, sizes:a.sizes.map(z=>({...z}))}))
       del.lines.forEach(l => { const a=articles.find(x=>x.code===l.code); const z=a&&a.sizes.find(x=>x.talle===l.talle); if(z) z.qty+=l.qty })
-      const deliveries = s.deliveries.map(d => d.id === delId ? {...d, status:'rechazado', confirmedAt:today()} : d)
+      const deliveries = s.deliveries.map(d => d.id === delId ? {...d, status:'rechazado', confirmedAt:today(), motivoRechazo: motivo||''} : d)
       return {...s, articles, deliveries}
     })
+    setRechazarModal({ delId: null, motivo: '' })
     showToast('Entrega rechazada y stock restituido.')
   }
 
@@ -993,7 +995,7 @@ export default function App() {
                 </div>
                 <div style={{padding:'12px 18px',borderTop:'1px solid #F0F0EC',display:'flex',gap:10}}>
                   <button onClick={() => receptorAceptar(d.id)} style={{flex:1,background:'#2e9b5e',color:'#fff',border:'none',borderRadius:8,padding:'10px 0',fontWeight:700,fontSize:14,cursor:'pointer'}}>✓ Aceptar</button>
-                  <button onClick={() => receptorRechazar(d.id)} style={{flex:1,background:'#C2473D',color:'#fff',border:'none',borderRadius:8,padding:'10px 0',fontWeight:700,fontSize:14,cursor:'pointer'}}>✕ Rechazar</button>
+                  <button onClick={() => setRechazarModal({ delId: d.id, motivo: '' })} style={{flex:1,background:'#C2473D',color:'#fff',border:'none',borderRadius:8,padding:'10px 0',fontWeight:700,fontSize:14,cursor:'pointer'}}>✕ Rechazar</button>
                 </div>
               </div>
             ))}
@@ -1017,6 +1019,11 @@ export default function App() {
                     <span style={{fontSize:12.5,color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>{d.fecha}</span>
                     {d.confirmedAt && <span style={{fontSize:11.5,color:'#8a8a82',flex:1,textAlign:'right'}}>Confirmado: {d.confirmedAt}</span>}
                   </div>
+                  {st === 'rechazado' && d.motivoRechazo && (
+                    <div style={{padding:'8px 18px',background:'#FBEAE8',borderBottom:'1px solid #f5c6c3',fontSize:12.5,color:'#C2473D'}}>
+                      <b>Motivo:</b> {d.motivoRechazo}
+                    </div>
+                  )}
                   <div style={{padding:'14px 18px'}}>
                     {d.lines.map((l,i) => (
                       <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'5px 0',borderBottom:i<d.lines.length-1?'1px solid #F5F5F0':'none'}}>
@@ -1617,6 +1624,11 @@ export default function App() {
                   <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em',textAlign:'center'}}>TALLE</div>
                   <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em',textAlign:'right'}}>CANT.</div>
                 </div>
+                {st === 'rechazado' && d.motivoRechazo && (
+                  <div style={{padding:'10px 20px',background:'#FBEAE8',borderBottom:'1px solid #f5c6c3',fontSize:13,color:'#C2473D'}}>
+                    <b>Motivo de rechazo:</b> {d.motivoRechazo}
+                  </div>
+                )}
                 {d.lines.map((l, i) => (
                   <div key={i} style={{display:'grid',gridTemplateColumns:'1fr 60px 55px',padding:'11px 20px',borderBottom:'1px solid #F0F0EC',alignItems:'center'}}>
                     <div>
@@ -2292,6 +2304,41 @@ export default function App() {
                 </div>
                 {userMgmt.err && <div style={{fontSize:12.5,color:'#C2473D',fontWeight:600,marginBottom:8}}>{userMgmt.err}</div>}
                 <button className="btn btn-dark" onClick={addUser}>+ Agregar usuario</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {rechazarModal.delId !== null && (
+        <div className="modal-overlay" onClick={() => setRechazarModal({ delId: null, motivo: '' })}>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{maxWidth:420}}>
+            <div className="modal-header">
+              <div className="modal-title">Motivo de rechazo</div>
+              <button className="modal-close" onClick={() => setRechazarModal({ delId: null, motivo: '' })}>×</button>
+            </div>
+            <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:14}}>
+              <p style={{margin:0,fontSize:13.5,color:'#6a6a62'}}>Explicá brevemente por qué rechazás esta entrega.</p>
+              <div className="form-group">
+                <label className="field-label">Motivo</label>
+                <textarea
+                  className="field-input"
+                  rows={3}
+                  style={{resize:'vertical',fontFamily:'inherit'}}
+                  placeholder="Ej: Talle incorrecto, artículo dañado…"
+                  value={rechazarModal.motivo}
+                  onChange={e => setRechazarModal(p => ({...p, motivo: e.target.value}))}
+                />
+              </div>
+              {!rechazarModal.motivo.trim() && (
+                <div style={{fontSize:12,color:'#8a8a82'}}>El motivo es obligatorio para rechazar.</div>
+              )}
+              <div style={{display:'flex',gap:10}}>
+                <button className="btn btn-ghost" style={{flex:1}} onClick={() => setRechazarModal({ delId: null, motivo: '' })}>Cancelar</button>
+                <button
+                  style={{flex:1,padding:'10px 0',borderRadius:8,border:'none',cursor: rechazarModal.motivo.trim() ? 'pointer':'not-allowed',fontWeight:700,fontSize:14,background: rechazarModal.motivo.trim() ? '#C2473D':'#e0a09a',color:'#fff'}}
+                  onClick={() => { if(rechazarModal.motivo.trim()) receptorRechazar(rechazarModal.delId, rechazarModal.motivo.trim()) }}
+                >✕ Rechazar entrega</button>
               </div>
             </div>
           </div>
