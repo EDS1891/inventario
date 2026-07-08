@@ -62,7 +62,7 @@ export default async function handler(req, res) {
     `
 
     await transporter.sendMail({
-      from: `"Depósito Peñarol" <${process.env.SMTP_USER}>`,
+      from: '"Depósito Peñarol" <edominguez@capenarol.com.uy>',
       to,
       subject: `Entrega #${delId} pendiente de confirmación – Depósito Peñarol`,
       text: `Hola ${displayName},\n\nTenés una entrega de indumentaria pendiente de confirmación.\n\nDetalle:\n${linesList}\n\nIngresá a https://inventario-eds1891.vercel.app para aceptar o rechazar la entrega.\n\nDepósito Peñarol`,
