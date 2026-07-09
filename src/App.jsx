@@ -146,7 +146,7 @@ export default function App() {
   const dbRef = useRef(db)
 
   // delivery/devolución form
-  const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' })
+  const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', disciplina:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' })
   // new article form
   const [na, setNa] = useState({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', precio:'', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' })
   // reponer form
@@ -304,10 +304,10 @@ export default function App() {
   const openDetail = (code) => { setSelectedCode(code); setView('detalle'); setSidebarOpen(false) }
 
   // ---- Entregas / Devoluciones ----
-  const openEntrega = () => { setNd({ mode:'entrega', persona:'', receptor:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
-  const openDevolucion = () => { setNd({ mode:'devolucion', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
-  const openEntregaFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'entrega', persona:'', receptor:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
-  const openDevolucionFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'devolucion', persona:'', receptor:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
+  const openEntrega = () => { setNd({ mode:'entrega', persona:'', receptor:'', disciplina:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
+  const openDevolucion = () => { setNd({ mode:'devolucion', persona:'', receptor:'', disciplina:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
+  const openEntregaFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'entrega', persona:'', receptor:'', disciplina:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
+  const openDevolucionFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'devolucion', persona:'', receptor:'', disciplina:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
 
   const ndAddLine = () => {
     const qty = parseInt(nd.cQty, 10)
@@ -329,6 +329,7 @@ export default function App() {
     const esDev = nd.mode === 'devolucion'
     if(!nd.persona.trim()) { showToast('Ingresá el nombre del integrante.'); return }
     if(!nd.receptor) { showToast('Elegí un grupo / plantel.'); return }
+    if(nd.receptor === 'Deportes Anexos' && !nd.disciplina.trim()) { showToast('Ingresá la disciplina.'); return }
     if(nd.lines.length === 0) { showToast('Agregá al menos un artículo.'); return }
     let newDbState = null
     setDb(s => {
@@ -346,7 +347,7 @@ export default function App() {
         if(esDev) {
           movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'entrada', fecha, talle:l.talle, qty:l.qty, detalle:'Devolución de '+nd.persona+' ('+nd.receptor+')', creadoPor:currentUser?.displayName||session})
         } else {
-          movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'salida', fecha, talle:l.talle, qty:l.qty, detalle:'Entrega a '+nd.persona+' ('+nd.receptor+')', delId:s.nextDel, creadoPor:currentUser?.displayName||session})
+          movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'salida', fecha, talle:l.talle, qty:l.qty, detalle:'Entrega a '+nd.persona+' ('+nd.receptor+(nd.disciplina?' - '+nd.disciplina:'')+')', delId:s.nextDel, creadoPor:currentUser?.displayName||session})
         }
       })
       const activeArticles = articles.filter(a => total(a) > 0)
@@ -354,7 +355,7 @@ export default function App() {
       const toUser = nd.toUser || null
       const status = toUser ? 'pendiente' : 'aceptado'
       const confirmedAt = toUser ? null : fecha
-      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, lines:[...nd.lines], toUser, status, confirmedAt, creadoPor:currentUser?.displayName||session}, ...s.deliveries]
+      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, disciplina:nd.receptor==='Deportes Anexos'?nd.disciplina.trim():undefined, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, lines:[...nd.lines], toUser, status, confirmedAt, creadoPor:currentUser?.displayName||session}, ...s.deliveries]
       const r = { ...s, articles:activeArticles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid }
       newDbState = r; return r
     })
@@ -814,7 +815,7 @@ export default function App() {
   const ndMonto = nd.receptor === 'Protocolo' && nd.paga === 'si'
     ? nd.lines.reduce((s,l) => { const art=articles.find(a=>a.code===l.code); return s+(art?.precio||0)*l.qty }, 0) * 0.5
     : 0
-  const ndOk = nd.persona && nd.persona.trim() && nd.receptor && nd.lines.length > 0
+  const ndOk = nd.persona && nd.persona.trim() && nd.receptor && nd.lines.length > 0 && (nd.receptor !== 'Deportes Anexos' || nd.disciplina.trim())
 
   const repTalleOptions = selA ? selA.sizes.map(s => ({value:s.talle, label:s.talle})) : []
   const ajTalleOptions = selA ? selA.sizes.map(s => ({value:s.talle, label:s.talle+' (sistema: '+s.qty+')'})) : []
@@ -1666,7 +1667,7 @@ export default function App() {
               <div className="modal-header">
                 <div>
                   <div className="modal-title">{d.persona}</div>
-                  <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>{d.receptor} · {d.fecha}</div>
+                  <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>{d.receptor}{d.disciplina ? ' · ' + d.disciplina : ''} · {d.fecha}</div>
                   {d.creadoPor && <div style={{fontSize:12,color:'#aaa',marginTop:2}}>Registrado por: {d.creadoPor}</div>}
                 </div>
                 <span style={{...stStyle,borderRadius:5,padding:'3px 9px',fontSize:11,fontWeight:700,marginLeft:'auto',marginRight:12,whiteSpace:'nowrap'}}>{stLabel}</span>
@@ -1857,11 +1858,17 @@ export default function App() {
               </div>
               <div className="form-group">
                 <label className="field-label">Grupo / Plantel</label>
-                <select className="field-input" value={nd.receptor} onChange={e => setNd(p=>({...p,receptor:e.target.value,paga:null}))}>
+                <select className="field-input" value={nd.receptor} onChange={e => setNd(p=>({...p,receptor:e.target.value,paga:null,disciplina:''}))}>
                   <option value="">Seleccionar grupo…</option>
                   {RECEPTORES.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
+              {nd.receptor === 'Deportes Anexos' && (
+                <div className="form-group">
+                  <label className="field-label">Disciplina</label>
+                  <input className="field-input" value={nd.disciplina} onChange={e => setNd(p=>({...p,disciplina:e.target.value}))} placeholder="Ej. Atletismo, Tenis, Natación…" />
+                </div>
+              )}
               {!ndIsDev && (
                 <div className="form-group">
                   <label className="field-label">Enviar a usuario registrado <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional)</span></label>
@@ -2001,6 +2008,22 @@ export default function App() {
                 <div className="form-group">
                   <label className="field-label">Código (SKU)</label>
                   <input className="field-input mono" value={na.code} onChange={e => setNa(p=>({...p,code:e.target.value.toUpperCase()}))} placeholder="CAM-XXX-26" />
+                  {(() => {
+                    const existing = na.code ? db.articles.find(a => a.code === na.code) : null
+                    if (!existing?.ubic) return null
+                    return (
+                      <div style={{marginTop:6,fontSize:12,color:'#7a5800',background:'#FFF8D6',border:'1px solid #FFD200',borderRadius:6,padding:'6px 10px',display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>
+                        <span>Ya existe en <b>{existing.ubic}</b></span>
+                        <button type="button" onClick={() => {
+                          const ubic = existing.ubic
+                          const isT = ubic === 'TRANSITO'
+                          setNa(p => ({...p, estante: isT ? 'TRANSITO' : ubic.slice(0,-1), altura: isT ? 'A' : ubic.slice(-1)}))
+                        }} style={{padding:'3px 10px',borderRadius:5,border:'1px solid #e6be00',background:'#FFD200',color:'#121212',fontWeight:700,fontSize:11.5,cursor:'pointer',whiteSpace:'nowrap'}}>
+                          Usar ubicación
+                        </button>
+                      </div>
+                    )
+                  })()}
                 </div>
                 <div className="form-group">
                   <label className="field-label">Categoría</label>
