@@ -12,7 +12,7 @@ const DIVISIONES            = ['Sub 19','Sub 17','Sub 16','Sub 15','Sub 14']
 const DIVISIONES_FEM        = ['Sub 19','Sub 16','Sub 14']
 const CARGOS_REG = ['Coordinación','Director Técnico','Ayudante Técnico','Videoanalista','Preparador Físico','Entrenador de Arqueros','Doctor/a','Kinesiólogo/a','Utilero','Administración Palacio']
 const CARGOS_SIN_SECTOR = ['Administración Palacio']
-const ESTANTES = ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','50','51']
+const ESTANTES = ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','50','51','TRANSITO']
 const ALTURAS = ['A','B','C','D','E','O']
 
 const DEFAULT_USERS = [{ username:'compras', password:'peniarol1891', role:'admin', displayName:'Compras Peñarol', status:'aprobado' }]
@@ -405,7 +405,7 @@ export default function App() {
     const { code, name, cat:ncat, tallesArr, tallesMins, tallesQty, estante, altura, precio } = na
     if(!code || !name) { showToast('Completá código y nombre.'); return }
     if(tallesArr.length === 0) { showToast('Seleccioná al menos un talle.'); return }
-    const ubic = (estante||'1') + (altura||'A')
+    const ubic = estante === 'TRANSITO' ? 'TRANSITO' : (estante||'1') + (altura||'A')
     const sizes = tallesArr.map(t => ({talle:t, qty:tallesQty[t]||0, min:tallesMins[t]||0}))
     const precioNum = parseFloat(precio)||0
     setDb(s => ({ ...s, articles:[{id:s.nextId, code, name, cat:ncat, ubic, precio:precioNum, sizes}, ...s.articles], nextId:s.nextId+1 }))
@@ -483,7 +483,7 @@ export default function App() {
   const mvConfirm = () => {
     const toMove = Object.entries(mv.qtys).map(([t,q]) => [t, parseInt(q,10)||0]).filter(([,q]) => q > 0)
     if(toMove.length === 0) { showToast('Ingresá la cantidad a mover en al menos un talle.'); return }
-    const newUbic = mv.estante + mv.altura
+    const newUbic = mv.estante === 'TRANSITO' ? 'TRANSITO' : mv.estante + mv.altura
     if(newUbic === selA.ubic) { showToast('La ubicación destino es la misma que la actual.'); return }
     for(const [t, q] of toMove) {
       const src = selA.sizes.find(sz => sz.talle === t)
@@ -526,7 +526,7 @@ export default function App() {
       return {...prev, articles:arts, nextId}
     })
     setModal(null); setView('inventario')
-    showToast('Movido a ' + mv.estante + mv.altura + '.')
+    showToast('Movido a ' + (mv.estante === 'TRANSITO' ? 'TRANSITO' : mv.estante + mv.altura) + '.')
   }
 
   // ---- Editar ----
@@ -2066,12 +2066,14 @@ export default function App() {
                       {ESTANTES.map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
                   </div>
+                  {na.estante !== 'TRANSITO' && (
                   <div style={{display:'flex',alignItems:'center',gap:8}}>
                     <span style={{fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>Altura</span>
                     <select className="field-input" style={{flex:1}} value={na.altura} onChange={e => setNa(p=>({...p,altura:e.target.value}))}>
                       {ALTURAS.map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
                   </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -2260,12 +2262,14 @@ export default function App() {
                   <select className="field-input" style={{flex:1}} value={mv.estante} onChange={e => setMv(p=>({...p,estante:e.target.value}))}>
                     {ESTANTES.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
+                  {mv.estante !== 'TRANSITO' && <>
                   <span style={{fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>Altura</span>
                   <select className="field-input" style={{flex:1}} value={mv.altura} onChange={e => setMv(p=>({...p,altura:e.target.value}))}>
                     {ALTURAS.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
+                  </>}
                 </div>
-                <div style={{marginTop:6,fontSize:12,color:'#8a8a82'}}>Destino: <b style={{color:'#1a1a1a'}}>{mv.estante}{mv.altura}</b></div>
+                <div style={{marginTop:6,fontSize:12,color:'#8a8a82'}}>Destino: <b style={{color:'#1a1a1a'}}>{mv.estante === 'TRANSITO' ? 'TRANSITO' : mv.estante + mv.altura}</b></div>
               </div>
             </div>
             <div className="modal-footer">
