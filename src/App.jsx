@@ -1740,8 +1740,9 @@ export default function App() {
               {/* Tab: Reposiciones */}
               {repTab === 'reposiciones' && (<>
                 {(() => {
-                  const totalEquipos = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
-                  const totalShorts = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
+                  const esReposicion = r => /^reposici[oó]n\s+vs/i.test((r.concepto||'').trim())
+                  const totalEquipos = (db.reposiciones||[]).filter(esReposicion).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
+                  const totalShorts = (db.reposiciones||[]).filter(esReposicion).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
                   return (
                     <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
@@ -2190,9 +2191,13 @@ export default function App() {
         }))
         const jugs = Object.values(jugMap).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0))
 
+        // Solo reposiciones "Reposición vs ..."
+        const esRep = r => /^reposici[oó]n\s+vs/i.test((r.concepto||'').trim())
+        const repsValidas = (db.reposiciones||[]).filter(esRep)
+
         // Suma por jugador x mes
         const getQty = (nombre, mes) =>
-          (db.reposiciones||[]).filter(r => {
+          repsValidas.filter(r => {
             const p = (r.fecha||'').split('/')
             return (p.length===3 ? p[1]+'/'+p[2] : r.fecha) === mes
           }).reduce((acc,r) => {
@@ -2201,7 +2206,7 @@ export default function App() {
           }, 0)
 
         const getTotal = (nombre) =>
-          (db.reposiciones||[]).reduce((acc,r)=>{
+          repsValidas.reduce((acc,r)=>{
             const j=(r.jugadores||[]).find(x=>x.nombre===nombre)
             return acc+(j?Number(j[campo])||0:0)
           },0)
