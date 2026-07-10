@@ -1189,7 +1189,7 @@ export default function App() {
           </div>
         </div>
         <nav className="sidebar-nav">
-          {[['panel','PANEL PRINCIPAL'],['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES'],['usuarios-reg','USUARIOS REGISTRADOS'],['utileria','CAMISETAS UTILERÍA'],['reposiciones','REPOSICIÓN CAMISETAS']].map(([key,label]) => {
+          {[['panel','PANEL PRINCIPAL'],['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES'],['reposiciones','REPOSICIÓN CAMISETAS'],['utileria','CAMISETAS UTILERÍA'],['usuarios-reg','USUARIOS REGISTRADOS']].map(([key,label]) => {
             const isActive = view===key||(key==='inventario'&&view==='detalle')
             return (
               <button key={key} className={`nav-item${isActive?' active':''}`} onClick={() => goView(key)}>
