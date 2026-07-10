@@ -1747,15 +1747,19 @@ export default function App() {
                   ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay reposiciones registradas aún.</div>
                   : (
                     <div className="card" style={{padding:0,overflow:'hidden'}}>
-                      <div className="table-header" style={{gridTemplateColumns:'100px 1fr 80px 36px'}}>
-                        <div>FECHA</div><div>CONCEPTO</div><div style={{textAlign:'right'}}>JUGADORES</div><div/>
+                      <div className="table-header" style={{gridTemplateColumns:'100px 1fr 120px 70px 36px'}}>
+                        <div>FECHA</div><div>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'right'}}>JUGADORES</div><div/>
                       </div>
                       {(db.reposiciones||[]).map(r => (
-                        <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 1fr 80px 36px',cursor:'pointer'}} onClick={() => setRepDetail(r)}>
+                        <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 1fr 120px 70px 36px',cursor:'pointer'}} onClick={() => setRepDetail(r)}>
                           <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#6a6a62'}}>{r.fecha}</div>
                           <div>
                             <div style={{fontWeight:600}}>{r.concepto}</div>
                             {r.creadoPor && <div style={{fontSize:11.5,color:'#8a8a82'}}>{r.creadoPor}</div>}
+                          </div>
+                          <div style={{fontSize:12}}>
+                            {r.torneo && <div style={{fontWeight:600}}>{r.torneo}</div>}
+                            {r.fechaTorneo != null && r.fechaTorneo !== '' && <div style={{fontSize:11,color:'#8a8a82'}}>Fecha {r.fechaTorneo}</div>}
                           </div>
                           <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{(r.jugadores||[]).length}</div>
                           <div style={{textAlign:'right',color:'#8a8a82',fontSize:18,lineHeight:1}}>›</div>
