@@ -755,9 +755,19 @@ export default function App() {
   }
   const deliveryRows = deliveries.map(delEnrich)
   const deliveryReceptores = [...new Set(deliveries.map(d => d.receptor).filter(Boolean))]
+  const REP_FILTER = 'Reposiciones 1° División'
   const filteredDeliveryRows = deliveryRows
-    .filter(d => !delFilterReceptor || d.receptor === delFilterReceptor)
+    .filter(d => !delFilterReceptor || delFilterReceptor === REP_FILTER || d.receptor === delFilterReceptor)
     .filter(d => !delFilterPersona || d.persona.toLowerCase().includes(delFilterPersona.toLowerCase()))
+  const repRows = (db.reposiciones||[]).map(r => {
+    const totalCamisetas = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
+    const totalShorts = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
+    const parts = []
+    if (totalCamisetas) parts.push(`${totalCamisetas} camiseta${totalCamisetas!==1?'s':''}`)
+    if (totalShorts) parts.push(`${totalShorts} short${totalShorts!==1?'s':''}`)
+    return { id:r.id, fecha:r.fecha, persona:r.concepto, subLabel:r.torneo||'', ini:ini(r.concepto), resumen:parts.join(' · ')||'—', totalUd:totalCamisetas+totalShorts, creadoPor:r.creadoPor, _rep:r }
+  })
+  const filteredRepRows = repRows.filter(r => !delFilterPersona || r.persona.toLowerCase().includes(delFilterPersona.toLowerCase()))
   const recentDeliveries = deliveries.slice(0,4).map(delEnrich)
   const pendingApprovals = db.users.filter(u => u.status === 'pendiente')
   const pendingDeliveries = deliveries
@@ -1552,14 +1562,19 @@ export default function App() {
                   {deliveryReceptores.map(r => (
                     <button key={r} className={`chip${delFilterReceptor===r?' active':''}`} onClick={() => setDelFilterReceptor(r)}>{r}</button>
                   ))}
+                  <button className={`chip${delFilterReceptor===REP_FILTER?' active':''}`} onClick={() => setDelFilterReceptor(REP_FILTER)}>Reposiciones 1° División</button>
                 </div>
                 <input className="field-input" style={{width:200,flexShrink:0}} placeholder="Buscar integrante…" value={delFilterPersona} onChange={e => setDelFilterPersona(e.target.value)} />
               </div>
             <div className="card table-wrap">
               <div className="card-header">
-                <div className="card-title">Historial de entregas</div>
+                <div className="card-title">{delFilterReceptor===REP_FILTER ? 'Reposiciones 1° División' : 'Historial de entregas'}</div>
                 <div className="card-spacer"/>
-                <span style={{fontSize:12.5,color:'#8a8a82'}}>{filteredDeliveryRows.length} de {kpis.entregas} entregas</span>
+                <span style={{fontSize:12.5,color:'#8a8a82'}}>
+                  {delFilterReceptor===REP_FILTER
+                    ? `${filteredRepRows.length} de ${(db.reposiciones||[]).length} reposiciones`
+                    : `${filteredDeliveryRows.length} de ${kpis.entregas} entregas`}
+                </span>
               </div>
               <div className={`table-header ${delFilterReceptor==='Deportes Anexos'?'del-cols-disc':'del-cols'}`}>
                 <div>FECHA</div><div>INTEGRANTE / GRUPO</div>
@@ -1569,32 +1584,50 @@ export default function App() {
                 <div className="del-col-por">USUARIO</div>
                 <div style={{textAlign:'right'}}>ESTADO</div><div/>
               </div>
-              {filteredDeliveryRows.map(d => (
-                <div key={d.id} className={`table-row ${delFilterReceptor==='Deportes Anexos'?'del-cols-disc':'del-cols'} clickable`} onClick={() => setSelectedDeliveryId(d.id)}>
-                  <div className="mono" style={{fontSize:12.5,color:'#6a6a62'}}>{d.fecha}</div>
-                  <div style={{display:'flex',alignItems:'center',gap:11,minWidth:0}}>
-                    <div className="avatar lg">{d.ini}</div>
-                    <div style={{minWidth:0}}>
-                      <div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.persona}</div>
-                      <div style={{fontSize:11.5,color:'#8a8a82'}}>
-                        {d.receptor}
-                        {d.paga !== null && d.paga !== undefined && <span style={{marginLeft:6,fontWeight:600,color:d.paga==='si'?'#2e9b5e':'#C2473D'}}>· Paga: {d.paga==='si'?'Sí':'No'}{d.paga==='si'&&d.monto>0?' — $ '+d.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}):''}</span>}
+              {delFilterReceptor===REP_FILTER
+                ? filteredRepRows.map(d => (
+                    <div key={d.id} className="table-row del-cols clickable" onClick={() => setRepDetail(d._rep)}>
+                      <div className="mono" style={{fontSize:12.5,color:'#6a6a62'}}>{d.fecha}</div>
+                      <div style={{display:'flex',alignItems:'center',gap:11,minWidth:0}}>
+                        <div className="avatar lg">{d.ini}</div>
+                        <div style={{minWidth:0}}>
+                          <div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.persona}</div>
+                          {d.subLabel && <div style={{fontSize:11.5,color:'#8a8a82'}}>{d.subLabel}</div>}
+                        </div>
+                      </div>
+                      <div className="del-col-detail" style={{color:'#6a6a62',fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.resumen}</div>
+                      <div style={{textAlign:'center',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{d.totalUd}</div>
+                      <div className="del-col-por" style={{fontSize:12.5,color:'#8a8a82',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.creadoPor || '—'}</div>
+                      <div/><div/>
+                    </div>
+                  ))
+                : filteredDeliveryRows.map(d => (
+                    <div key={d.id} className={`table-row ${delFilterReceptor==='Deportes Anexos'?'del-cols-disc':'del-cols'} clickable`} onClick={() => setSelectedDeliveryId(d.id)}>
+                      <div className="mono" style={{fontSize:12.5,color:'#6a6a62'}}>{d.fecha}</div>
+                      <div style={{display:'flex',alignItems:'center',gap:11,minWidth:0}}>
+                        <div className="avatar lg">{d.ini}</div>
+                        <div style={{minWidth:0}}>
+                          <div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.persona}</div>
+                          <div style={{fontSize:11.5,color:'#8a8a82'}}>
+                            {d.receptor}
+                            {d.paga !== null && d.paga !== undefined && <span style={{marginLeft:6,fontWeight:600,color:d.paga==='si'?'#2e9b5e':'#C2473D'}}>· Paga: {d.paga==='si'?'Sí':'No'}{d.paga==='si'&&d.monto>0?' — $ '+d.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}):''}</span>}
+                          </div>
+                        </div>
+                      </div>
+                      {delFilterReceptor==='Deportes Anexos' && <div style={{fontSize:12.5,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.disciplina||<span style={{color:'#ccc'}}>—</span>}</div>}
+                      <div className="del-col-detail" style={{color:'#6a6a62',fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.resumen}</div>
+                      <div style={{textAlign:'center',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{d.totalUd}</div>
+                      <div className="del-col-por" style={{fontSize:12.5,color:'#8a8a82',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.creadoPor || '—'}</div>
+                      <div style={{textAlign:'right'}}>
+                        {(() => { const st=d.status||'aceptado'; return st==='pendiente'?<span style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Pendiente</span>:st==='rechazado'?<span style={{background:'#FBEAE8',color:'#C2473D',border:'1px solid #C2473D',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Rechazado</span>:<span style={{background:'#EDF7F2',color:'#2e9b5e',border:'1px solid #2e9b5e',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Aceptado</span> })()}
+                      </div>
+                      <div style={{display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
+                        {!isSoloVista && <button className="btn-del" onClick={e => { e.stopPropagation(); askDeleteDelivery(d.id) }}>✕</button>}
                       </div>
                     </div>
-                  </div>
-                  {delFilterReceptor==='Deportes Anexos' && <div style={{fontSize:12.5,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.disciplina||<span style={{color:'#ccc'}}>—</span>}</div>}
-                  <div className="del-col-detail" style={{color:'#6a6a62',fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.resumen}</div>
-                  <div style={{textAlign:'center',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{d.totalUd}</div>
-                  <div className="del-col-por" style={{fontSize:12.5,color:'#8a8a82',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.creadoPor || '—'}</div>
-                  <div style={{textAlign:'right'}}>
-                    {(() => { const st=d.status||'aceptado'; return st==='pendiente'?<span style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Pendiente</span>:st==='rechazado'?<span style={{background:'#FBEAE8',color:'#C2473D',border:'1px solid #C2473D',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Rechazado</span>:<span style={{background:'#EDF7F2',color:'#2e9b5e',border:'1px solid #2e9b5e',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Aceptado</span> })()}
-                  </div>
-                  <div style={{display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
-                    {!isSoloVista && <button className="btn-del" onClick={e => { e.stopPropagation(); askDeleteDelivery(d.id) }}>✕</button>}
-                  </div>
-                </div>
-              ))}
-              {filteredDeliveryRows.length === 0 && <div className="empty">{delFilterReceptor||delFilterPersona ? 'Sin entregas para este filtro.' : 'Sin entregas registradas.'}</div>}
+                  ))
+              }
+              {(delFilterReceptor===REP_FILTER ? filteredRepRows : filteredDeliveryRows).length === 0 && <div className="empty">{delFilterReceptor===REP_FILTER ? 'No hay reposiciones registradas.' : delFilterReceptor||delFilterPersona ? 'Sin entregas para este filtro.' : 'Sin entregas registradas.'}</div>}
             </div>
             </>
           )}
