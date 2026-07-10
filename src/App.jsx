@@ -1876,6 +1876,35 @@ export default function App() {
                     ))}
                   </div>
                 </div>
+
+                {/* Tabla monto por receptor */}
+                <div className="card" style={{padding:0,overflow:'hidden'}}>
+                  <div className="table-header" style={{gridTemplateColumns:'1fr 140px 120px'}}>
+                    <div>RECEPTOR</div>
+                    <div style={{textAlign:'right'}}>MONTO ENTREGADO</div>
+                    <div style={{textAlign:'right'}}>UNIDADES</div>
+                  </div>
+                  {data.filter(r => r.unidades > 0).map(r => (
+                    <div key={r.name} className="table-row clickable" style={{gridTemplateColumns:'1fr 140px 120px'}}
+                      onClick={() => { setDelFilterReceptor(r.name); setView('entregas') }}>
+                      <div style={{display:'flex',alignItems:'center',gap:8}}>
+                        <div style={{width:8,height:8,borderRadius:'50%',background:RECEPTOR_COLORS[r.name]||'#999',flexShrink:0}} />
+                        <span style={{fontWeight:500}}>{r.name}</span>
+                      </div>
+                      <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#1a5c33'}}>
+                        {r.monto > 0 ? '$ '+r.monto.toLocaleString('es-UY',{minimumFractionDigits:0,maximumFractionDigits:0}) : <span style={{color:'#ccc'}}>—</span>}
+                      </div>
+                      <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace',color:'#6a6a62'}}>
+                        {r.unidades.toLocaleString('es-UY')}
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 140px 120px',padding:'10px 16px',background:'#121212',color:'#FFD200',fontWeight:700,fontSize:13}}>
+                    <div>TOTAL</div>
+                    <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace'}}>$ {data.reduce((s,r)=>s+(r.monto||0),0).toLocaleString('es-UY',{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
+                    <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace'}}>{totalUsado.toLocaleString('es-UY')}</div>
+                  </div>
+                </div>
               </div>
             )
           })()}
