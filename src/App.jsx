@@ -1533,15 +1533,15 @@ export default function App() {
                 <div className="card-spacer"/>
                 <span style={{fontSize:12.5,color:'#8a8a82'}}>{filteredDeliveryRows.length} de {kpis.entregas} entregas</span>
               </div>
-              <div className="table-header del-cols">
+              <div className={`table-header ${delFilterReceptor==='Deportes Anexos'?'del-cols-disc':'del-cols'}`}>
                 <div>FECHA</div><div>INTEGRANTE / GRUPO</div>
-                <div>DISCIPLINA</div>
+                {delFilterReceptor==='Deportes Anexos' && <div>DISCIPLINA</div>}
                 <div className="del-col-detail">DETALLE</div>
                 <div className="del-col-por">USUARIO</div>
                 <div style={{textAlign:'right'}}>ESTADO</div><div/>
               </div>
               {filteredDeliveryRows.map(d => (
-                <div key={d.id} className="table-row del-cols clickable" onClick={() => setSelectedDeliveryId(d.id)}>
+                <div key={d.id} className={`table-row ${delFilterReceptor==='Deportes Anexos'?'del-cols-disc':'del-cols'} clickable`} onClick={() => setSelectedDeliveryId(d.id)}>
                   <div className="mono" style={{fontSize:12.5,color:'#6a6a62'}}>{d.fecha}</div>
                   <div style={{display:'flex',alignItems:'center',gap:11,minWidth:0}}>
                     <div className="avatar lg">{d.ini}</div>
@@ -1553,7 +1553,7 @@ export default function App() {
                       </div>
                     </div>
                   </div>
-                  <div style={{fontSize:12.5,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.disciplina||<span style={{color:'#ccc'}}>—</span>}</div>
+                  {delFilterReceptor==='Deportes Anexos' && <div style={{fontSize:12.5,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.disciplina||<span style={{color:'#ccc'}}>—</span>}</div>}
                   <div className="del-col-detail" style={{color:'#6a6a62',fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.resumen}</div>
                   <div className="del-col-por" style={{fontSize:12.5,color:'#8a8a82',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.creadoPor || '—'}</div>
                   <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{d.totalUd}</div>
