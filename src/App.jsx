@@ -1657,7 +1657,7 @@ export default function App() {
               <div className="card" style={{padding:20,display:'flex',gap:14,alignItems:'center',cursor:'pointer'}} onClick={() => setView('reposiciones')}>
                 <div className="avatar xl" style={{background:'#FFD200',color:'#121212'}}>R</div>
                 <div style={{flex:1}}>
-                  <div style={{fontWeight:700,fontSize:15}}>Primera División</div>
+                  <div style={{fontWeight:700,fontSize:15}}>Reposiciones Primera División</div>
                   <div style={{fontSize:12.5,color:'#8a8a82',marginTop:3}}>{(db.reposiciones||[]).length} reposiciones registradas</div>
                 </div>
                 <span style={{color:'#C8C8C0',fontSize:20}}>›</span>
