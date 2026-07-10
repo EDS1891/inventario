@@ -20,7 +20,11 @@ const REP_TIPOS_JUGADOR = ['TRADICIONAL','AMARILLA','VERDE']
 const REP_TIPOS_GOLERO  = ['NEGRO','NARANJA','CREMA']
 const getRepTipos = (posicion) => posicion === 'Golero' ? REP_TIPOS_GOLERO : REP_TIPOS_JUGADOR
 
-const DEFAULT_USERS = [{ username:'compras', password:'peniarol1891', role:'admin', displayName:'Compras Peñarol', status:'aprobado' }]
+const DEFAULT_USERS = [
+  { username:'compras', password:'peniarol1891', role:'admin', displayName:'Compras Peñarol', status:'aprobado' },
+  { username:'compras@capenarol.com.uy', password:'peniarol1891', role:'admin', displayName:'Compras Peñarol', status:'aprobado' },
+  { username:'iabella@capenarol.com.uy', password:'Temporal2026', role:'receptor', displayName:'Ignacio Abella Goday', status:'aprobado' },
+]
 const EMPTY_DB = { articles:[], deliveries:[], movimientos:[], nextId:1, nextDel:1, nextMov:1, nextRep:1, users: DEFAULT_USERS, camisetasUtileria:[], reposiciones:[], plantel:[] }
 const COMPETICIONES = ['CAMPEONATO URUGUAYO','CONMEBOL','COPA LIBERTADORES FEMENINA','COPA LIBERTADORES FÚTBOL SALA','COPA INTERCONTINENTAL SUB 20']
 const MODELOS_JUGADOR = ['TRADICIONAL','GRIS','AMARILLA','DORADA','NEGRA Y DORADA','NEGRA Y AMARILLA','AMARILLA FLÚO']
@@ -230,12 +234,6 @@ export default function App() {
     supabase.from('deposito_state').upsert({ id: 2, deliveries: list })
       .then(({ error }) => { if (error) console.error('Error guardando usuarios:', error.message) })
   }
-  useEffect(() => {
-    if (!db.users || db.users.length === 0) return
-    if (!db.users.find(u => u.username === 'iabella@capenarol.com.uy')) {
-      saveUsers([...db.users, { username:'iabella@capenarol.com.uy', password:'Temporal2026', role:'receptor', displayName:'Ignacio Abella Goday', status:'aprobado' }])
-    }
-  }, [db.users])
   const doLogin = () => {
     const found = db.users.find(u => u.username.toLowerCase() === loginForm.user.toLowerCase() && u.password === loginForm.pass)
     if(!found) { setLoginForm(p => ({...p, err:'Usuario o contraseña incorrectos.'})); return }
