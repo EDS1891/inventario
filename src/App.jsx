@@ -1974,7 +1974,7 @@ export default function App() {
                     ))}
                   </div>
                 </div>
-                {TORNEOS_CON_FECHA.includes(repForm.torneo) && (
+                {TORNEOS_CON_FECHA.includes(repForm.torneo) ? (
                   <div className="form-group" style={{width:80,marginBottom:0}}>
                     <label className="field-label">Fecha</label>
                     <select className="field-input" value={repForm.fechaTorneo} onChange={e=>setRepForm(p=>({...p,fechaTorneo:e.target.value}))}>
@@ -1982,6 +1982,11 @@ export default function App() {
                         <option key={n} value={n}>{n}</option>
                       ))}
                     </select>
+                  </div>
+                ) : (
+                  <div className="form-group" style={{width:140,marginBottom:0}}>
+                    <label className="field-label">Fecha</label>
+                    <input className="field-input" value={repForm.fechaTorneo||''} onChange={e=>setRepForm(p=>({...p,fechaTorneo:e.target.value}))} placeholder="Ej. Ida / Final" />
                   </div>
                 )}
               </div>
