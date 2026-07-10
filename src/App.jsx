@@ -2049,21 +2049,29 @@ export default function App() {
               <div style={{display:'grid',gridTemplateColumns:'40px 1fr 80px 80px',gap:6,marginBottom:4,fontSize:10,fontWeight:700,color:'#8a8a82',background:'#F5F5F0',borderRadius:6,padding:'5px 6px'}}>
                 <div>Nº</div><div>NOMBRE</div><div style={{textAlign:'center'}}>CAMISETA</div><div style={{textAlign:'center'}}>SHORT</div>
               </div>
-              {(repDetail.jugadores||[]).map((j,i) => (
-                <div key={i} style={{display:'grid',gridTemplateColumns:'40px 1fr 80px 80px',gap:6,padding:'6px 6px',borderBottom:'1px solid #F5F5F0',fontSize:13,alignItems:'center'}}>
-                  <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#6a6a62'}}>{j.numero||'—'}</div>
-                  <div>
-                    <span style={{fontWeight:500}}>{j.nombre||'—'}</span>
-                    {j.talleCamiseta && <span style={{fontSize:10,color:'#aaa',marginLeft:6}}>T:{j.talleCamiseta}</span>}
+              {(repDetail.jugadores||[]).map((j,i) => {
+                const goleroRowBg = j.posicion==='Golero'
+                  ? j.tipoCamiseta==='NEGRO'   ? {background:'#d0d0d0',borderBottom:'1px solid #bbb'}
+                  : j.tipoCamiseta==='NARANJA'  ? {background:'#FFE5CC',borderBottom:'1px solid #FFB870'}
+                  : j.tipoCamiseta==='CREMA'    ? {background:'#FFF8E8',borderBottom:'1px solid #EDE0C0'}
+                  : {borderBottom:'1px solid #F5F5F0'}
+                  : {borderBottom:'1px solid #F5F5F0'}
+                return (
+                  <div key={i} style={{display:'grid',gridTemplateColumns:'40px 1fr 80px 80px',gap:6,padding:'6px 6px',fontSize:13,alignItems:'center',...goleroRowBg}}>
+                    <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#6a6a62'}}>{j.numero||'—'}</div>
+                    <div>
+                      <span style={{fontWeight:500}}>{j.nombre||'—'}</span>
+                      {j.talleCamiseta && <span style={{fontSize:10,color:'#aaa',marginLeft:6}}>T:{j.talleCamiseta}</span>}
+                    </div>
+                    <div style={{textAlign:'center',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:j.cantCamiseta>0?'#1a1a1a':'#ccc'}}>
+                      {j.cantCamiseta>0?j.cantCamiseta:'—'}
+                    </div>
+                    <div style={{textAlign:'center',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:j.cantShort>0?'#1a1a1a':'#ccc'}}>
+                      {j.cantShort>0?j.cantShort:'—'}
+                    </div>
                   </div>
-                  <div style={{textAlign:'center',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:j.cantCamiseta>0?'#1a1a1a':'#ccc'}}>
-                    {j.cantCamiseta>0?j.cantCamiseta:'—'}
-                  </div>
-                  <div style={{textAlign:'center',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:j.cantShort>0?'#1a1a1a':'#ccc'}}>
-                    {j.cantShort>0?j.cantShort:'—'}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
               <div style={{marginTop:10,fontSize:12,color:'#8a8a82',textAlign:'right'}}>{(repDetail.jugadores||[]).length} jugadores</div>
             </div>
             <div className="modal-footer">
