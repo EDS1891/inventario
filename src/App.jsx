@@ -1547,7 +1547,7 @@ export default function App() {
                     <div style={{minWidth:0}}>
                       <div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.persona}</div>
                       <div style={{fontSize:11.5,color:'#8a8a82'}}>
-                        {d.receptor}
+                        {d.receptor}{d.disciplina ? <span> · <b>{d.disciplina}</b></span> : ''}
                         {d.paga !== null && d.paga !== undefined && <span style={{marginLeft:6,fontWeight:600,color:d.paga==='si'?'#2e9b5e':'#C2473D'}}>· Paga: {d.paga==='si'?'Sí':'No'}{d.paga==='si'&&d.monto>0?' — $ '+d.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}):''}</span>}
                       </div>
                     </div>
