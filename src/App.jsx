@@ -1696,8 +1696,6 @@ export default function App() {
               </div>
             </div>
           )}
-        </div>
-      </div>
 
           {/* REPOSICIÓN CAMISETAS */}
           {view === 'reposiciones' && (
@@ -1780,6 +1778,8 @@ export default function App() {
               </>)}
             </div>
           )}
+        </div>
+      </div>
 
       {/* ===== MODALES ===== */}
 
