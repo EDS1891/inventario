@@ -1895,7 +1895,7 @@ export default function App() {
                         {data.map(r => (
                           <div key={r.name} style={{flex:1,minWidth:40,display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
                             <div style={{width:8,height:8,borderRadius:'50%',background:RECEPTOR_COLORS[r.name]||'#999'}} />
-                            <div style={{fontSize:10,color:'#5a5a52',textAlign:'center',lineHeight:1.2}}>{r.name}</div>
+                            <div style={{fontSize:10,fontWeight:700,color:'#1a1a1a',textAlign:'center',lineHeight:1.2,textTransform:'uppercase'}}>{r.name}</div>
                           </div>
                         ))}
                       </div>
