@@ -59,11 +59,20 @@ async function loadFromSupabase() {
   DEFAULT_USERS.forEach(du => {
     if (!users.find(u => u.username === du.username)) users.push(du)
   })
+  const rawDeliveries = data.deliveries || []
+  const needsMigration = rawDeliveries.some(d => !d.creadoPor)
+  const deliveries = needsMigration
+    ? rawDeliveries.map(d => d.creadoPor ? d : { ...d, creadoPor: 'Emiliano Domínguez' })
+    : rawDeliveries
+  if (needsMigration) {
+    supabase.from('deposito_state').upsert({ id: 1, articles: data.articles, deliveries, movimientos: data.movimientos, next_id: data.next_id, next_del: data.next_del, next_mov: data.next_mov })
+      .then(({ error }) => { if (error) console.error('Error migrando creadoPor:', error.message) })
+  }
   return {
     articles: (data.articles || []).map(a => ({
       ...a, sizes: (a.sizes || []).map(s => ({ talle: s.talle, qty: Number(s.qty)||0, min: Number(s.min)||0 }))
     })),
-    deliveries: data.deliveries || [],
+    deliveries,
     movimientos: data.movimientos || [],
     nextId: data.next_id || 1,
     nextDel: data.next_del || 1,
