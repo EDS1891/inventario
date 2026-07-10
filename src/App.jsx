@@ -1746,13 +1746,16 @@ export default function App() {
           {/* CONTRATO PUMA */}
           {view === 'contrato-puma' && (() => {
             const TOTAL_CONTRATO = 17200
-            const RECEPTOR_ORDER = ['Protocolo','1° División','Reposición 1° División','3 División','Juveniles','Femenino','Juveniles Femenino','Basket','Captación','Futbol Sala Masculino','Futbol Sala Femenino','Funcionarios']
+            const RECEPTOR_ORDER = ['Protocolo','1° División','3 División','Juveniles','Femenino','Juveniles Femenino','Basket','Captación','Futbol Sala Masculino','Futbol Sala Femenino','Funcionarios']
             const repUnidades = (db.reposiciones||[]).reduce((s, r) =>
               s + (r.jugadores||[]).reduce((a, j) => a + (Number(j.cantCamiseta)||0) + (Number(j.cantShort)||0), 0), 0)
             const baseData = receptorCards
-              .map(r => ({ name: r.name, unidades: r.unidades, pct: r.unidades / TOTAL_CONTRATO * 100 }))
-            const repEntry = { name: 'Reposición 1° División', unidades: repUnidades, pct: repUnidades / TOTAL_CONTRATO * 100 }
-            const data = [...baseData, repEntry].sort((a, b) => {
+              .map(r => {
+                const extra = r.name === '1° División' ? repUnidades : 0
+                const total = r.unidades + extra
+                return { name: r.name, unidades: total, pct: total / TOTAL_CONTRATO * 100 }
+              })
+            const data = baseData.sort((a, b) => {
                 const ia = RECEPTOR_ORDER.indexOf(a.name)
                 const ib = RECEPTOR_ORDER.indexOf(b.name)
                 if (ia === -1 && ib === -1) return 0
