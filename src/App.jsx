@@ -1956,7 +1956,7 @@ export default function App() {
               {/* Selector de tipo de camiseta — uno por posición */}
               <div style={{display:'flex',gap:16,marginTop:14}}>
                 <div style={{flex:1}}>
-                  <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',marginBottom:6}}>CAMISETA JUGADORES</div>
+                  <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',marginBottom:6}}>EQUIPO JUGADORES</div>
                   <div style={{display:'flex',gap:6}}>
                     {REP_TIPOS_JUGADOR.map(t=>(
                       <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,tipoCamisetaJugador:t}))}
@@ -1970,7 +1970,7 @@ export default function App() {
                   </div>
                 </div>
                 <div style={{flex:1}}>
-                  <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',marginBottom:6}}>CAMISETA GOLEROS</div>
+                  <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',marginBottom:6}}>EQUIPO GOLEROS</div>
                   <div style={{display:'flex',gap:6}}>
                     {REP_TIPOS_GOLERO.map(t=>(
                       <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,tipoCamisetaGolero:t}))}
