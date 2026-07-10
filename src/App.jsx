@@ -1761,9 +1761,9 @@ export default function App() {
                         <div>Nº</div><div>NOMBRE</div><div>POSICIÓN</div><div>CAMISETA</div><div>SHORT</div><div/>
                       </div>
                       {(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => (
-                        <div key={j.id} className="table-row" style={{gridTemplateColumns:'50px 1fr 80px 90px 90px 72px'}}>
-                          <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>{j.numero||'—'}</div>
-                          <div style={{fontWeight:500}}>{j.nombre}</div>
+                        <div key={j.id} className="table-row" style={{gridTemplateColumns:'50px 1fr 80px 90px 90px 72px', background: j.nombre.trim().toLowerCase()==='libre' ? '#3a3a3a' : undefined}}>
+                          <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:j.nombre.trim().toLowerCase()==='libre'?'#888':undefined}}>{j.numero||'—'}</div>
+                          <div style={{fontWeight:500,color:j.nombre.trim().toLowerCase()==='libre'?'#888':'#8a8a82',fontStyle:j.nombre.trim().toLowerCase()==='libre'?'italic':undefined}}>{j.nombre}</div>
                           <div style={{color:'#6a6a62',fontSize:12}}>{j.posicion||'Jugador'}</div>
                           <div style={{color:'#6a6a62'}}>{j.talleCamiseta}</div>
                           <div style={{color:'#6a6a62'}}>{j.talleShort}</div>
