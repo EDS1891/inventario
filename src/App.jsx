@@ -1772,7 +1772,7 @@ export default function App() {
                   : (
                     <div className="card" style={{padding:0,overflow:'hidden'}}>
                       <div className="table-header" style={{gridTemplateColumns:'50px 1fr 80px 90px 90px 72px'}}>
-                        <div>Nº</div><div>NOMBRE</div><div>POSICIÓN</div><div>EQUIPO</div><div>SHORT</div><div/>
+                        <div>Nº</div><div>NOMBRE</div><div>POSICIÓN</div><div>CAMISETA</div><div>SHORT</div><div/>
                       </div>
                       {(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => (
                         <div key={j.id} className="table-row" style={{gridTemplateColumns:'50px 1fr 80px 90px 90px 72px', background: j.nombre.trim().toLowerCase()==='libre' ? '#3a3a3a' : undefined}}>
@@ -1956,7 +1956,7 @@ export default function App() {
               {/* Selector de tipo de camiseta — uno por posición */}
               <div style={{display:'flex',gap:16,marginTop:14}}>
                 <div style={{flex:1}}>
-                  <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',marginBottom:6}}>EQUIPO JUGADORES</div>
+                  <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',marginBottom:6}}>CAMISETA JUGADORES</div>
                   <div style={{display:'flex',gap:6}}>
                     {REP_TIPOS_JUGADOR.map(t=>(
                       <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,tipoCamisetaJugador:t}))}
@@ -1970,7 +1970,7 @@ export default function App() {
                   </div>
                 </div>
                 <div style={{flex:1}}>
-                  <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',marginBottom:6}}>EQUIPO GOLEROS</div>
+                  <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',marginBottom:6}}>CAMISETA GOLEROS</div>
                   <div style={{display:'flex',gap:6}}>
                     {REP_TIPOS_GOLERO.map(t=>(
                       <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,tipoCamisetaGolero:t}))}
@@ -1987,7 +1987,7 @@ export default function App() {
 
               <div style={{marginTop:16}}>
                 <div style={{display:'grid',gridTemplateColumns:'40px 1fr 80px 80px',gap:6,marginBottom:4,fontSize:10,fontWeight:700,color:'#8a8a82',padding:'4px 6px',background:'#F5F5F0',borderRadius:6}}>
-                  <div>Nº</div><div>NOMBRE</div><div style={{textAlign:'center'}}>EQUIPO</div><div style={{textAlign:'center'}}>SHORT</div>
+                  <div>Nº</div><div>NOMBRE</div><div style={{textAlign:'center'}}>CAMISETA</div><div style={{textAlign:'center'}}>SHORT</div>
                 </div>
                 {repForm.rows.map((r, i) => {
                   const hasQty = Number(r.cantCamiseta)>0 || Number(r.cantShort)>0
@@ -2047,7 +2047,7 @@ export default function App() {
                 </div>
               )}
               <div style={{display:'grid',gridTemplateColumns:'40px 1fr 80px 80px',gap:6,marginBottom:4,fontSize:10,fontWeight:700,color:'#8a8a82',background:'#F5F5F0',borderRadius:6,padding:'5px 6px'}}>
-                <div>Nº</div><div>NOMBRE</div><div style={{textAlign:'center'}}>EQUIPO</div><div style={{textAlign:'center'}}>SHORT</div>
+                <div>Nº</div><div>NOMBRE</div><div style={{textAlign:'center'}}>CAMISETA</div><div style={{textAlign:'center'}}>SHORT</div>
               </div>
               {(repDetail.jugadores||[]).map((j,i) => (
                 <div key={i} style={{display:'grid',gridTemplateColumns:'40px 1fr 80px 80px',gap:6,padding:'6px 6px',borderBottom:'1px solid #F5F5F0',fontSize:13,alignItems:'center'}}>
