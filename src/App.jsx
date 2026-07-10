@@ -3103,7 +3103,7 @@ export default function App() {
                       </div>
                       <span style={{background:u.role==='admin'?'#121212':u.role==='solo-vista'?'#FFF4E6':'#EDF7F2',color:u.role==='admin'?'#FFD200':u.role==='solo-vista'?'#c2560a':'#2e9b5e',border:'1px solid '+(u.role==='admin'?'#3a3a3a':u.role==='solo-vista'?'#e8834a':'#2e9b5e'),borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700,flexShrink:0}}>{u.role==='admin'?'Admin':u.role==='solo-vista'?'Solo Vista':'Receptor'}</span>
                       {u.username === session && <span className="badge gray">Vos</span>}
-                      {u.username !== session && <button className="btn-del" onClick={()=>deleteUser(u.username)}>✕</button>}
+                      {currentUser?.role === 'admin' && u.username !== session && <button className="btn-del" onClick={()=>deleteUser(u.username)}>✕</button>}
                     </div>
                     {currentUser?.role === 'admin' && u.username !== session && (
                       <div style={{display:'flex',gap:6,marginTop:8,paddingLeft:42}}>
