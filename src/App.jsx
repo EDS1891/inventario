@@ -1189,7 +1189,7 @@ export default function App() {
           </div>
         </div>
         <nav className="sidebar-nav">
-          {[['panel','PANEL'],['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES'],['usuarios-reg','USUARIOS REGISTRADOS'],['utileria','CAMISETAS UTILERÍA'],['reposiciones','REPOSICIÓN CAMISETAS']].map(([key,label]) => {
+          {[['panel','PANEL PRINCIPAL'],['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES'],['usuarios-reg','USUARIOS REGISTRADOS'],['utileria','CAMISETAS UTILERÍA'],['reposiciones','REPOSICIÓN CAMISETAS']].map(([key,label]) => {
             const isActive = view===key||(key==='inventario'&&view==='detalle')
             return (
               <button key={key} className={`nav-item${isActive?' active':''}`} onClick={() => goView(key)}>
@@ -1225,7 +1225,7 @@ export default function App() {
           </button>
           <img src="/1891_Amarillo.jpg" alt="1891" style={{height:28,width:'auto'}} />
           <div className="topbar-title">
-            {{panel:'PANEL',inventario:'INVENTARIO',detalle:'DETALLE',entregas:'ENTREGAS',movimientos:'MOVIMIENTOS',receptores:'RECEPTORES','usuarios-reg':'USUARIOS REGISTRADOS',utileria:'CAMISETAS UTILERÍA',reposiciones:'REPOSICIÓN CAMISETAS'}[view]}
+            {{panel:'PANEL PRINCIPAL',inventario:'INVENTARIO',detalle:'DETALLE',entregas:'ENTREGAS',movimientos:'MOVIMIENTOS',receptores:'RECEPTORES','usuarios-reg':'USUARIOS REGISTRADOS',utileria:'CAMISETAS UTILERÍA',reposiciones:'REPOSICIÓN CAMISETAS'}[view]}
           </div>
           <div className="topbar-spacer" />
           <div className="search-box">
