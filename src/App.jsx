@@ -140,6 +140,7 @@ export default function App() {
   const [repModal, setRepModal] = useState(false)
   const [repDetail, setRepDetail] = useState(null)
   const [repResumen, setRepResumen] = useState(null)
+  const [repConceptoEdit, setRepConceptoEdit] = useState(null)
   const [repTab, setRepTab] = useState('reposiciones')
   const [plantelForm, setPlantelForm] = useState({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',talleShort:'L'})
   const [plantelModal, setPlantelModal] = useState(false)
@@ -809,6 +810,13 @@ export default function App() {
     setDb(s => ({...s, reposiciones:(s.reposiciones||[]).filter(r=>r.id!==id)}))
     setRepDetail(null)
     showToast('Reposición eliminada.')
+  }
+  const saveRepConcepto = () => {
+    if (!repConceptoEdit?.trim()) { showToast('El concepto no puede estar vacío.'); return }
+    setDb(s => ({...s, reposiciones:(s.reposiciones||[]).map(r=>r.id===repDetail.id?{...r,concepto:repConceptoEdit.trim()}:r)}))
+    setRepDetail(p => ({...p, concepto:repConceptoEdit.trim()}))
+    setRepConceptoEdit(null)
+    showToast('Concepto actualizado.')
   }
   const savePlantelJugador = () => {
     if (!plantelForm.nombre.trim()) { showToast('Ingresá el nombre del jugador.'); return }
@@ -2082,8 +2090,21 @@ export default function App() {
         <div className="modal-backdrop" onClick={() => setRepDetail(null)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:580,width:'96%'}}>
             <div className="modal-header">
-              <div>
-                <div className="modal-title">{repDetail.concepto}</div>
+              <div style={{flex:1,minWidth:0}}>
+                {repConceptoEdit !== null ? (
+                  <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                    <input className="field-input" value={repConceptoEdit} onChange={e=>setRepConceptoEdit(e.target.value)}
+                      onKeyDown={e=>{if(e.key==='Enter')saveRepConcepto();if(e.key==='Escape')setRepConceptoEdit(null)}}
+                      autoFocus style={{fontWeight:700,fontSize:16,flex:1}} />
+                    <button className="btn btn-dark" style={{padding:'6px 12px',fontSize:13}} onClick={saveRepConcepto}>✓</button>
+                    <button className="btn btn-ghost" style={{padding:'6px 10px',fontSize:13}} onClick={()=>setRepConceptoEdit(null)}>✕</button>
+                  </div>
+                ) : (
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <div className="modal-title">{repDetail.concepto}</div>
+                    <button onClick={()=>setRepConceptoEdit(repDetail.concepto)} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px',lineHeight:1}}>✎</button>
+                  </div>
+                )}
                 <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>
                   {repDetail.fecha}{repDetail.creadoPor ? ' · '+repDetail.creadoPor : ''}
                   {repDetail.torneo && <span style={{marginLeft:8,fontWeight:700,color:'#7a5800',background:'#FFF8D6',border:'1px solid #FFD200',borderRadius:4,padding:'1px 7px',fontSize:11}}>
@@ -2091,7 +2112,7 @@ export default function App() {
                   </span>}
                 </div>
               </div>
-              <button className="modal-close" onClick={() => setRepDetail(null)}>×</button>
+              <button className="modal-close" onClick={() => { setRepConceptoEdit(null); setRepDetail(null) }}>×</button>
             </div>
             <div className="modal-body" style={{maxHeight:'60vh',overflowY:'auto'}}>
               {/* Tipos de camiseta usados en esta reposición */}
