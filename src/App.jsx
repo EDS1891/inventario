@@ -1746,7 +1746,21 @@ export default function App() {
           {/* CONTRATO PUMA */}
           {view === 'contrato-puma' && (() => {
             const TOTAL_CONTRATO = 17200
-            const RECEPTOR_ORDER = ['Protocolo','1° División','3 División','Juveniles','Femenino','Juveniles Femenino','Basket','Captación','Futbol Sala Masculino','Futbol Sala Femenino','Funcionarios']
+            const RECEPTOR_ORDER = ['Protocolo','1° División','3° División','Juveniles','Femenino','Juveniles Femenino','Basket','Captación','Fútbol Sala Masculino','Fútbol Sala Femenino','Deportes Anexos','Funcionarios']
+            const RECEPTOR_COLORS = {
+              'Protocolo':           '#7BC67E',
+              '1° División':         '#FFD200',
+              '3° División':         '#BDBDBD',
+              'Juveniles':           '#5a5a5a',
+              'Femenino':            '#9B59B6',
+              'Juveniles Femenino':  '#C2185B',
+              'Basket':              '#FF7043',
+              'Captación':           '#4FC3F7',
+              'Fútbol Sala Masculino': '#1565C0',
+              'Fútbol Sala Femenino':  '#F48FB1',
+              'Deportes Anexos':     '#E53935',
+              'Funcionarios':        '#90A4AE',
+            }
             const repUnidades = (db.reposiciones||[]).reduce((s, r) =>
               s + (r.jugadores||[]).reduce((a, j) => a + (Number(j.cantCamiseta)||0) + (Number(j.cantShort)||0), 0), 0)
             const baseData = receptorCards
@@ -1765,7 +1779,6 @@ export default function App() {
               })
             const totalUsado = data.reduce((s, r) => s + r.unidades, 0)
             const pctTotal = totalUsado / TOTAL_CONTRATO * 100
-            const COLORS = ['#FFD200','#2e9b5e','#C2473D','#4A90D9','#E87C3E','#9B59B6','#1ABC9C','#F39C12','#E74C3C','#95A5A6','#27AE60','#8E44AD']
             const maxPct = Math.max(...data.map(r => r.pct), 1)
             const BAR_HEIGHT = 220
             return (
@@ -1816,7 +1829,7 @@ export default function App() {
                               title={`Ver entregas de ${r.name}`}
                             >
                               {/* Etiqueta de valor */}
-                              <div style={{fontSize:10,fontWeight:700,color:COLORS[i%COLORS.length],marginBottom:3,whiteSpace:'nowrap'}}>
+                              <div style={{fontSize:10,fontWeight:700,color:RECEPTOR_COLORS[r.name]||'#999',marginBottom:3,whiteSpace:'nowrap'}}>
                                 {r.pct.toFixed(1)}%
                               </div>
                               <div style={{fontSize:10,color:'#8a8a82',marginBottom:3,whiteSpace:'nowrap'}}>
@@ -1826,7 +1839,7 @@ export default function App() {
                               <div style={{
                                 width:'100%',
                                 height: barH || 2,
-                                background: COLORS[i%COLORS.length],
+                                background: RECEPTOR_COLORS[r.name]||'#999',
                                 borderRadius:'4px 4px 0 0',
                                 transition:'height .4s, opacity .2s, filter .2s',
                                 minHeight: r.unidades > 0 ? 4 : 2,
@@ -1845,7 +1858,7 @@ export default function App() {
                   <div style={{display:'flex',gap:8,marginLeft:42,marginTop:8}}>
                     {data.map((r, i) => (
                       <div key={r.name} style={{flex:1,minWidth:40,display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
-                        <div style={{width:8,height:8,borderRadius:'50%',background:COLORS[i%COLORS.length]}} />
+                        <div style={{width:8,height:8,borderRadius:'50%',background:RECEPTOR_COLORS[r.name]||'#999'}} />
                         <div style={{fontSize:10,color:'#5a5a52',textAlign:'center',lineHeight:1.2}}>{r.name}</div>
                       </div>
                     ))}
