@@ -2010,9 +2010,9 @@ export default function App() {
                       </div>
                       {(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => (
                         <div key={j.id} className="table-row" style={{gridTemplateColumns:'50px 1fr 80px 90px 90px 72px',
-                          background: j.nombre.trim().toLowerCase()==='libre' ? '#3a3a3a' : j.posicion==='Golero' ? '#E8F5E9' : undefined}}>
+                          background: j.nombre.trim().toLowerCase()==='libre' ? '#3a3a3a' : j.posicion==='Golero' ? '#A5D6A7' : undefined}}>
                           <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:j.nombre.trim().toLowerCase()==='libre'?'#888':'#1a1a1a'}}>{j.numero||'—'}</div>
-                          <div style={{fontWeight:500,color:j.nombre.trim().toLowerCase()==='libre'?'#888':'#1a1a1a',fontStyle:j.nombre.trim().toLowerCase()==='libre'?'italic':undefined}}>{j.nombre}</div>
+                          <div style={{fontWeight:500,color:j.nombre.trim().toLowerCase()==='libre'?'#888':'#1a1a1a',fontStyle:j.nombre.trim().toLowerCase()==='libre'?'italic':undefined,textTransform:j.nombre.trim().toLowerCase()==='libre'?undefined:'uppercase'}}>{j.nombre}</div>
                           <div style={{color:'#1a1a1a',fontSize:12}}>{j.posicion||'Jugador'}</div>
                           <div style={{color:'#1a1a1a'}}>{j.talleCamiseta}</div>
                           <div style={{color:'#1a1a1a'}}>{j.talleShort}</div>
