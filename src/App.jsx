@@ -2009,12 +2009,13 @@ export default function App() {
                         <div>Nº</div><div>NOMBRE</div><div>POSICIÓN</div><div>CAMISETA</div><div>SHORT</div><div/>
                       </div>
                       {(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => (
-                        <div key={j.id} className="table-row" style={{gridTemplateColumns:'50px 1fr 80px 90px 90px 72px', background: j.nombre.trim().toLowerCase()==='libre' ? '#3a3a3a' : undefined}}>
-                          <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:j.nombre.trim().toLowerCase()==='libre'?'#888':undefined}}>{j.numero||'—'}</div>
-                          <div style={{fontWeight:500,color:j.nombre.trim().toLowerCase()==='libre'?'#888':'#8a8a82',fontStyle:j.nombre.trim().toLowerCase()==='libre'?'italic':undefined}}>{j.nombre}</div>
-                          <div style={{color:'#6a6a62',fontSize:12}}>{j.posicion||'Jugador'}</div>
-                          <div style={{color:'#6a6a62'}}>{j.talleCamiseta}</div>
-                          <div style={{color:'#6a6a62'}}>{j.talleShort}</div>
+                        <div key={j.id} className="table-row" style={{gridTemplateColumns:'50px 1fr 80px 90px 90px 72px',
+                          background: j.nombre.trim().toLowerCase()==='libre' ? '#3a3a3a' : j.posicion==='Golero' ? '#E8F5E9' : undefined}}>
+                          <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:j.nombre.trim().toLowerCase()==='libre'?'#888':'#1a1a1a'}}>{j.numero||'—'}</div>
+                          <div style={{fontWeight:500,color:j.nombre.trim().toLowerCase()==='libre'?'#888':'#1a1a1a',fontStyle:j.nombre.trim().toLowerCase()==='libre'?'italic':undefined}}>{j.nombre}</div>
+                          <div style={{color:'#1a1a1a',fontSize:12}}>{j.posicion||'Jugador'}</div>
+                          <div style={{color:'#1a1a1a'}}>{j.talleCamiseta}</div>
+                          <div style={{color:'#1a1a1a'}}>{j.talleShort}</div>
                           <div style={{display:'flex',gap:6,justifyContent:'flex-end'}}>
                             <button onClick={() => { setPlantelForm({...j}); setPlantelModal(true) }} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button>
                             <button onClick={() => deletePlantelJugador(j.id)} style={{background:'none',border:'none',cursor:'pointer',color:'#C2473D',fontSize:16,fontWeight:700,padding:'2px 4px'}}>×</button>
