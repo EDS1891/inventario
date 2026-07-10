@@ -55,6 +55,10 @@ async function loadFromSupabase() {
         : DEFAULT_USERS
     } catch { users = DEFAULT_USERS }
   }
+  // Siempre garantizar que los usuarios de DEFAULT_USERS estén presentes
+  DEFAULT_USERS.forEach(du => {
+    if (!users.find(u => u.username === du.username)) users.push(du)
+  })
   return {
     articles: (data.articles || []).map(a => ({
       ...a, sizes: (a.sizes || []).map(s => ({ talle: s.talle, qty: Number(s.qty)||0, min: Number(s.min)||0 }))
@@ -233,8 +237,10 @@ export default function App() {
   }, [db.articles, view, selectedCode])
 
   const saveUsers = (list) => {
-    setDb(prev => ({ ...prev, users: list }))
-    supabase.from('deposito_state').upsert({ id: 2, deliveries: list })
+    const merged = [...list]
+    DEFAULT_USERS.forEach(du => { if (!merged.find(u => u.username === du.username)) merged.push(du) })
+    setDb(prev => ({ ...prev, users: merged }))
+    supabase.from('deposito_state').upsert({ id: 2, deliveries: merged })
       .then(({ error }) => { if (error) console.error('Error guardando usuarios:', error.message) })
   }
   const doLogin = () => {
