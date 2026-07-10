@@ -1870,7 +1870,7 @@ export default function App() {
                                       ? (val>0 ? '$ '+val.toLocaleString('es-UY',{minimumFractionDigits:0,maximumFractionDigits:0}) : '—')
                                       : (r.pct.toFixed(1)+'%')}
                                   </div>
-                                  <div style={{fontSize:9,color:'#8a8a82',marginBottom:3,whiteSpace:'nowrap',textAlign:'center'}}>
+                                  <div style={{fontSize:9,fontWeight:700,color:'#1a1a1a',marginBottom:3,whiteSpace:'nowrap',textAlign:'center'}}>
                                     {isMonto ? (r.unidades>0 ? r.unidades.toLocaleString('es-UY')+' uds.' : '') : (r.unidades.toLocaleString('es-UY')+' uds.')}
                                   </div>
                                   <div style={{
