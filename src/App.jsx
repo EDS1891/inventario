@@ -142,6 +142,7 @@ export default function App() {
   const [repResumen, setRepResumen] = useState(null)
   const [repConceptoEdit, setRepConceptoEdit] = useState(null)
   const [disciplinaEdit, setDisciplinaEdit] = useState(null)
+  const [pumaMetric, setPumaMetric] = useState('unidades')
   const [repTab, setRepTab] = useState('reposiciones')
   const [plantelForm, setPlantelForm] = useState({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',talleShort:'L'})
   const [plantelModal, setPlantelModal] = useState(false)
@@ -1807,104 +1808,100 @@ export default function App() {
                   <div className="kpi-card" style={{minWidth:180}}>
                     <div className="kpi-label">MONTO TOTAL ENTREGADO</div>
                     <div className="kpi-value" style={{fontSize:20}}>$ {data.reduce((s,r)=>s+(r.monto||0),0).toLocaleString('es-UY',{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
-                    <div className="kpi-sub">en base a precios del inventario</div>
+                    <div className="kpi-sub">según precios del inventario</div>
                   </div>
                 </div>
 
                 {/* Gráfica de barras verticales */}
-                <div className="card" style={{padding:'20px 24px'}}>
-                  <div style={{fontWeight:700,fontSize:13,marginBottom:16}}>Artículos por receptor · % sobre {TOTAL_CONTRATO.toLocaleString('es-UY')} totales</div>
-                  <div style={{display:'flex',alignItems:'flex-end',gap:12,height:BAR_HEIGHT+40,overflowX:'auto',paddingBottom:4}}>
-                    {/* Eje Y referencia */}
-                    <div style={{display:'flex',flexDirection:'column',justifyContent:'space-between',height:BAR_HEIGHT,alignItems:'flex-end',flexShrink:0,paddingRight:6}}>
-                      {[100,75,50,25,0].map(v => (
-                        <span key={v} style={{fontSize:10,color:'#aaa',lineHeight:1}}>{v}%</span>
-                      ))}
-                    </div>
-                    {/* Líneas guía + barras */}
-                    <div style={{position:'relative',flex:1,height:BAR_HEIGHT,minWidth:0}}>
-                      {/* Líneas horizontales */}
-                      {[0,25,50,75,100].map(v => (
-                        <div key={v} style={{position:'absolute',left:0,right:0,bottom:`${v}%`,borderTop:'1px dashed #E8E8E0',zIndex:0}} />
-                      ))}
-                      {/* Barras */}
-                      <div style={{display:'flex',alignItems:'flex-end',gap:8,height:'100%',position:'relative',zIndex:1}}>
-                        {data.map((r, i) => {
-                          const barH = (r.pct / 100) * BAR_HEIGHT
-                          return (
-                            <div key={r.name}
-                              onClick={() => { setDelFilterReceptor(r.name); setView('entregas') }}
-                              style={{display:'flex',flexDirection:'column',alignItems:'center',flex:1,minWidth:40,height:'100%',justifyContent:'flex-end',cursor:'pointer'}}
-                              title={`Ver entregas de ${r.name}`}
-                            >
-                              {/* Etiqueta de valor */}
-                              <div style={{fontSize:10,fontWeight:700,color:RECEPTOR_COLORS[r.name]||'#999',marginBottom:2,whiteSpace:'nowrap'}}>
-                                {r.pct.toFixed(1)}%
-                              </div>
-                              <div style={{fontSize:10,color:'#8a8a82',marginBottom:2,whiteSpace:'nowrap'}}>
-                                {r.unidades.toLocaleString('es-UY')} uds.
-                              </div>
-                              {r.monto > 0 && <div style={{fontSize:9,color:'#5a8a5a',fontWeight:600,marginBottom:3,whiteSpace:'nowrap'}}>
-                                $ {r.monto.toLocaleString('es-UY',{minimumFractionDigits:0,maximumFractionDigits:0})}
-                              </div>}
-                              {/* Barra */}
-                              <div style={{
-                                width:'100%',
-                                height: barH || 2,
-                                background: RECEPTOR_COLORS[r.name]||'#999',
-                                borderRadius:'4px 4px 0 0',
-                                transition:'height .4s, opacity .2s, filter .2s',
-                                minHeight: r.unidades > 0 ? 4 : 2,
-                                opacity: r.unidades === 0 ? 0.25 : 1
-                              }}
-                                onMouseEnter={e => e.currentTarget.style.filter='brightness(1.15)'}
-                                onMouseLeave={e => e.currentTarget.style.filter=''}
-                              />
-                            </div>
-                          )
-                        })}
+                {(() => {
+                  const isMonto = pumaMetric === 'monto'
+                  const maxVal = Math.max(...data.map(r => isMonto ? (r.monto||0) : r.unidades), 1)
+                  const fmtVal = v => isMonto
+                    ? '$ '+v.toLocaleString('es-UY',{minimumFractionDigits:0,maximumFractionDigits:0})
+                    : v.toLocaleString('es-UY')+' uds.'
+                  return (
+                    <div className="card" style={{padding:'20px 24px'}}>
+                      {/* Header con toggle */}
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+                        <div style={{fontWeight:700,fontSize:13}}>
+                          {isMonto ? 'Monto entregado por receptor' : 'Artículos por receptor · % sobre '+TOTAL_CONTRATO.toLocaleString('es-UY')+' totales'}
+                        </div>
+                        <div style={{display:'flex',gap:4,background:'#F0F0EC',borderRadius:8,padding:3}}>
+                          {[['unidades','Artículos'],['monto','Monto $']].map(([key,label]) => (
+                            <button key={key} onClick={() => setPumaMetric(key)}
+                              style={{padding:'4px 14px',borderRadius:6,border:'none',cursor:'pointer',fontSize:12,fontWeight:600,
+                                background: pumaMetric===key ? '#121212' : 'transparent',
+                                color: pumaMetric===key ? '#FFD200' : '#6a6a62',
+                                transition:'all .15s'}}>
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div style={{display:'flex',alignItems:'flex-end',gap:12,height:BAR_HEIGHT+40,overflowX:'auto',paddingBottom:4}}>
+                        {/* Eje Y */}
+                        <div style={{display:'flex',flexDirection:'column',justifyContent:'space-between',height:BAR_HEIGHT,alignItems:'flex-end',flexShrink:0,paddingRight:6}}>
+                          {[100,75,50,25,0].map(v => (
+                            <span key={v} style={{fontSize:10,color:'#aaa',lineHeight:1}}>
+                              {isMonto
+                                ? '$ '+(maxVal*v/100/1000).toFixed(0)+'k'
+                                : v+'%'}
+                            </span>
+                          ))}
+                        </div>
+                        {/* Líneas guía + barras */}
+                        <div style={{position:'relative',flex:1,height:BAR_HEIGHT,minWidth:0}}>
+                          {[0,25,50,75,100].map(v => (
+                            <div key={v} style={{position:'absolute',left:0,right:0,bottom:`${v}%`,borderTop:'1px dashed #E8E8E0',zIndex:0}} />
+                          ))}
+                          <div style={{display:'flex',alignItems:'flex-end',gap:8,height:'100%',position:'relative',zIndex:1}}>
+                            {data.map(r => {
+                              const val = isMonto ? (r.monto||0) : r.unidades
+                              const barH = (val / maxVal) * BAR_HEIGHT
+                              const color = RECEPTOR_COLORS[r.name]||'#999'
+                              return (
+                                <div key={r.name}
+                                  onClick={() => { setDelFilterReceptor(r.name); setView('entregas') }}
+                                  style={{display:'flex',flexDirection:'column',alignItems:'center',flex:1,minWidth:40,height:'100%',justifyContent:'flex-end',cursor:'pointer'}}
+                                  title={`Ver entregas de ${r.name}`}
+                                >
+                                  <div style={{fontSize:10,fontWeight:700,color,marginBottom:2,whiteSpace:'nowrap',textAlign:'center'}}>
+                                    {isMonto
+                                      ? (val>0 ? '$ '+val.toLocaleString('es-UY',{minimumFractionDigits:0,maximumFractionDigits:0}) : '—')
+                                      : (r.pct.toFixed(1)+'%')}
+                                  </div>
+                                  <div style={{fontSize:9,color:'#8a8a82',marginBottom:3,whiteSpace:'nowrap',textAlign:'center'}}>
+                                    {isMonto ? (r.unidades>0 ? r.unidades.toLocaleString('es-UY')+' uds.' : '') : (r.unidades.toLocaleString('es-UY')+' uds.')}
+                                  </div>
+                                  <div style={{
+                                    width:'100%', height: barH||2,
+                                    background: color,
+                                    borderRadius:'4px 4px 0 0',
+                                    transition:'height .4s, filter .2s',
+                                    minHeight: val>0 ? 4 : 2,
+                                    opacity: val===0 ? 0.2 : 1
+                                  }}
+                                    onMouseEnter={e => e.currentTarget.style.filter='brightness(1.15)'}
+                                    onMouseLeave={e => e.currentTarget.style.filter=''}
+                                  />
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                      {/* Etiquetas eje X */}
+                      <div style={{display:'flex',gap:8,marginLeft:42,marginTop:8}}>
+                        {data.map(r => (
+                          <div key={r.name} style={{flex:1,minWidth:40,display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
+                            <div style={{width:8,height:8,borderRadius:'50%',background:RECEPTOR_COLORS[r.name]||'#999'}} />
+                            <div style={{fontSize:10,color:'#5a5a52',textAlign:'center',lineHeight:1.2}}>{r.name}</div>
+                          </div>
+                        ))}
                       </div>
                     </div>
-                  </div>
-                  {/* Etiquetas eje X */}
-                  <div style={{display:'flex',gap:8,marginLeft:42,marginTop:8}}>
-                    {data.map((r, i) => (
-                      <div key={r.name} style={{flex:1,minWidth:40,display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
-                        <div style={{width:8,height:8,borderRadius:'50%',background:RECEPTOR_COLORS[r.name]||'#999'}} />
-                        <div style={{fontSize:10,color:'#5a5a52',textAlign:'center',lineHeight:1.2}}>{r.name}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Tabla monto por receptor */}
-                <div className="card" style={{padding:0,overflow:'hidden'}}>
-                  <div className="table-header" style={{gridTemplateColumns:'1fr 140px 120px'}}>
-                    <div>RECEPTOR</div>
-                    <div style={{textAlign:'right'}}>MONTO ENTREGADO</div>
-                    <div style={{textAlign:'right'}}>UNIDADES</div>
-                  </div>
-                  {data.filter(r => r.unidades > 0).map(r => (
-                    <div key={r.name} className="table-row clickable" style={{gridTemplateColumns:'1fr 140px 120px'}}
-                      onClick={() => { setDelFilterReceptor(r.name); setView('entregas') }}>
-                      <div style={{display:'flex',alignItems:'center',gap:8}}>
-                        <div style={{width:8,height:8,borderRadius:'50%',background:RECEPTOR_COLORS[r.name]||'#999',flexShrink:0}} />
-                        <span style={{fontWeight:500}}>{r.name}</span>
-                      </div>
-                      <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#1a5c33'}}>
-                        {r.monto > 0 ? '$ '+r.monto.toLocaleString('es-UY',{minimumFractionDigits:0,maximumFractionDigits:0}) : <span style={{color:'#ccc'}}>—</span>}
-                      </div>
-                      <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace',color:'#6a6a62'}}>
-                        {r.unidades.toLocaleString('es-UY')}
-                      </div>
-                    </div>
-                  ))}
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 140px 120px',padding:'10px 16px',background:'#121212',color:'#FFD200',fontWeight:700,fontSize:13}}>
-                    <div>TOTAL</div>
-                    <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace'}}>$ {data.reduce((s,r)=>s+(r.monto||0),0).toLocaleString('es-UY',{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
-                    <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace'}}>{totalUsado.toLocaleString('es-UY')}</div>
-                  </div>
-                </div>
+                  )
+                })()}
               </div>
             )
           })()}
