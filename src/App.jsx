@@ -14,9 +14,11 @@ const CARGOS_REG = ['Coordinación','Director Técnico','Ayudante Técnico','Vid
 const CARGOS_SIN_SECTOR = ['Administración Palacio']
 const ESTANTES = ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','50','51','TRANSITO']
 const ALTURAS = ['A','B','C','D','E','O']
+const CAMISETA_TIPOS = ['Titular','Alternativa','3°']
+const SHORT_TIPOS = ['Titular','Alternativa']
 
 const DEFAULT_USERS = [{ username:'compras', password:'peniarol1891', role:'admin', displayName:'Compras Peñarol', status:'aprobado' }]
-const EMPTY_DB = { articles:[], deliveries:[], movimientos:[], nextId:1, nextDel:1, nextMov:1, users: DEFAULT_USERS, camisetasUtileria:[] }
+const EMPTY_DB = { articles:[], deliveries:[], movimientos:[], nextId:1, nextDel:1, nextMov:1, nextRep:1, users: DEFAULT_USERS, camisetasUtileria:[], reposiciones:[] }
 const COMPETICIONES = ['CAMPEONATO URUGUAYO','CONMEBOL','COPA LIBERTADORES FEMENINA','COPA LIBERTADORES FÚTBOL SALA','COPA INTERCONTINENTAL SUB 20']
 const MODELOS_JUGADOR = ['TRADICIONAL','GRIS','AMARILLA','DORADA','NEGRA Y DORADA','NEGRA Y AMARILLA','AMARILLA FLÚO']
 const MODELOS_GOLERO  = ['VERDE','NARANJA','NEGRO','GRIS','ROSADO','CREMA','AMARILLO FLÚO','AMARILLO']
@@ -26,10 +28,11 @@ const SESSION_KEY = 'dep_session'
 
 
 async function loadFromSupabase() {
-  const [{ data, error }, { data: usersRow }, { data: utiRow }] = await Promise.all([
+  const [{ data, error }, { data: usersRow }, { data: utiRow }, { data: repRow }] = await Promise.all([
     supabase.from('deposito_state').select('*').eq('id', 1).single(),
     supabase.from('deposito_state').select('deliveries').eq('id', 2).single(),
     supabase.from('deposito_state').select('articles').eq('id', 3).single(),
+    supabase.from('deposito_state').select('deliveries,next_del').eq('id', 4).single(),
   ])
   if (error || !data) return null
   let users = (usersRow?.deliveries?.length > 0 && usersRow.deliveries[0]?.username)
@@ -54,12 +57,14 @@ async function loadFromSupabase() {
     nextMov: data.next_mov || 1,
     users,
     camisetasUtileria: utiRow?.articles || [],
+    reposiciones: repRow?.deliveries || [],
+    nextRep: repRow?.next_del || 1,
   }
 }
 
 async function saveToSupabase(db) {
   // Row id=2 (users) is managed exclusively by saveUsers() to avoid session-collision overwrites
-  const [r1, r3] = await Promise.all([
+  const [r1, r3, r4] = await Promise.all([
     supabase.from('deposito_state').upsert({
       id: 1,
       articles: db.articles,
@@ -80,8 +85,18 @@ async function saveToSupabase(db) {
       next_mov: 0,
       updated_at: new Date().toISOString(),
     }),
+    supabase.from('deposito_state').upsert({
+      id: 4,
+      articles: [],
+      deliveries: db.reposiciones || [],
+      movimientos: [],
+      next_id: 0,
+      next_del: db.nextRep || 1,
+      next_mov: 0,
+      updated_at: new Date().toISOString(),
+    }),
   ])
-  return !r1.error && !r3.error
+  return !r1.error && !r3.error && !r4.error
 }
 
 function fmt(n) { return Number(n).toLocaleString('es-UY') }
@@ -128,6 +143,9 @@ export default function App() {
   const [utiFilterModelo, setUtiFilterModelo] = useState('')
   const [utiForm, setUtiForm] = useState({ tipo:'', competicion:'', numero:'', jugador:'', talle:'S', modelo:'', estampado:'', parches:'', detalle:'', temporada:'', id:null })
   const [utiModal, setUtiModal] = useState(false)
+  const [repForm, setRepForm] = useState({ concepto:'', jugadores:[{numero:'',nombre:'',camiseta:'Titular',short:'Titular'}] })
+  const [repModal, setRepModal] = useState(false)
+  const [repDetail, setRepDetail] = useState(null)
   const [rechazarModal, setRechazarModal] = useState({ delId: null, motivo: '' })
   const [toast, setToast] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -756,6 +774,23 @@ export default function App() {
     setDb(prev => ({...prev, camisetasUtileria: (prev.camisetasUtileria||[]).filter(c => c.id !== id)}))
     showToast('Camiseta eliminada.')
   }
+
+  const saveReposicion = () => {
+    if (!repForm.concepto.trim()) { showToast('Ingresá el concepto.'); return }
+    const validos = repForm.jugadores.filter(j => j.nombre.trim() || j.numero)
+    if (validos.length === 0) { showToast('Agregá al menos un jugador.'); return }
+    setDb(s => {
+      const rep = { id:s.nextRep, fecha:today(), concepto:repForm.concepto.trim(), creadoPor:currentUser?.displayName||session, jugadores:validos.map(j=>({...j,numero:j.numero?Number(j.numero):''})) }
+      return { ...s, reposiciones:[rep,...(s.reposiciones||[])], nextRep:s.nextRep+1 }
+    })
+    setRepModal(false)
+    showToast('Reposición registrada.')
+  }
+  const deleteReposicion = (id) => {
+    setDb(s => ({...s, reposiciones:(s.reposiciones||[]).filter(r=>r.id!==id)}))
+    setRepDetail(null)
+    showToast('Reposición eliminada.')
+  }
   const utiFiltered = (db.camisetasUtileria || []).filter(c =>
     (!utiFilter      || c.competicion === utiFilter) &&
     (!utiFilterTipo  || c.tipo === utiFilterTipo) &&
@@ -1110,7 +1145,7 @@ export default function App() {
           </div>
         </div>
         <nav className="sidebar-nav">
-          {[['panel','PANEL'],['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES'],['usuarios-reg','USUARIOS REGISTRADOS'],['utileria','CAMISETAS UTILERÍA']].map(([key,label]) => {
+          {[['panel','PANEL'],['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES'],['usuarios-reg','USUARIOS REGISTRADOS'],['utileria','CAMISETAS UTILERÍA'],['reposiciones','REPOSICIÓN CAMISETAS']].map(([key,label]) => {
             const isActive = view===key||(key==='inventario'&&view==='detalle')
             return (
               <button key={key} className={`nav-item${isActive?' active':''}`} onClick={() => goView(key)}>
@@ -1146,7 +1181,7 @@ export default function App() {
           </button>
           <img src="/1891_Amarillo.jpg" alt="1891" style={{height:28,width:'auto'}} />
           <div className="topbar-title">
-            {{panel:'PANEL',inventario:'INVENTARIO',detalle:'DETALLE',entregas:'ENTREGAS',movimientos:'MOVIMIENTOS',receptores:'RECEPTORES','usuarios-reg':'USUARIOS REGISTRADOS',utileria:'CAMISETAS UTILERÍA'}[view]}
+            {{panel:'PANEL',inventario:'INVENTARIO',detalle:'DETALLE',entregas:'ENTREGAS',movimientos:'MOVIMIENTOS',receptores:'RECEPTORES','usuarios-reg':'USUARIOS REGISTRADOS',utileria:'CAMISETAS UTILERÍA',reposiciones:'REPOSICIÓN CAMISETAS'}[view]}
           </div>
           <div className="topbar-spacer" />
           <div className="search-box">
@@ -1648,6 +1683,41 @@ export default function App() {
         </div>
       </div>
 
+          {/* REPOSICIÓN CAMISETAS */}
+          {view === 'reposiciones' && (
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
+                <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:180}}>
+                  <div className="kpi-label">REPOSICIONES</div>
+                  <div className="kpi-value">{(db.reposiciones||[]).length}</div>
+                  <div className="kpi-sub">registradas</div>
+                </div>
+                <button className="btn btn-dark" onClick={() => { setRepForm({concepto:'',jugadores:[{numero:'',nombre:'',camiseta:'Titular',short:'Titular'}]}); setRepModal(true) }}>+ Nueva reposición</button>
+              </div>
+              {(db.reposiciones||[]).length === 0
+                ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay reposiciones registradas aún.</div>
+                : (
+                  <div className="card" style={{padding:0,overflow:'hidden'}}>
+                    <div className="table-header" style={{gridTemplateColumns:'100px 1fr 80px 36px'}}>
+                      <div>FECHA</div><div>CONCEPTO</div><div style={{textAlign:'right'}}>JUGADORES</div><div/>
+                    </div>
+                    {(db.reposiciones||[]).map(r => (
+                      <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 1fr 80px 36px',cursor:'pointer'}} onClick={() => setRepDetail(r)}>
+                        <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#6a6a62'}}>{r.fecha}</div>
+                        <div>
+                          <div style={{fontWeight:600}}>{r.concepto}</div>
+                          {r.creadoPor && <div style={{fontSize:11.5,color:'#8a8a82'}}>{r.creadoPor}</div>}
+                        </div>
+                        <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{(r.jugadores||[]).length}</div>
+                        <div style={{textAlign:'right',color:'#8a8a82',fontSize:18,lineHeight:1}}>›</div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              }
+            </div>
+          )}
+
       {/* ===== MODALES ===== */}
 
       {/* Modal: Detalle de entrega */}
@@ -1787,6 +1857,93 @@ export default function App() {
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={()=>setUtiModal(false)}>Cancelar</button>
               <button className="btn btn-dark" onClick={saveUti}>Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Nueva Reposición Camisetas */}
+      {repModal && (
+        <div className="modal-backdrop" onClick={() => setRepModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:640,width:'96%'}}>
+            <div className="modal-header">
+              <div className="modal-title">Nueva reposición</div>
+              <button className="modal-close" onClick={() => setRepModal(false)}>×</button>
+            </div>
+            <div className="modal-body" style={{maxHeight:'65vh',overflowY:'auto'}}>
+              <div className="form-group">
+                <label className="field-label">Concepto</label>
+                <input className="field-input" value={repForm.concepto} onChange={e => setRepForm(p=>({...p,concepto:e.target.value}))} placeholder="Ej. Reposición vs Nacional" autoFocus />
+              </div>
+              <div style={{marginTop:16}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                  <span style={{fontSize:12.5,fontWeight:700,color:'#4a4a42'}}>JUGADORES</span>
+                  <button type="button" className="btn btn-ghost" style={{fontSize:12,padding:'4px 12px'}} onClick={() => setRepForm(p=>({...p,jugadores:[...p.jugadores,{numero:'',nombre:'',camiseta:'Titular',short:'Titular'}]}))}>+ Agregar fila</button>
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'56px 1fr 100px 100px 30px',gap:6,marginBottom:6,fontSize:11,fontWeight:700,color:'#8a8a82',padding:'0 2px'}}>
+                  <div>Nº</div><div>Nombre</div><div>Camiseta</div><div>Short</div><div/>
+                </div>
+                {repForm.jugadores.map((j, i) => (
+                  <div key={i} style={{display:'grid',gridTemplateColumns:'56px 1fr 100px 100px 30px',gap:6,marginBottom:6,alignItems:'center'}}>
+                    <input className="field-input mono" type="number" min="1" max="99" value={j.numero}
+                      onChange={e => setRepForm(p => ({...p,jugadores:p.jugadores.map((x,ix)=>ix===i?{...x,numero:e.target.value}:x)}))}
+                      placeholder="10" style={{textAlign:'center',padding:'5px 4px'}} />
+                    <input className="field-input" value={j.nombre}
+                      onChange={e => setRepForm(p => ({...p,jugadores:p.jugadores.map((x,ix)=>ix===i?{...x,nombre:e.target.value}:x)}))}
+                      placeholder="Nombre" style={{padding:'5px 8px'}} />
+                    <select className="field-input" value={j.camiseta}
+                      onChange={e => setRepForm(p => ({...p,jugadores:p.jugadores.map((x,ix)=>ix===i?{...x,camiseta:e.target.value}:x)}))}
+                      style={{padding:'5px 4px'}}>
+                      {CAMISETA_TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    <select className="field-input" value={j.short}
+                      onChange={e => setRepForm(p => ({...p,jugadores:p.jugadores.map((x,ix)=>ix===i?{...x,short:e.target.value}:x)}))}
+                      style={{padding:'5px 4px'}}>
+                      {SHORT_TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    <button type="button" onClick={() => setRepForm(p => {const arr=p.jugadores.filter((_,ix)=>ix!==i);return {...p,jugadores:arr.length?arr:[{numero:'',nombre:'',camiseta:'Titular',short:'Titular'}]}})}
+                      style={{background:'none',border:'none',color:'#C2473D',cursor:'pointer',fontSize:18,fontWeight:700,padding:'0',lineHeight:1}}>×</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setRepModal(false)}>Cancelar</button>
+              <button className="btn btn-dark" onClick={saveReposicion}>Guardar reposición</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Detalle Reposición */}
+      {repDetail && (
+        <div className="modal-backdrop" onClick={() => setRepDetail(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:580,width:'96%'}}>
+            <div className="modal-header">
+              <div>
+                <div className="modal-title">{repDetail.concepto}</div>
+                <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>{repDetail.fecha}{repDetail.creadoPor ? ' · '+repDetail.creadoPor : ''}</div>
+              </div>
+              <button className="modal-close" onClick={() => setRepDetail(null)}>×</button>
+            </div>
+            <div className="modal-body" style={{maxHeight:'60vh',overflowY:'auto'}}>
+              <div style={{display:'grid',gridTemplateColumns:'50px 1fr 100px 100px',gap:8,marginBottom:8,fontSize:11,fontWeight:700,color:'#8a8a82',borderBottom:'1px solid #ECECE8',paddingBottom:6}}>
+                <div>Nº</div><div>NOMBRE</div><div>CAMISETA</div><div>SHORT</div>
+              </div>
+              {(repDetail.jugadores||[]).map((j,i) => (
+                <div key={i} style={{display:'grid',gridTemplateColumns:'50px 1fr 100px 100px',gap:8,padding:'6px 0',borderBottom:'1px solid #F5F5F0',fontSize:13,alignItems:'center'}}>
+                  <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#6a6a62'}}>{j.numero||'—'}</div>
+                  <div style={{fontWeight:500}}>{j.nombre||'—'}</div>
+                  <div style={{color:'#6a6a62'}}>{j.camiseta}</div>
+                  <div style={{color:'#6a6a62'}}>{j.short}</div>
+                </div>
+              ))}
+              <div style={{marginTop:10,fontSize:12,color:'#8a8a82',textAlign:'right'}}>{(repDetail.jugadores||[]).length} jugadores</div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setRepDetail(null)}>Cerrar</button>
+              <button style={{padding:'8px 16px',borderRadius:7,border:'1px solid #C2473D',background:'#FBEAE8',color:'#C2473D',fontWeight:700,cursor:'pointer'}}
+                onClick={() => { if(window.confirm('¿Eliminar esta reposición?')) deleteReposicion(repDetail.id) }}>Eliminar</button>
             </div>
           </div>
         </div>
