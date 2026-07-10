@@ -18,7 +18,7 @@ const CAMISETA_TIPOS = ['Titular','Alternativa','3°']
 const SHORT_TIPOS = ['Titular','Alternativa']
 
 const DEFAULT_USERS = [{ username:'compras', password:'peniarol1891', role:'admin', displayName:'Compras Peñarol', status:'aprobado' }]
-const EMPTY_DB = { articles:[], deliveries:[], movimientos:[], nextId:1, nextDel:1, nextMov:1, nextRep:1, users: DEFAULT_USERS, camisetasUtileria:[], reposiciones:[] }
+const EMPTY_DB = { articles:[], deliveries:[], movimientos:[], nextId:1, nextDel:1, nextMov:1, nextRep:1, users: DEFAULT_USERS, camisetasUtileria:[], reposiciones:[], plantel:[] }
 const COMPETICIONES = ['CAMPEONATO URUGUAYO','CONMEBOL','COPA LIBERTADORES FEMENINA','COPA LIBERTADORES FÚTBOL SALA','COPA INTERCONTINENTAL SUB 20']
 const MODELOS_JUGADOR = ['TRADICIONAL','GRIS','AMARILLA','DORADA','NEGRA Y DORADA','NEGRA Y AMARILLA','AMARILLA FLÚO']
 const MODELOS_GOLERO  = ['VERDE','NARANJA','NEGRO','GRIS','ROSADO','CREMA','AMARILLO FLÚO','AMARILLO']
@@ -59,6 +59,7 @@ async function loadFromSupabase() {
     camisetasUtileria: utiRow?.articles || [],
     reposiciones: repRow?.deliveries || [],
     nextRep: repRow?.next_del || 1,
+    plantel: repRow?.articles || [],
   }
 }
 
@@ -87,7 +88,7 @@ async function saveToSupabase(db) {
     }),
     supabase.from('deposito_state').upsert({
       id: 4,
-      articles: [],
+      articles: db.plantel || [],
       deliveries: db.reposiciones || [],
       movimientos: [],
       next_id: 0,
@@ -143,9 +144,12 @@ export default function App() {
   const [utiFilterModelo, setUtiFilterModelo] = useState('')
   const [utiForm, setUtiForm] = useState({ tipo:'', competicion:'', numero:'', jugador:'', talle:'S', modelo:'', estampado:'', parches:'', detalle:'', temporada:'', id:null })
   const [utiModal, setUtiModal] = useState(false)
-  const [repForm, setRepForm] = useState({ concepto:'', jugadores:[{numero:'',nombre:'',camiseta:'Titular',short:'Titular'}] })
+  const [repForm, setRepForm] = useState({ concepto:'', rows:[] })
   const [repModal, setRepModal] = useState(false)
   const [repDetail, setRepDetail] = useState(null)
+  const [repTab, setRepTab] = useState('reposiciones')
+  const [plantelForm, setPlantelForm] = useState({id:null,numero:'',nombre:'',talleCamiseta:'L',talleShort:'L'})
+  const [plantelModal, setPlantelModal] = useState(false)
   const [rechazarModal, setRechazarModal] = useState({ delId: null, motivo: '' })
   const [toast, setToast] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -775,12 +779,18 @@ export default function App() {
     showToast('Camiseta eliminada.')
   }
 
+  const openRepModal = () => {
+    setRepForm({ concepto:'', rows:(db.plantel||[]).map(j=>({...j,cantCamiseta:'',cantShort:''})) })
+    setRepModal(true)
+  }
   const saveReposicion = () => {
     if (!repForm.concepto.trim()) { showToast('Ingresá el concepto.'); return }
-    const validos = repForm.jugadores.filter(j => j.nombre.trim() || j.numero)
-    if (validos.length === 0) { showToast('Agregá al menos un jugador.'); return }
+    const jugadores = repForm.rows
+      .filter(r => Number(r.cantCamiseta) > 0 || Number(r.cantShort) > 0)
+      .map(r => ({ numero:r.numero, nombre:r.nombre, talleCamiseta:r.talleCamiseta, talleShort:r.talleShort, cantCamiseta:Number(r.cantCamiseta)||0, cantShort:Number(r.cantShort)||0 }))
+    if (!jugadores.length) { showToast('Ingresá al menos una cantidad.'); return }
     setDb(s => {
-      const rep = { id:s.nextRep, fecha:today(), concepto:repForm.concepto.trim(), creadoPor:currentUser?.displayName||session, jugadores:validos.map(j=>({...j,numero:j.numero?Number(j.numero):''})) }
+      const rep = { id:s.nextRep, fecha:today(), concepto:repForm.concepto.trim(), creadoPor:currentUser?.displayName||session, jugadores }
       return { ...s, reposiciones:[rep,...(s.reposiciones||[])], nextRep:s.nextRep+1 }
     })
     setRepModal(false)
@@ -790,6 +800,23 @@ export default function App() {
     setDb(s => ({...s, reposiciones:(s.reposiciones||[]).filter(r=>r.id!==id)}))
     setRepDetail(null)
     showToast('Reposición eliminada.')
+  }
+  const savePlantelJugador = () => {
+    if (!plantelForm.nombre.trim()) { showToast('Ingresá el nombre del jugador.'); return }
+    setDb(s => {
+      const list = s.plantel || []
+      if (plantelForm.id !== null) {
+        return {...s, plantel:list.map(j=>j.id===plantelForm.id?{...plantelForm}:j)}
+      }
+      const newId = list.length > 0 ? Math.max(...list.map(j=>j.id))+1 : 1
+      return {...s, plantel:[...list, {...plantelForm, id:newId}]}
+    })
+    setPlantelModal(false)
+    showToast(plantelForm.id!==null ? 'Jugador actualizado.' : 'Jugador agregado al plantel.')
+  }
+  const deletePlantelJugador = (id) => {
+    setDb(s => ({...s, plantel:(s.plantel||[]).filter(j=>j.id!==id)}))
+    showToast('Jugador eliminado.')
   }
   const utiFiltered = (db.camisetasUtileria || []).filter(c =>
     (!utiFilter      || c.competicion === utiFilter) &&
@@ -1686,35 +1713,82 @@ export default function App() {
           {/* REPOSICIÓN CAMISETAS */}
           {view === 'reposiciones' && (
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
-                <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:180}}>
-                  <div className="kpi-label">REPOSICIONES</div>
-                  <div className="kpi-value">{(db.reposiciones||[]).length}</div>
-                  <div className="kpi-sub">registradas</div>
-                </div>
-                <button className="btn btn-dark" onClick={() => { setRepForm({concepto:'',jugadores:[{numero:'',nombre:'',camiseta:'Titular',short:'Titular'}]}); setRepModal(true) }}>+ Nueva reposición</button>
+              {/* Tabs */}
+              <div style={{display:'flex',gap:6,borderBottom:'2px solid #ECECE8',paddingBottom:0}}>
+                {[['reposiciones','Reposiciones'],['plantel','Plantel']].map(([k,l]) => (
+                  <button key={k} onClick={() => setRepTab(k)} style={{padding:'7px 18px',border:'none',background:'none',fontWeight:700,fontSize:13,cursor:'pointer',borderBottom:repTab===k?'2px solid #FFD200':'2px solid transparent',marginBottom:-2,color:repTab===k?'#121212':'#8a8a82'}}>
+                    {l}{k==='plantel'&&(db.plantel||[]).length>0?` (${(db.plantel||[]).length})`:''}
+                  </button>
+                ))}
               </div>
-              {(db.reposiciones||[]).length === 0
-                ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay reposiciones registradas aún.</div>
-                : (
-                  <div className="card" style={{padding:0,overflow:'hidden'}}>
-                    <div className="table-header" style={{gridTemplateColumns:'100px 1fr 80px 36px'}}>
-                      <div>FECHA</div><div>CONCEPTO</div><div style={{textAlign:'right'}}>JUGADORES</div><div/>
-                    </div>
-                    {(db.reposiciones||[]).map(r => (
-                      <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 1fr 80px 36px',cursor:'pointer'}} onClick={() => setRepDetail(r)}>
-                        <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#6a6a62'}}>{r.fecha}</div>
-                        <div>
-                          <div style={{fontWeight:600}}>{r.concepto}</div>
-                          {r.creadoPor && <div style={{fontSize:11.5,color:'#8a8a82'}}>{r.creadoPor}</div>}
-                        </div>
-                        <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{(r.jugadores||[]).length}</div>
-                        <div style={{textAlign:'right',color:'#8a8a82',fontSize:18,lineHeight:1}}>›</div>
-                      </div>
-                    ))}
+
+              {/* Tab: Reposiciones */}
+              {repTab === 'reposiciones' && (<>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
+                  <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:180}}>
+                    <div className="kpi-label">REPOSICIONES</div>
+                    <div className="kpi-value">{(db.reposiciones||[]).length}</div>
+                    <div className="kpi-sub">registradas</div>
                   </div>
-                )
-              }
+                  <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed'}}>+ Nueva reposición</button>
+                </div>
+                {!(db.plantel||[]).length && (
+                  <div style={{fontSize:13,color:'#7a5800',background:'#FFF8D6',border:'1px solid #FFD200',borderRadius:8,padding:'10px 14px'}}>
+                    Configurá el <button onClick={()=>setRepTab('plantel')} style={{background:'none',border:'none',fontWeight:700,color:'#7a5800',cursor:'pointer',padding:0,textDecoration:'underline'}}>plantel</button> primero para poder registrar reposiciones.
+                  </div>
+                )}
+                {(db.reposiciones||[]).length === 0
+                  ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay reposiciones registradas aún.</div>
+                  : (
+                    <div className="card" style={{padding:0,overflow:'hidden'}}>
+                      <div className="table-header" style={{gridTemplateColumns:'100px 1fr 80px 36px'}}>
+                        <div>FECHA</div><div>CONCEPTO</div><div style={{textAlign:'right'}}>JUGADORES</div><div/>
+                      </div>
+                      {(db.reposiciones||[]).map(r => (
+                        <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 1fr 80px 36px',cursor:'pointer'}} onClick={() => setRepDetail(r)}>
+                          <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#6a6a62'}}>{r.fecha}</div>
+                          <div>
+                            <div style={{fontWeight:600}}>{r.concepto}</div>
+                            {r.creadoPor && <div style={{fontSize:11.5,color:'#8a8a82'}}>{r.creadoPor}</div>}
+                          </div>
+                          <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{(r.jugadores||[]).length}</div>
+                          <div style={{textAlign:'right',color:'#8a8a82',fontSize:18,lineHeight:1}}>›</div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                }
+              </>)}
+
+              {/* Tab: Plantel */}
+              {repTab === 'plantel' && (<>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                  <span style={{fontSize:12.5,color:'#8a8a82'}}>Jugadores con su talle de camiseta y short</span>
+                  <button className="btn btn-dark" onClick={() => { setPlantelForm({id:null,numero:'',nombre:'',talleCamiseta:'L',talleShort:'L'}); setPlantelModal(true) }}>+ Jugador</button>
+                </div>
+                {(db.plantel||[]).length === 0
+                  ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay jugadores en el plantel.</div>
+                  : (
+                    <div className="card" style={{padding:0,overflow:'hidden'}}>
+                      <div className="table-header" style={{gridTemplateColumns:'50px 1fr 90px 90px 72px'}}>
+                        <div>Nº</div><div>NOMBRE</div><div>CAMISETA</div><div>SHORT</div><div/>
+                      </div>
+                      {(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => (
+                        <div key={j.id} className="table-row" style={{gridTemplateColumns:'50px 1fr 90px 90px 72px'}}>
+                          <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>{j.numero||'—'}</div>
+                          <div style={{fontWeight:500}}>{j.nombre}</div>
+                          <div style={{color:'#6a6a62'}}>{j.talleCamiseta}</div>
+                          <div style={{color:'#6a6a62'}}>{j.talleShort}</div>
+                          <div style={{display:'flex',gap:6,justifyContent:'flex-end'}}>
+                            <button onClick={() => { setPlantelForm({...j}); setPlantelModal(true) }} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button>
+                            <button onClick={() => deletePlantelJugador(j.id)} style={{background:'none',border:'none',cursor:'pointer',color:'#C2473D',fontSize:16,fontWeight:700,padding:'2px 4px'}}>×</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                }
+              </>)}
             </div>
           )}
 
@@ -1865,46 +1939,39 @@ export default function App() {
       {/* Modal: Nueva Reposición Camisetas */}
       {repModal && (
         <div className="modal-backdrop" onClick={() => setRepModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:640,width:'96%'}}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:600,width:'96%'}}>
             <div className="modal-header">
               <div className="modal-title">Nueva reposición</div>
               <button className="modal-close" onClick={() => setRepModal(false)}>×</button>
             </div>
-            <div className="modal-body" style={{maxHeight:'65vh',overflowY:'auto'}}>
+            <div className="modal-body" style={{maxHeight:'70vh',overflowY:'auto'}}>
               <div className="form-group">
                 <label className="field-label">Concepto</label>
                 <input className="field-input" value={repForm.concepto} onChange={e => setRepForm(p=>({...p,concepto:e.target.value}))} placeholder="Ej. Reposición vs Nacional" autoFocus />
               </div>
               <div style={{marginTop:16}}>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-                  <span style={{fontSize:12.5,fontWeight:700,color:'#4a4a42'}}>JUGADORES</span>
-                  <button type="button" className="btn btn-ghost" style={{fontSize:12,padding:'4px 12px'}} onClick={() => setRepForm(p=>({...p,jugadores:[...p.jugadores,{numero:'',nombre:'',camiseta:'Titular',short:'Titular'}]}))}>+ Agregar fila</button>
+                <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',marginBottom:6}}>Ingresá la cantidad enviada a cada jugador (dejá en 0 si no aplica)</div>
+                <div style={{display:'grid',gridTemplateColumns:'44px 1fr 90px 90px',gap:6,marginBottom:6,fontSize:11,fontWeight:700,color:'#8a8a82',padding:'4px 6px',background:'#F5F5F0',borderRadius:6}}>
+                  <div>Nº</div><div>NOMBRE · TALLE</div><div style={{textAlign:'center'}}>CAMISETA</div><div style={{textAlign:'center'}}>SHORT</div>
                 </div>
-                <div style={{display:'grid',gridTemplateColumns:'56px 1fr 100px 100px 30px',gap:6,marginBottom:6,fontSize:11,fontWeight:700,color:'#8a8a82',padding:'0 2px'}}>
-                  <div>Nº</div><div>Nombre</div><div>Camiseta</div><div>Short</div><div/>
-                </div>
-                {repForm.jugadores.map((j, i) => (
-                  <div key={i} style={{display:'grid',gridTemplateColumns:'56px 1fr 100px 100px 30px',gap:6,marginBottom:6,alignItems:'center'}}>
-                    <input className="field-input mono" type="number" min="1" max="99" value={j.numero}
-                      onChange={e => setRepForm(p => ({...p,jugadores:p.jugadores.map((x,ix)=>ix===i?{...x,numero:e.target.value}:x)}))}
-                      placeholder="10" style={{textAlign:'center',padding:'5px 4px'}} />
-                    <input className="field-input" value={j.nombre}
-                      onChange={e => setRepForm(p => ({...p,jugadores:p.jugadores.map((x,ix)=>ix===i?{...x,nombre:e.target.value}:x)}))}
-                      placeholder="Nombre" style={{padding:'5px 8px'}} />
-                    <select className="field-input" value={j.camiseta}
-                      onChange={e => setRepForm(p => ({...p,jugadores:p.jugadores.map((x,ix)=>ix===i?{...x,camiseta:e.target.value}:x)}))}
-                      style={{padding:'5px 4px'}}>
-                      {CAMISETA_TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                    <select className="field-input" value={j.short}
-                      onChange={e => setRepForm(p => ({...p,jugadores:p.jugadores.map((x,ix)=>ix===i?{...x,short:e.target.value}:x)}))}
-                      style={{padding:'5px 4px'}}>
-                      {SHORT_TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                    <button type="button" onClick={() => setRepForm(p => {const arr=p.jugadores.filter((_,ix)=>ix!==i);return {...p,jugadores:arr.length?arr:[{numero:'',nombre:'',camiseta:'Titular',short:'Titular'}]}})}
-                      style={{background:'none',border:'none',color:'#C2473D',cursor:'pointer',fontSize:18,fontWeight:700,padding:'0',lineHeight:1}}>×</button>
-                  </div>
-                ))}
+                {repForm.rows.map((r, i) => {
+                  const hasQty = Number(r.cantCamiseta) > 0 || Number(r.cantShort) > 0
+                  return (
+                    <div key={i} style={{display:'grid',gridTemplateColumns:'44px 1fr 90px 90px',gap:6,marginBottom:4,alignItems:'center',padding:'5px 6px',borderRadius:6,background:hasQty?'#FFFDF0':'transparent',border:hasQty?'1px solid #FFD200':'1px solid transparent'}}>
+                      <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13}}>{r.numero||'—'}</div>
+                      <div>
+                        <div style={{fontWeight:600,fontSize:13}}>{r.nombre}</div>
+                        <div style={{fontSize:11,color:'#8a8a82'}}>Cam: {r.talleCamiseta} · Short: {r.talleShort}</div>
+                      </div>
+                      <input className="field-input mono" type="number" min="0" value={r.cantCamiseta}
+                        onChange={e => setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,cantCamiseta:e.target.value}:x)}))}
+                        placeholder="0" style={{textAlign:'center',padding:'5px 4px'}} />
+                      <input className="field-input mono" type="number" min="0" value={r.cantShort}
+                        onChange={e => setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,cantShort:e.target.value}:x)}))}
+                        placeholder="0" style={{textAlign:'center',padding:'5px 4px'}} />
+                    </div>
+                  )
+                })}
               </div>
             </div>
             <div className="modal-footer">
@@ -1927,15 +1994,22 @@ export default function App() {
               <button className="modal-close" onClick={() => setRepDetail(null)}>×</button>
             </div>
             <div className="modal-body" style={{maxHeight:'60vh',overflowY:'auto'}}>
-              <div style={{display:'grid',gridTemplateColumns:'50px 1fr 100px 100px',gap:8,marginBottom:8,fontSize:11,fontWeight:700,color:'#8a8a82',borderBottom:'1px solid #ECECE8',paddingBottom:6}}>
-                <div>Nº</div><div>NOMBRE</div><div>CAMISETA</div><div>SHORT</div>
+              <div style={{display:'grid',gridTemplateColumns:'44px 1fr 90px 90px',gap:8,marginBottom:6,fontSize:11,fontWeight:700,color:'#8a8a82',background:'#F5F5F0',borderRadius:6,padding:'5px 6px'}}>
+                <div>Nº</div><div>NOMBRE</div><div style={{textAlign:'center'}}>CAMISETA</div><div style={{textAlign:'center'}}>SHORT</div>
               </div>
               {(repDetail.jugadores||[]).map((j,i) => (
-                <div key={i} style={{display:'grid',gridTemplateColumns:'50px 1fr 100px 100px',gap:8,padding:'6px 0',borderBottom:'1px solid #F5F5F0',fontSize:13,alignItems:'center'}}>
+                <div key={i} style={{display:'grid',gridTemplateColumns:'44px 1fr 90px 90px',gap:8,padding:'7px 6px',borderBottom:'1px solid #F5F5F0',fontSize:13,alignItems:'center'}}>
                   <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#6a6a62'}}>{j.numero||'—'}</div>
-                  <div style={{fontWeight:500}}>{j.nombre||'—'}</div>
-                  <div style={{color:'#6a6a62'}}>{j.camiseta}</div>
-                  <div style={{color:'#6a6a62'}}>{j.short}</div>
+                  <div>
+                    <div style={{fontWeight:500}}>{j.nombre||'—'}</div>
+                    {j.talleCamiseta && <div style={{fontSize:11,color:'#8a8a82'}}>Cam: {j.talleCamiseta} · Short: {j.talleShort}</div>}
+                  </div>
+                  <div style={{textAlign:'center',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color: j.cantCamiseta > 0 ? '#1a1a1a' : '#ccc'}}>
+                    {j.cantCamiseta > 0 ? j.cantCamiseta : (j.camiseta || '—')}
+                  </div>
+                  <div style={{textAlign:'center',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color: j.cantShort > 0 ? '#1a1a1a' : '#ccc'}}>
+                    {j.cantShort > 0 ? j.cantShort : (j.short || '—')}
+                  </div>
                 </div>
               ))}
               <div style={{marginTop:10,fontSize:12,color:'#8a8a82',textAlign:'right'}}>{(repDetail.jugadores||[]).length} jugadores</div>
@@ -1944,6 +2018,52 @@ export default function App() {
               <button className="btn btn-ghost" onClick={() => setRepDetail(null)}>Cerrar</button>
               <button style={{padding:'8px 16px',borderRadius:7,border:'1px solid #C2473D',background:'#FBEAE8',color:'#C2473D',fontWeight:700,cursor:'pointer'}}
                 onClick={() => { if(window.confirm('¿Eliminar esta reposición?')) deleteReposicion(repDetail.id) }}>Eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Plantel — agregar/editar jugador */}
+      {plantelModal && (
+        <div className="modal-backdrop" onClick={() => setPlantelModal(false)}>
+          <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">{plantelForm.id !== null ? 'Editar jugador' : 'Agregar jugador'}</div>
+              <button className="modal-close" onClick={() => setPlantelModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{display:'flex',gap:12}}>
+                <div className="form-group" style={{width:80}}>
+                  <label className="field-label">Número</label>
+                  <input className="field-input mono" type="number" min="1" max="99" value={plantelForm.numero}
+                    onChange={e => setPlantelForm(p=>({...p,numero:e.target.value}))}
+                    placeholder="10" style={{textAlign:'center'}} />
+                </div>
+                <div className="form-group" style={{flex:1}}>
+                  <label className="field-label">Nombre completo</label>
+                  <input className="field-input" value={plantelForm.nombre}
+                    onChange={e => setPlantelForm(p=>({...p,nombre:e.target.value}))}
+                    placeholder="Ej. Maximiliano Olivera" autoFocus />
+                </div>
+              </div>
+              <div style={{display:'flex',gap:12,marginTop:4}}>
+                <div className="form-group" style={{flex:1}}>
+                  <label className="field-label">Talle Camiseta</label>
+                  <select className="field-input" value={plantelForm.talleCamiseta} onChange={e => setPlantelForm(p=>({...p,talleCamiseta:e.target.value}))}>
+                    {TALLES_ADULTO.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div className="form-group" style={{flex:1}}>
+                  <label className="field-label">Talle Short</label>
+                  <select className="field-input" value={plantelForm.talleShort} onChange={e => setPlantelForm(p=>({...p,talleShort:e.target.value}))}>
+                    {TALLES_ADULTO.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setPlantelModal(false)}>Cancelar</button>
+              <button className="btn btn-dark" onClick={savePlantelJugador}>Guardar</button>
             </div>
           </div>
         </div>
