@@ -41,7 +41,7 @@ export default async function handler(req, res) {
         <div style="padding:28px 24px;background:#fff;border:1px solid #e0e0e0">
           <p style="margin:0 0 12px;font-size:15px">Hola <strong>${displayName}</strong>,</p>
           <p style="margin:0 0 18px;font-size:15px">
-            Tenés una entrega de indumentaria pendiente de confirmación desde el depósito.
+            Tenés una entrega de indumentaria pendiente de confirmación:
           </p>
           <div style="background:#f8f8f8;border:1px solid #e0e0e0;border-radius:8px;padding:16px;margin-bottom:20px">
             <div style="font-weight:bold;font-size:12px;color:#888;letter-spacing:.05em;margin-bottom:10px">DETALLE DE ENTREGA #${delId}</div>
