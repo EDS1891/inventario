@@ -1713,7 +1713,7 @@ export default function App() {
 
               {/* Tab: Reposiciones */}
               {repTab === 'reposiciones' && (<>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
+                <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
                   <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:180}}>
                     <div className="kpi-label">REPOSICIONES</div>
                     <div className="kpi-value">{(db.reposiciones||[]).length}</div>
