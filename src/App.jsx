@@ -1746,9 +1746,17 @@ export default function App() {
           {/* CONTRATO PUMA */}
           {view === 'contrato-puma' && (() => {
             const TOTAL_CONTRATO = 17200
+            const RECEPTOR_ORDER = ['Protocolo','1° División','3 División','Juveniles','Femenino','Juveniles Femenino','Basket','Captación','Futbol Sala Masculino','Futbol Sala Femenino','Funcionarios']
             const data = receptorCards
               .map(r => ({ name: r.name, unidades: r.unidades, pct: r.unidades / TOTAL_CONTRATO * 100 }))
-              .sort((a, b) => b.unidades - a.unidades)
+              .sort((a, b) => {
+                const ia = RECEPTOR_ORDER.indexOf(a.name)
+                const ib = RECEPTOR_ORDER.indexOf(b.name)
+                if (ia === -1 && ib === -1) return 0
+                if (ia === -1) return 1
+                if (ib === -1) return -1
+                return ia - ib
+              })
             const totalUsado = data.reduce((s, r) => s + r.unidades, 0)
             const pctTotal = totalUsado / TOTAL_CONTRATO * 100
             const COLORS = ['#FFD200','#2e9b5e','#4A90D9','#E87C3E','#9B59B6','#C2473D','#1ABC9C','#F39C12']
