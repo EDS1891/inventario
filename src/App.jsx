@@ -28,11 +28,10 @@ const SESSION_KEY = 'dep_session'
 
 
 async function loadFromSupabase() {
-  const [{ data, error }, { data: usersRow }, { data: utiRow }, { data: repRow }] = await Promise.all([
+  const [{ data, error }, { data: usersRow }, { data: utiRow }] = await Promise.all([
     supabase.from('deposito_state').select('*').eq('id', 1).single(),
     supabase.from('deposito_state').select('deliveries').eq('id', 2).single(),
-    supabase.from('deposito_state').select('articles').eq('id', 3).single(),
-    supabase.from('deposito_state').select('deliveries,next_del').eq('id', 4).single(),
+    supabase.from('deposito_state').select('articles,deliveries,movimientos,next_del').eq('id', 3).single(),
   ])
   if (error || !data) return null
   let users = (usersRow?.deliveries?.length > 0 && usersRow.deliveries[0]?.username)
@@ -57,15 +56,15 @@ async function loadFromSupabase() {
     nextMov: data.next_mov || 1,
     users,
     camisetasUtileria: utiRow?.articles || [],
-    reposiciones: repRow?.deliveries || [],
-    nextRep: repRow?.next_del || 1,
-    plantel: repRow?.articles || [],
+    reposiciones: utiRow?.deliveries || [],
+    nextRep: utiRow?.next_del || 1,
+    plantel: utiRow?.movimientos || [],
   }
 }
 
 async function saveToSupabase(db) {
   // Row id=2 (users) is managed exclusively by saveUsers() to avoid session-collision overwrites
-  const [r1, r3, r4] = await Promise.all([
+  const [r1, r3] = await Promise.all([
     supabase.from('deposito_state').upsert({
       id: 1,
       articles: db.articles,
@@ -79,25 +78,15 @@ async function saveToSupabase(db) {
     supabase.from('deposito_state').upsert({
       id: 3,
       articles: db.camisetasUtileria || [],
-      deliveries: [],
-      movimientos: [],
-      next_id: 0,
-      next_del: 0,
-      next_mov: 0,
-      updated_at: new Date().toISOString(),
-    }),
-    supabase.from('deposito_state').upsert({
-      id: 4,
-      articles: db.plantel || [],
       deliveries: db.reposiciones || [],
-      movimientos: [],
+      movimientos: db.plantel || [],
       next_id: 0,
       next_del: db.nextRep || 1,
       next_mov: 0,
       updated_at: new Date().toISOString(),
     }),
   ])
-  return !r1.error && !r3.error && !r4.error
+  return !r1.error && !r3.error
 }
 
 function fmt(n) { return Number(n).toLocaleString('es-UY') }
