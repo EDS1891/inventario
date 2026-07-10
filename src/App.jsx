@@ -230,6 +230,12 @@ export default function App() {
     supabase.from('deposito_state').upsert({ id: 2, deliveries: list })
       .then(({ error }) => { if (error) console.error('Error guardando usuarios:', error.message) })
   }
+  useEffect(() => {
+    if (!db.users || db.users.length === 0) return
+    if (!db.users.find(u => u.username === 'iabella@capenarol.com.uy')) {
+      saveUsers([...db.users, { username:'iabella@capenarol.com.uy', password:'Temporal2026', role:'receptor', displayName:'Ignacio Abella Goday', status:'aprobado' }])
+    }
+  }, [db.users])
   const doLogin = () => {
     const found = db.users.find(u => u.username.toLowerCase() === loginForm.user.toLowerCase() && u.password === loginForm.pass)
     if(!found) { setLoginForm(p => ({...p, err:'Usuario o contraseña incorrectos.'})); return }
