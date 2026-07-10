@@ -1730,14 +1730,30 @@ export default function App() {
 
               {/* Tab: Reposiciones */}
               {repTab === 'reposiciones' && (<>
-                <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
-                  <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:180}}>
-                    <div className="kpi-label">REPOSICIONES</div>
-                    <div className="kpi-value">{(db.reposiciones||[]).length}</div>
-                    <div className="kpi-sub">registradas</div>
-                  </div>
-                  <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed'}}>+ Nueva reposición</button>
-                </div>
+                {(() => {
+                  const totalEquipos = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
+                  const totalShorts = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
+                  return (
+                    <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
+                        <div className="kpi-label">REPOSICIONES</div>
+                        <div className="kpi-value">{(db.reposiciones||[]).length}</div>
+                        <div className="kpi-sub">registradas</div>
+                      </div>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
+                        <div className="kpi-label">EQUIPOS ENTREGADOS</div>
+                        <div className="kpi-value">{totalEquipos}</div>
+                        <div className="kpi-sub">camisetas en total</div>
+                      </div>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
+                        <div className="kpi-label">SHORTS ENTREGADOS</div>
+                        <div className="kpi-value">{totalShorts}</div>
+                        <div className="kpi-sub">shorts en total</div>
+                      </div>
+                      <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed',alignSelf:'flex-start'}}>+ Nueva reposición</button>
+                    </div>
+                  )
+                })()}
                 {!(db.plantel||[]).length && (
                   <div style={{fontSize:13,color:'#7a5800',background:'#FFF8D6',border:'1px solid #FFD200',borderRadius:8,padding:'10px 14px'}}>
                     Configurá el <button onClick={()=>setRepTab('plantel')} style={{background:'none',border:'none',fontWeight:700,color:'#7a5800',cursor:'pointer',padding:0,textDecoration:'underline'}}>plantel</button> primero para poder registrar reposiciones.
