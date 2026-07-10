@@ -1641,19 +1641,17 @@ export default function App() {
           )}
 
           {view === 'receptores' && (
-            <div style={{display:'flex',flexDirection:'column',gap:12}}>
-              <div className="receptor-grid">
-                {receptorCards.map(r => (
-                  <div key={r.name} className="card" style={{padding:20,display:'flex',gap:14,alignItems:'center',cursor:'pointer'}} onClick={() => setSelectedReceptor(r.name)}>
-                    <div className="avatar xl">{r.ini}</div>
-                    <div style={{flex:1}}>
-                      <div style={{fontWeight:700,fontSize:15}}>{r.name}</div>
-                      <div style={{fontSize:12.5,color:'#8a8a82',marginTop:3}}>{r.count} entregas · {r.unidades} unidades</div>
-                    </div>
-                    <span style={{color:'#C8C8C0',fontSize:20}}>›</span>
+            <div className="receptor-grid">
+              {receptorCards.map(r => (
+                <div key={r.name} className="card" style={{padding:20,display:'flex',gap:14,alignItems:'center',cursor:'pointer'}} onClick={() => setSelectedReceptor(r.name)}>
+                  <div className="avatar xl">{r.ini}</div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700,fontSize:15}}>{r.name}</div>
+                    <div style={{fontSize:12.5,color:'#8a8a82',marginTop:3}}>{r.count} entregas · {r.unidades} unidades</div>
                   </div>
-                ))}
-              </div>
+                  <span style={{color:'#C8C8C0',fontSize:20}}>›</span>
+                </div>
+              ))}
               <div className="card" style={{padding:20,display:'flex',gap:14,alignItems:'center',cursor:'pointer'}} onClick={() => setView('reposiciones')}>
                 <div className="avatar xl" style={{background:'#FFD200',color:'#121212'}}>R</div>
                 <div style={{flex:1}}>
