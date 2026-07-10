@@ -140,6 +140,7 @@ export default function App() {
   const [repModal, setRepModal] = useState(false)
   const [repDetail, setRepDetail] = useState(null)
   const [repResumen, setRepResumen] = useState(null)
+  const [repFilterTorneo, setRepFilterTorneo] = useState('')
   const [repConceptoEdit, setRepConceptoEdit] = useState(null)
   const [disciplinaEdit, setDisciplinaEdit] = useState(null)
   const [pumaMetric, setPumaMetric] = useState('unidades')
@@ -1952,28 +1953,45 @@ export default function App() {
                 )}
                 {(db.reposiciones||[]).length === 0
                   ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay reposiciones registradas aún.</div>
-                  : (
-                    <div className="card" style={{padding:0,overflow:'hidden'}}>
-                      <div className="table-header" style={{gridTemplateColumns:'100px 1fr 120px 70px 36px'}}>
-                        <div>FECHA</div><div>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'right'}}>JUGADORES</div><div/>
-                      </div>
-                      {(db.reposiciones||[]).map(r => (
-                        <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 1fr 120px 70px 36px',cursor:'pointer'}} onClick={() => setRepDetail(r)}>
-                          <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#6a6a62'}}>{r.fecha}</div>
-                          <div>
-                            <div style={{fontWeight:600}}>{r.concepto}</div>
-                            {r.creadoPor && <div style={{fontSize:11.5,color:'#8a8a82'}}>{r.creadoPor}</div>}
+                  : (() => {
+                    const torneos = [...new Set((db.reposiciones||[]).map(r=>r.torneo).filter(Boolean))]
+                    const filtered = (db.reposiciones||[]).filter(r => !repFilterTorneo || r.torneo === repFilterTorneo)
+                    return (
+                      <>
+                        {torneos.length > 0 && (
+                          <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                            <button className={`chip${repFilterTorneo===''?' active':''}`} onClick={() => setRepFilterTorneo('')}>Todos</button>
+                            {torneos.map(t => (
+                              <button key={t} className={`chip${repFilterTorneo===t?' active':''}`} onClick={() => setRepFilterTorneo(t)}>{t}</button>
+                            ))}
                           </div>
-                          <div style={{fontSize:12}}>
-                            {r.torneo && <div style={{fontWeight:600}}>{r.torneo}</div>}
-                            {r.fechaTorneo != null && r.fechaTorneo !== '' && <div style={{fontSize:11,color:'#8a8a82'}}>Fecha {r.fechaTorneo}</div>}
+                        )}
+                        <div className="card" style={{padding:0,overflow:'hidden'}}>
+                          <div className="table-header" style={{gridTemplateColumns:'100px 1fr 120px 70px 36px'}}>
+                            <div>FECHA</div><div>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'right'}}>JUGADORES</div><div/>
                           </div>
-                          <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{(r.jugadores||[]).length}</div>
-                          <div style={{textAlign:'right',color:'#8a8a82',fontSize:18,lineHeight:1}}>›</div>
+                          {filtered.length === 0
+                            ? <div style={{color:'#8a8a82',fontSize:13,textAlign:'center',padding:'24px 0'}}>Sin reposiciones para este torneo.</div>
+                            : filtered.map(r => (
+                              <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 1fr 120px 70px 36px',cursor:'pointer'}} onClick={() => setRepDetail(r)}>
+                                <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#6a6a62'}}>{r.fecha}</div>
+                                <div>
+                                  <div style={{fontWeight:600}}>{r.concepto}</div>
+                                  {r.creadoPor && <div style={{fontSize:11.5,color:'#8a8a82'}}>{r.creadoPor}</div>}
+                                </div>
+                                <div style={{fontSize:12}}>
+                                  {r.torneo && <div style={{fontWeight:600}}>{r.torneo}</div>}
+                                  {r.fechaTorneo != null && r.fechaTorneo !== '' && <div style={{fontSize:11,color:'#8a8a82'}}>Fecha {r.fechaTorneo}</div>}
+                                </div>
+                                <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{(r.jugadores||[]).length}</div>
+                                <div style={{textAlign:'right',color:'#8a8a82',fontSize:18,lineHeight:1}}>›</div>
+                              </div>
+                            ))
+                          }
                         </div>
-                      ))}
-                    </div>
-                  )
+                      </>
+                    )
+                  })()
                 }
               </>)}
 
