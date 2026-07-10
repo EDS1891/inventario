@@ -1256,7 +1256,7 @@ export default function App() {
                 <div className="kpi-card" style={{cursor:'pointer'}} onClick={() => { setCat('Entrenamiento'); setView('inventario') }}><div className="kpi-label">PRENDAS DE ENTRENAMIENTO</div><div className="kpi-value">{kpis.entrenamiento}</div><div className="kpi-sub">unidades en stock →</div></div>
                 <div className="kpi-card" style={{cursor:'pointer'}} onClick={() => { setCat('Juego'); setView('inventario') }}><div className="kpi-label">PRENDAS DE JUEGO</div><div className="kpi-value">{kpis.juego}</div><div className="kpi-sub">unidades en stock →</div></div>
                 <div className="kpi-card" style={{cursor:'pointer'}} onClick={() => { setCat('Casual'); setView('inventario') }}><div className="kpi-label">PRENDAS CASUAL</div><div className="kpi-value">{kpis.casual}</div><div className="kpi-sub">unidades en stock →</div></div>
-                <div className="kpi-card" style={{cursor:'pointer'}} onClick={() => setView('reposiciones')}><div className="kpi-label">REPOSICIONES PRIMERA DIVISIÓN</div><div className="kpi-value">{(db.reposiciones||[]).length}</div><div className="kpi-sub">reposiciones registradas →</div></div>
+
               </div>
               <div className="panel-grid">
                 <div className="card">
@@ -1746,20 +1746,20 @@ export default function App() {
           {/* CONTRATO PUMA */}
           {view === 'contrato-puma' && (() => {
             const TOTAL_CONTRATO = 17200
-            const RECEPTOR_ORDER = ['Protocolo','1° División','3° División','Juveniles','Femenino','Juveniles Femenino','Basket','Captación','Fútbol Sala Masculino','Fútbol Sala Femenino','Deportes Anexos','Funcionarios']
+            const RECEPTOR_ORDER = ['Protocolo','1° División','3 División','Juveniles','Femenino','Juveniles Femenino','Basket','Captación','Futbol Sala Masculino','Futbol Sala Femenino','Funcionarios']
             const RECEPTOR_COLORS = {
-              'Protocolo':           '#7BC67E',
-              '1° División':         '#FFD200',
-              '3° División':         '#BDBDBD',
-              'Juveniles':           '#5a5a5a',
-              'Femenino':            '#9B59B6',
-              'Juveniles Femenino':  '#C2185B',
-              'Basket':              '#FF7043',
-              'Captación':           '#4FC3F7',
+              'Protocolo':             '#7BC67E',
+              '1° División':           '#FFD200',
+              '3° División':           '#BDBDBD',
+              'Juveniles':             '#5a5a5a',
+              'Femenino':              '#9B59B6',
+              'Juveniles Femenino':    '#C2185B',
+              'Basket':                '#FF7043',
+              'Captación':             '#4FC3F7',
               'Fútbol Sala Masculino': '#1565C0',
               'Fútbol Sala Femenino':  '#F48FB1',
-              'Deportes Anexos':     '#E53935',
-              'Funcionarios':        '#90A4AE',
+              'Deportes Anexos':       '#E53935',
+              'Funcionarios':          '#90A4AE',
             }
             const repUnidades = (db.reposiciones||[]).reduce((s, r) =>
               s + (r.jugadores||[]).reduce((a, j) => a + (Number(j.cantCamiseta)||0) + (Number(j.cantShort)||0), 0), 0)
