@@ -1933,7 +1933,7 @@ export default function App() {
                         <div className="kpi-sub">registradas</div>
                       </div>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepResumen('equipos')}>
-                        <div className="kpi-label">EQUIPOS ENTREGADOS</div>
+                        <div className="kpi-label">CAMISETAS ENTREGADAS</div>
                         <div className="kpi-value">{totalEquipos}</div>
                         <div className="kpi-sub">camisetas en total →</div>
                       </div>
