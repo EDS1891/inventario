@@ -139,6 +139,7 @@ export default function App() {
   const [repForm, setRepForm] = useState({ concepto:'', rows:[] })
   const [repModal, setRepModal] = useState(false)
   const [repDetail, setRepDetail] = useState(null)
+  const [repResumen, setRepResumen] = useState(null)
   const [repTab, setRepTab] = useState('reposiciones')
   const [plantelForm, setPlantelForm] = useState({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',talleShort:'L'})
   const [plantelModal, setPlantelModal] = useState(false)
@@ -1740,15 +1741,15 @@ export default function App() {
                         <div className="kpi-value">{(db.reposiciones||[]).length}</div>
                         <div className="kpi-sub">registradas</div>
                       </div>
-                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepResumen('equipos')}>
                         <div className="kpi-label">EQUIPOS ENTREGADOS</div>
                         <div className="kpi-value">{totalEquipos}</div>
-                        <div className="kpi-sub">camisetas en total</div>
+                        <div className="kpi-sub">camisetas en total →</div>
                       </div>
-                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepResumen('shorts')}>
                         <div className="kpi-label">SHORTS ENTREGADOS</div>
                         <div className="kpi-value">{totalShorts}</div>
-                        <div className="kpi-sub">shorts en total</div>
+                        <div className="kpi-sub">shorts en total →</div>
                       </div>
                       <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed',alignSelf:'flex-start'}}>+ Nueva reposición</button>
                     </div>
@@ -2144,6 +2145,103 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Modal: Resumen entregas por jugador por mes */}
+      {repResumen && (() => {
+        const campo = repResumen === 'equipos' ? 'cantCamiseta' : 'cantShort'
+        const titulo = repResumen === 'equipos' ? 'Equipos entregados por jugador' : 'Shorts entregados por jugador'
+
+        // Meses únicos ordenados cronológicamente (de r.fecha = DD/MM/YYYY)
+        const meses = [...new Set((db.reposiciones||[]).map(r => {
+          const p = (r.fecha||'').split('/')
+          return p.length===3 ? p[1]+'/'+p[2] : r.fecha
+        }))].sort((a,b) => {
+          const [ma,ya] = a.split('/').map(Number)
+          const [mb,yb] = b.split('/').map(Number)
+          return ya!==yb ? ya-yb : ma-mb
+        })
+
+        // Jugadores únicos (número + nombre) presentes en alguna reposición
+        const jugMap = {}
+        ;(db.reposiciones||[]).forEach(r => (r.jugadores||[]).forEach(j => {
+          const key = (j.numero||'—')+'|'+j.nombre
+          if (!jugMap[key]) jugMap[key] = {numero:j.numero||'—', nombre:j.nombre}
+        }))
+        const jugs = Object.values(jugMap).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0))
+
+        // Suma por jugador x mes
+        const getQty = (nombre, mes) =>
+          (db.reposiciones||[]).filter(r => {
+            const p = (r.fecha||'').split('/')
+            return (p.length===3 ? p[1]+'/'+p[2] : r.fecha) === mes
+          }).reduce((acc,r) => {
+            const j = (r.jugadores||[]).find(x=>x.nombre===nombre)
+            return acc + (j ? Number(j[campo])||0 : 0)
+          }, 0)
+
+        const getTotal = (nombre) =>
+          (db.reposiciones||[]).reduce((acc,r)=>{
+            const j=(r.jugadores||[]).find(x=>x.nombre===nombre)
+            return acc+(j?Number(j[campo])||0:0)
+          },0)
+
+        const MESES_ES = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+        const fmtMes = mes => { const [m,y]=mes.split('/'); return MESES_ES[Number(m)]+' '+y }
+
+        return (
+          <div className="modal-backdrop" onClick={()=>setRepResumen(null)}>
+            <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:700,width:'96%'}}>
+              <div className="modal-header">
+                <div className="modal-title">{titulo}</div>
+                <button className="modal-close" onClick={()=>setRepResumen(null)}>×</button>
+              </div>
+              <div className="modal-body" style={{padding:0,overflowX:'auto',maxHeight:'70vh',overflowY:'auto'}}>
+                <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,minWidth:400}}>
+                  <thead>
+                    <tr style={{background:'#121212',color:'#FFD200'}}>
+                      <th style={{padding:'8px 12px',textAlign:'left',fontWeight:700,fontSize:11,letterSpacing:'.04em',position:'sticky',left:0,background:'#121212'}}>JUGADOR</th>
+                      {meses.map(m=>(
+                        <th key={m} style={{padding:'8px 10px',textAlign:'center',fontWeight:700,fontSize:11,letterSpacing:'.04em',whiteSpace:'nowrap'}}>{fmtMes(m)}</th>
+                      ))}
+                      <th style={{padding:'8px 10px',textAlign:'center',fontWeight:700,fontSize:11,letterSpacing:'.04em',color:'#FFD200'}}>TOTAL</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {jugs.map((j,i)=>{
+                      const total = getTotal(j.nombre)
+                      return (
+                        <tr key={i} style={{borderBottom:'1px solid #F5F5F0',background:i%2===0?'#fff':'#FAFAF8'}}>
+                          <td style={{padding:'7px 12px',fontWeight:500,position:'sticky',left:0,background:i%2===0?'#fff':'#FAFAF8',whiteSpace:'nowrap'}}>
+                            <span style={{fontFamily:'IBM Plex Mono,monospace',color:'#8a8a82',marginRight:8,fontSize:11}}>{j.numero}</span>
+                            {j.nombre}
+                          </td>
+                          {meses.map(m=>{
+                            const q=getQty(j.nombre,m)
+                            return <td key={m} style={{padding:'7px 10px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:q>0?700:400,color:q>0?'#1a1a1a':'#ccc'}}>{q>0?q:'—'}</td>
+                          })}
+                          <td style={{padding:'7px 10px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:total>0?'#1a1a1a':'#ccc',background:total>0?'#FFF8D6':'transparent'}}>{total>0?total:'—'}</td>
+                        </tr>
+                      )
+                    })}
+                    {/* Fila de totales */}
+                    <tr style={{background:'#121212',color:'#FFD200',fontWeight:700}}>
+                      <td style={{padding:'8px 12px',fontSize:11,letterSpacing:'.04em',position:'sticky',left:0,background:'#121212'}}>TOTAL</td>
+                      {meses.map(m=>{
+                        const t=jugs.reduce((acc,j)=>acc+getQty(j.nombre,m),0)
+                        return <td key={m} style={{padding:'8px 10px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace'}}>{t>0?t:'—'}</td>
+                      })}
+                      <td style={{padding:'8px 10px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace'}}>{jugs.reduce((acc,j)=>acc+getTotal(j.nombre),0)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={()=>setRepResumen(null)}>Cerrar</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Modal: Plantel — agregar/editar jugador */}
       {plantelModal && (
