@@ -16,6 +16,9 @@ const ESTANTES = ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','1
 const ALTURAS = ['A','B','C','D','E','O']
 const CAMISETA_TIPOS = ['Titular','Alternativa','3°']
 const SHORT_TIPOS = ['Titular','Alternativa']
+const REP_TIPOS_JUGADOR = ['TRADICIONAL','AMARILLA','VERDE']
+const REP_TIPOS_GOLERO  = ['NEGRO','NARANJA','CREMA']
+const getRepTipos = (posicion) => posicion === 'Golero' ? REP_TIPOS_GOLERO : REP_TIPOS_JUGADOR
 
 const DEFAULT_USERS = [{ username:'compras', password:'peniarol1891', role:'admin', displayName:'Compras Peñarol', status:'aprobado' }]
 const EMPTY_DB = { articles:[], deliveries:[], movimientos:[], nextId:1, nextDel:1, nextMov:1, nextRep:1, users: DEFAULT_USERS, camisetasUtileria:[], reposiciones:[], plantel:[] }
@@ -769,14 +772,23 @@ export default function App() {
   }
 
   const openRepModal = () => {
-    setRepForm({ concepto:'', rows:(db.plantel||[]).map(j=>({...j,cantCamiseta:'',cantShort:''})) })
+    setRepForm({ concepto:'', rows:(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j=>{
+      const tipos = getRepTipos(j.posicion)
+      const camisetas = Object.fromEntries(tipos.map(t=>[t,'']))
+      return {...j, camisetas, cantShort:''}
+    })})
     setRepModal(true)
   }
   const saveReposicion = () => {
     if (!repForm.concepto.trim()) { showToast('Ingresá el concepto.'); return }
     const jugadores = repForm.rows
-      .filter(r => Number(r.cantCamiseta) > 0 || Number(r.cantShort) > 0)
-      .map(r => ({ numero:r.numero, nombre:r.nombre, talleCamiseta:r.talleCamiseta, talleShort:r.talleShort, cantCamiseta:Number(r.cantCamiseta)||0, cantShort:Number(r.cantShort)||0 }))
+      .filter(r => Object.values(r.camisetas||{}).some(v=>Number(v)>0) || Number(r.cantShort)>0)
+      .map(r => ({
+        numero:r.numero, nombre:r.nombre, posicion:r.posicion||'Jugador',
+        talleCamiseta:r.talleCamiseta, talleShort:r.talleShort,
+        camisetas: Object.fromEntries(Object.entries(r.camisetas||{}).map(([k,v])=>[k,Number(v)||0])),
+        cantShort: Number(r.cantShort)||0
+      }))
     if (!jugadores.length) { showToast('Ingresá al menos una cantidad.'); return }
     setDb(s => {
       const rep = { id:s.nextRep, fecha:today(), concepto:repForm.concepto.trim(), creadoPor:currentUser?.displayName||session, jugadores }
@@ -1940,25 +1952,35 @@ export default function App() {
                 <input className="field-input" value={repForm.concepto} onChange={e => setRepForm(p=>({...p,concepto:e.target.value}))} placeholder="Ej. Reposición vs Nacional" autoFocus />
               </div>
               <div style={{marginTop:16}}>
-                <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',marginBottom:6}}>Ingresá la cantidad enviada a cada jugador (dejá en 0 si no aplica)</div>
-                <div style={{display:'grid',gridTemplateColumns:'44px 1fr 90px 90px',gap:6,marginBottom:6,fontSize:11,fontWeight:700,color:'#8a8a82',padding:'4px 6px',background:'#F5F5F0',borderRadius:6}}>
-                  <div>Nº</div><div>NOMBRE · TALLE</div><div style={{textAlign:'center'}}>CAMISETA</div><div style={{textAlign:'center'}}>SHORT</div>
-                </div>
+                <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',marginBottom:8}}>Ingresá la cantidad enviada (dejá en blanco si no aplica)</div>
                 {repForm.rows.map((r, i) => {
-                  const hasQty = Number(r.cantCamiseta) > 0 || Number(r.cantShort) > 0
+                  const tipos = getRepTipos(r.posicion)
+                  const hasQty = Object.values(r.camisetas||{}).some(v=>Number(v)>0) || Number(r.cantShort)>0
+                  const isLibre = r.nombre.trim().toLowerCase()==='libre'
                   return (
-                    <div key={i} style={{display:'grid',gridTemplateColumns:'44px 1fr 90px 90px',gap:6,marginBottom:4,alignItems:'center',padding:'5px 6px',borderRadius:6,background:hasQty?'#FFFDF0':'transparent',border:hasQty?'1px solid #FFD200':'1px solid transparent'}}>
-                      <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13}}>{r.numero||'—'}</div>
-                      <div>
-                        <div style={{fontWeight:600,fontSize:13}}>{r.nombre}</div>
-                        <div style={{fontSize:11,color:'#8a8a82'}}>Cam: {r.talleCamiseta} · Short: {r.talleShort}</div>
+                    <div key={i} style={{marginBottom:6,padding:'8px 10px',borderRadius:8,background:isLibre?'#3a3a3a':hasQty?'#FFFDF0':'#F9F9F6',border:hasQty?'1px solid #FFD200':'1px solid transparent'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                        <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,minWidth:28,color:isLibre?'#888':undefined}}>{r.numero||'—'}</span>
+                        <span style={{fontWeight:600,fontSize:13,flex:1,color:isLibre?'#888':'#1a1a1a',fontStyle:isLibre?'italic':undefined}}>{r.nombre}</span>
+                        <span style={{fontSize:10,color:'#8a8a82',background:'#ECECE8',borderRadius:4,padding:'2px 6px'}}>{r.posicion||'Jugador'}</span>
                       </div>
-                      <input className="field-input mono" type="number" min="0" value={r.cantCamiseta}
-                        onChange={e => setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,cantCamiseta:e.target.value}:x)}))}
-                        placeholder="0" style={{textAlign:'center',padding:'5px 4px'}} />
-                      <input className="field-input mono" type="number" min="0" value={r.cantShort}
-                        onChange={e => setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,cantShort:e.target.value}:x)}))}
-                        placeholder="0" style={{textAlign:'center',padding:'5px 4px'}} />
+                      <div style={{display:'flex',gap:6,alignItems:'flex-end',flexWrap:'wrap'}}>
+                        {tipos.map(tipo => (
+                          <div key={tipo} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,flex:1,minWidth:60}}>
+                            <span style={{fontSize:9,fontWeight:700,color:'#6a6a62',letterSpacing:'.04em',textAlign:'center'}}>{tipo}</span>
+                            <input className="field-input mono" type="number" min="0"
+                              value={r.camisetas?.[tipo]??''}
+                              onChange={e => setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,camisetas:{...x.camisetas,[tipo]:e.target.value}}:x)}))}
+                              placeholder="0" style={{textAlign:'center',padding:'5px 4px',fontSize:13}} />
+                          </div>
+                        ))}
+                        <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3,flex:1,minWidth:60}}>
+                          <span style={{fontSize:9,fontWeight:700,color:'#6a6a62',letterSpacing:'.04em'}}>SHORT</span>
+                          <input className="field-input mono" type="number" min="0" value={r.cantShort}
+                            onChange={e => setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,cantShort:e.target.value}:x)}))}
+                            placeholder="0" style={{textAlign:'center',padding:'5px 4px',fontSize:13}} />
+                        </div>
+                      </div>
                     </div>
                   )
                 })}
@@ -1984,24 +2006,36 @@ export default function App() {
               <button className="modal-close" onClick={() => setRepDetail(null)}>×</button>
             </div>
             <div className="modal-body" style={{maxHeight:'60vh',overflowY:'auto'}}>
-              <div style={{display:'grid',gridTemplateColumns:'44px 1fr 90px 90px',gap:8,marginBottom:6,fontSize:11,fontWeight:700,color:'#8a8a82',background:'#F5F5F0',borderRadius:6,padding:'5px 6px'}}>
-                <div>Nº</div><div>NOMBRE</div><div style={{textAlign:'center'}}>CAMISETA</div><div style={{textAlign:'center'}}>SHORT</div>
-              </div>
-              {(repDetail.jugadores||[]).map((j,i) => (
-                <div key={i} style={{display:'grid',gridTemplateColumns:'44px 1fr 90px 90px',gap:8,padding:'7px 6px',borderBottom:'1px solid #F5F5F0',fontSize:13,alignItems:'center'}}>
-                  <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#6a6a62'}}>{j.numero||'—'}</div>
-                  <div>
-                    <div style={{fontWeight:500}}>{j.nombre||'—'}</div>
-                    {j.talleCamiseta && <div style={{fontSize:11,color:'#8a8a82'}}>Cam: {j.talleCamiseta} · Short: {j.talleShort}</div>}
+              {(repDetail.jugadores||[]).map((j,i) => {
+                const tipos = getRepTipos(j.posicion)
+                const camEntries = j.camisetas
+                  ? Object.entries(j.camisetas).filter(([,v])=>v>0)
+                  : j.cantCamiseta>0 ? [['CAMISETA',j.cantCamiseta]] : []
+                return (
+                  <div key={i} style={{padding:'8px 6px',borderBottom:'1px solid #F5F5F0',fontSize:13}}>
+                    <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:camEntries.length||j.cantShort>0?4:0}}>
+                      <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#6a6a62',minWidth:28}}>{j.numero||'—'}</span>
+                      <span style={{fontWeight:500,flex:1}}>{j.nombre||'—'}</span>
+                      {j.posicion && <span style={{fontSize:10,color:'#8a8a82',background:'#ECECE8',borderRadius:4,padding:'2px 6px'}}>{j.posicion}</span>}
+                      <span style={{fontSize:11,color:'#8a8a82'}}>Talle: {j.talleCamiseta}</span>
+                    </div>
+                    {(camEntries.length>0||j.cantShort>0) && (
+                      <div style={{display:'flex',gap:8,flexWrap:'wrap',paddingLeft:36}}>
+                        {camEntries.map(([tipo,qty])=>(
+                          <span key={tipo} style={{fontSize:12,fontWeight:700,background:'#FFF8D6',border:'1px solid #FFD200',borderRadius:5,padding:'2px 8px'}}>
+                            {tipo}: {qty}
+                          </span>
+                        ))}
+                        {j.cantShort>0 && (
+                          <span style={{fontSize:12,fontWeight:700,background:'#F0F0EC',border:'1px solid #ddd',borderRadius:5,padding:'2px 8px'}}>
+                            SHORT: {j.cantShort}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <div style={{textAlign:'center',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color: j.cantCamiseta > 0 ? '#1a1a1a' : '#ccc'}}>
-                    {j.cantCamiseta > 0 ? j.cantCamiseta : (j.camiseta || '—')}
-                  </div>
-                  <div style={{textAlign:'center',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color: j.cantShort > 0 ? '#1a1a1a' : '#ccc'}}>
-                    {j.cantShort > 0 ? j.cantShort : (j.short || '—')}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
               <div style={{marginTop:10,fontSize:12,color:'#8a8a82',textAlign:'right'}}>{(repDetail.jugadores||[]).length} jugadores</div>
             </div>
             <div className="modal-footer">
