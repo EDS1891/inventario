@@ -185,7 +185,7 @@ export default function App() {
   const dbRef = useRef(db)
 
   // delivery/devolución form
-  const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', disciplina:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' })
+  const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', disciplina:'', fecha:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' })
   // new article form
   const [na, setNa] = useState({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', precio:'', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' })
   // reponer form
@@ -377,7 +377,7 @@ export default function App() {
       const articles = s.articles.map(a => ({...a, sizes: a.sizes.map(z => ({...z}))}))
       const movimientos = [...s.movimientos]
       let mid = s.nextMov
-      const fecha = today()
+      const fecha = nd.fecha || today()
       nd.lines.forEach(l => {
         // Find the entry at the specific location (ubic), fallback to first with the talle
         const a = l.ubic
@@ -2635,6 +2635,16 @@ export default function App() {
               <div className="form-group">
                 <label className="field-label">{ndIsDev ? 'Integrante que devuelve' : 'Integrante que recibe'}</label>
                 <input className="field-input" value={nd.persona} onChange={e => setNd(p=>({...p,persona:e.target.value}))} placeholder="Ej. Maximiliano Olivera" />
+              </div>
+              <div className="form-group">
+                <label className="field-label">Fecha <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional — por defecto hoy)</span></label>
+                <input type="date" className="field-input" value={nd.fecha
+                  ? nd.fecha.split('/').reverse().join('-')
+                  : new Date().toISOString().slice(0,10)}
+                  onChange={e => {
+                    const [y,m,d] = e.target.value.split('-')
+                    setNd(p=>({...p, fecha: d+'/'+m+'/'+y}))
+                  }} />
               </div>
               <div className="form-group">
                 <label className="field-label">Grupo / Plantel</label>
