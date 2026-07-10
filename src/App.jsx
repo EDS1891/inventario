@@ -6,6 +6,7 @@ const TALLE_ORDER = ['2','4','6','8','10','12','14','Único','S','M','L','XL','X
 const TALLES_ADULTO = ['S','M','L','XL','XXL','XXXL','Único']
 const TALLES_NINO   = ['2','4','6','8','10','12','14']
 const RECEPTORES = ['1° División','3° División','Juveniles','Captación','Femenino','Juveniles Femenino','Fútbol Sala Masculino','Fútbol Sala Femenino','Basket','Deportes Anexos','Funcionarios','Protocolo']
+const DISCIPLINAS_DEPORTES_ANEXOS = ['Atletismo','Bowling','Esports','Fútbol Inclusivo','Fútbol Playa Masculino','Fútbol Sala Femenino','Handball','Volley','Teqball','Cricket','Footgolf','Ciclismo','Paracaidismo','Maxi Basket','Automovilismo','Motociclismo','Hockey Patín','Esgrima']
 const CATEGORIAS = ['Entrenamiento','Juego','Casual']
 const OCUPACIONES = ['3° División','Juveniles','Juveniles Femenino','Captacion']
 const DIVISIONES            = ['Sub 19','Sub 17','Sub 16','Sub 15','Sub 14']
@@ -2118,9 +2119,11 @@ export default function App() {
                     {d.receptor === 'Deportes Anexos' && (
                       disciplinaEdit !== null
                         ? <span style={{marginLeft:6,display:'inline-flex',gap:4,alignItems:'center'}}>
-                            <input className="field-input" value={disciplinaEdit} onChange={e=>setDisciplinaEdit(e.target.value)}
-                              onKeyDown={e=>{if(e.key==='Enter')saveDisciplinaEdit(d.id);if(e.key==='Escape')setDisciplinaEdit(null)}}
-                              autoFocus placeholder="Ej. Atletismo" style={{fontSize:12,padding:'2px 6px',width:140}} />
+                            <select className="field-input" value={disciplinaEdit} onChange={e=>setDisciplinaEdit(e.target.value)}
+                              autoFocus style={{fontSize:12,padding:'2px 6px',width:170}}>
+                              <option value="">— Seleccioná —</option>
+                              {DISCIPLINAS_DEPORTES_ANEXOS.map(d => <option key={d} value={d}>{d}</option>)}
+                            </select>
                             <button onClick={()=>saveDisciplinaEdit(d.id)} style={{background:'#FFD200',border:'none',borderRadius:4,padding:'2px 8px',fontWeight:700,fontSize:11,cursor:'pointer'}}>✓</button>
                             <button onClick={()=>setDisciplinaEdit(null)} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:13}}>✕</button>
                           </span>
@@ -2692,7 +2695,10 @@ export default function App() {
               {nd.receptor === 'Deportes Anexos' && (
                 <div className="form-group">
                   <label className="field-label">Disciplina</label>
-                  <input className="field-input" value={nd.disciplina} onChange={e => setNd(p=>({...p,disciplina:e.target.value}))} placeholder="Ej. Atletismo, Tenis, Natación…" />
+                  <select className="field-input" value={nd.disciplina} onChange={e => setNd(p=>({...p,disciplina:e.target.value}))}>
+                    <option value="">— Seleccioná una disciplina —</option>
+                    {DISCIPLINAS_DEPORTES_ANEXOS.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
                 </div>
               )}
               {!ndIsDev && (
