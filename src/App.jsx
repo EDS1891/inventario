@@ -1746,10 +1746,13 @@ export default function App() {
           {/* CONTRATO PUMA */}
           {view === 'contrato-puma' && (() => {
             const TOTAL_CONTRATO = 17200
-            const RECEPTOR_ORDER = ['Protocolo','1° División','3 División','Juveniles','Femenino','Juveniles Femenino','Basket','Captación','Futbol Sala Masculino','Futbol Sala Femenino','Funcionarios']
-            const data = receptorCards
+            const RECEPTOR_ORDER = ['Protocolo','1° División','Reposición 1° División','3 División','Juveniles','Femenino','Juveniles Femenino','Basket','Captación','Futbol Sala Masculino','Futbol Sala Femenino','Funcionarios']
+            const repUnidades = (db.reposiciones||[]).reduce((s, r) =>
+              s + (r.jugadores||[]).reduce((a, j) => a + (Number(j.cantCamiseta)||0) + (Number(j.cantShort)||0), 0), 0)
+            const baseData = receptorCards
               .map(r => ({ name: r.name, unidades: r.unidades, pct: r.unidades / TOTAL_CONTRATO * 100 }))
-              .sort((a, b) => {
+            const repEntry = { name: 'Reposición 1° División', unidades: repUnidades, pct: repUnidades / TOTAL_CONTRATO * 100 }
+            const data = [...baseData, repEntry].sort((a, b) => {
                 const ia = RECEPTOR_ORDER.indexOf(a.name)
                 const ib = RECEPTOR_ORDER.indexOf(b.name)
                 if (ia === -1 && ib === -1) return 0
@@ -1759,7 +1762,7 @@ export default function App() {
               })
             const totalUsado = data.reduce((s, r) => s + r.unidades, 0)
             const pctTotal = totalUsado / TOTAL_CONTRATO * 100
-            const COLORS = ['#FFD200','#2e9b5e','#4A90D9','#E87C3E','#9B59B6','#C2473D','#1ABC9C','#F39C12']
+            const COLORS = ['#FFD200','#2e9b5e','#C2473D','#4A90D9','#E87C3E','#9B59B6','#1ABC9C','#F39C12','#E74C3C','#95A5A6','#27AE60','#8E44AD']
             const maxPct = Math.max(...data.map(r => r.pct), 1)
             const BAR_HEIGHT = 220
             return (
