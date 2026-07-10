@@ -141,6 +141,7 @@ export default function App() {
   const [repDetail, setRepDetail] = useState(null)
   const [repResumen, setRepResumen] = useState(null)
   const [repConceptoEdit, setRepConceptoEdit] = useState(null)
+  const [disciplinaEdit, setDisciplinaEdit] = useState(null)
   const [repTab, setRepTab] = useState('reposiciones')
   const [plantelForm, setPlantelForm] = useState({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',talleShort:'L'})
   const [plantelModal, setPlantelModal] = useState(false)
@@ -810,6 +811,12 @@ export default function App() {
     setDb(s => ({...s, reposiciones:(s.reposiciones||[]).filter(r=>r.id!==id)}))
     setRepDetail(null)
     showToast('Reposición eliminada.')
+  }
+  const saveDisciplinaEdit = (deliveryId) => {
+    if (!disciplinaEdit?.trim()) { showToast('Ingresá la disciplina.'); return }
+    setDb(s => ({...s, deliveries:s.deliveries.map(d=>d.id===deliveryId?{...d,disciplina:disciplinaEdit.trim()}:d)}))
+    setDisciplinaEdit(null)
+    showToast('Disciplina actualizada.')
   }
   const saveRepConcepto = () => {
     if (!repConceptoEdit?.trim()) { showToast('El concepto no puede estar vacío.'); return }
@@ -1859,7 +1866,25 @@ export default function App() {
               <div className="modal-header">
                 <div>
                   <div className="modal-title">{d.persona}</div>
-                  <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>{d.receptor}{d.disciplina ? ' · ' + d.disciplina : ''} · {d.fecha}</div>
+                  <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>
+                    {d.receptor}
+                    {d.receptor === 'Deportes Anexos' && (
+                      disciplinaEdit !== null
+                        ? <span style={{marginLeft:6,display:'inline-flex',gap:4,alignItems:'center'}}>
+                            <input className="field-input" value={disciplinaEdit} onChange={e=>setDisciplinaEdit(e.target.value)}
+                              onKeyDown={e=>{if(e.key==='Enter')saveDisciplinaEdit(d.id);if(e.key==='Escape')setDisciplinaEdit(null)}}
+                              autoFocus placeholder="Ej. Atletismo" style={{fontSize:12,padding:'2px 6px',width:140}} />
+                            <button onClick={()=>saveDisciplinaEdit(d.id)} style={{background:'#FFD200',border:'none',borderRadius:4,padding:'2px 8px',fontWeight:700,fontSize:11,cursor:'pointer'}}>✓</button>
+                            <button onClick={()=>setDisciplinaEdit(null)} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:13}}>✕</button>
+                          </span>
+                        : <span>
+                            {d.disciplina ? ' · ' + d.disciplina : <span style={{color:'#C2473D',fontSize:11,marginLeft:4}}>sin disciplina</span>}
+                            <button onClick={()=>setDisciplinaEdit(d.disciplina||'')} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:13,marginLeft:4,padding:'0 2px'}}>✎</button>
+                          </span>
+                    )}
+                    {d.receptor !== 'Deportes Anexos' && d.disciplina ? ' · ' + d.disciplina : ''}
+                    {' · '}{d.fecha}
+                  </div>
                   {d.creadoPor && <div style={{fontSize:12,color:'#aaa',marginTop:2}}>Registrado por: {d.creadoPor}</div>}
                 </div>
                 <span style={{...stStyle,borderRadius:5,padding:'3px 9px',fontSize:11,fontWeight:700,marginLeft:'auto',marginRight:12,whiteSpace:'nowrap'}}>{stLabel}</span>
