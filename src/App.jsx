@@ -1796,7 +1796,11 @@ export default function App() {
                         {data.map((r, i) => {
                           const barH = (r.pct / 100) * BAR_HEIGHT
                           return (
-                            <div key={r.name} style={{display:'flex',flexDirection:'column',alignItems:'center',flex:1,minWidth:40,height:'100%',justifyContent:'flex-end'}}>
+                            <div key={r.name}
+                              onClick={() => { setDelFilterReceptor(r.name); setView('entregas') }}
+                              style={{display:'flex',flexDirection:'column',alignItems:'center',flex:1,minWidth:40,height:'100%',justifyContent:'flex-end',cursor:'pointer'}}
+                              title={`Ver entregas de ${r.name}`}
+                            >
                               {/* Etiqueta de valor */}
                               <div style={{fontSize:10,fontWeight:700,color:COLORS[i%COLORS.length],marginBottom:3,whiteSpace:'nowrap'}}>
                                 {r.pct.toFixed(1)}%
@@ -1810,10 +1814,13 @@ export default function App() {
                                 height: barH || 2,
                                 background: COLORS[i%COLORS.length],
                                 borderRadius:'4px 4px 0 0',
-                                transition:'height .4s',
+                                transition:'height .4s, opacity .2s, filter .2s',
                                 minHeight: r.unidades > 0 ? 4 : 2,
                                 opacity: r.unidades === 0 ? 0.25 : 1
-                              }} />
+                              }}
+                                onMouseEnter={e => e.currentTarget.style.filter='brightness(1.15)'}
+                                onMouseLeave={e => e.currentTarget.style.filter=''}
+                              />
                             </div>
                           )
                         })}
