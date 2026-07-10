@@ -1535,6 +1535,7 @@ export default function App() {
               </div>
               <div className="table-header del-cols">
                 <div>FECHA</div><div>INTEGRANTE / GRUPO</div>
+                <div>DISCIPLINA</div>
                 <div className="del-col-detail">DETALLE</div>
                 <div className="del-col-por">USUARIO</div>
                 <div style={{textAlign:'right'}}>ESTADO</div><div/>
@@ -1547,11 +1548,12 @@ export default function App() {
                     <div style={{minWidth:0}}>
                       <div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.persona}</div>
                       <div style={{fontSize:11.5,color:'#8a8a82'}}>
-                        {d.receptor}{d.disciplina ? <span> · <b>{d.disciplina}</b></span> : ''}
+                        {d.receptor}
                         {d.paga !== null && d.paga !== undefined && <span style={{marginLeft:6,fontWeight:600,color:d.paga==='si'?'#2e9b5e':'#C2473D'}}>· Paga: {d.paga==='si'?'Sí':'No'}{d.paga==='si'&&d.monto>0?' — $ '+d.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}):''}</span>}
                       </div>
                     </div>
                   </div>
+                  <div style={{fontSize:12.5,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.disciplina||<span style={{color:'#ccc'}}>—</span>}</div>
                   <div className="del-col-detail" style={{color:'#6a6a62',fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.resumen}</div>
                   <div className="del-col-por" style={{fontSize:12.5,color:'#8a8a82',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.creadoPor || '—'}</div>
                   <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{d.totalUd}</div>

@@ -238,7 +238,7 @@ nav.sidebar-nav {
 
 /* Inventory table columns */
 .inv-cols { grid-template-columns: 1.1fr 1.85fr .7fr 1.25fr .8fr .65fr .85fr .75fr; }
-.del-cols { grid-template-columns: 1fr 1.6fr 1.8fr 1.1fr .7fr 44px; }
+.del-cols { grid-template-columns: 1fr 1.6fr 1fr 1.8fr 1.1fr .7fr 44px; }
 .mov-cols { grid-template-columns: 0.95fr 2.4fr 1fr .7fr 1.1fr .7fr 44px; }
 
 /* ---- Badge ---- */
