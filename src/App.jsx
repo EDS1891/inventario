@@ -1942,6 +1942,11 @@ export default function App() {
                         <div className="kpi-value">{totalShorts}</div>
                         <div className="kpi-sub">shorts en total →</div>
                       </div>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepTab('plantel')}>
+                        <div className="kpi-label">PLANTEL</div>
+                        <div className="kpi-value">{(db.plantel||[]).length}</div>
+                        <div className="kpi-sub">jugadores registrados →</div>
+                      </div>
                       <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed',alignSelf:'flex-start'}}>+ Nueva reposición</button>
                     </div>
                   )
