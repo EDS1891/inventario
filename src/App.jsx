@@ -2106,8 +2106,8 @@ export default function App() {
                   <div key={i} style={{display:'grid',gridTemplateColumns:'40px 1fr 80px 80px',gap:6,padding:'6px 6px',fontSize:13,alignItems:'center',...goleroRowBg}}>
                     <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#6a6a62'}}>{j.numero||'—'}</div>
                     <div>
-                      <span style={{fontWeight:500}}>{j.nombre||'—'}</span>
-                      {j.talleCamiseta && <span style={{fontSize:10,color:'#aaa',marginLeft:6}}>T:{j.talleCamiseta}</span>}
+                      <div style={{fontWeight:500}}>{j.nombre||'—'}</div>
+                      {j.talleCamiseta && <div style={{fontSize:10,color:'#8a8a82',marginTop:1}}>CAM {j.talleCamiseta} · SHORT {j.talleShort}</div>}
                     </div>
                     <div style={{textAlign:'center',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:j.cantCamiseta>0?'#1a1a1a':'#ccc'}}>
                       {j.cantCamiseta>0?j.cantCamiseta:'—'}
