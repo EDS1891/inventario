@@ -1249,6 +1249,7 @@ export default function App() {
                 <div className="kpi-card" style={{cursor:'pointer'}} onClick={() => { setCat('Entrenamiento'); setView('inventario') }}><div className="kpi-label">PRENDAS DE ENTRENAMIENTO</div><div className="kpi-value">{kpis.entrenamiento}</div><div className="kpi-sub">unidades en stock →</div></div>
                 <div className="kpi-card" style={{cursor:'pointer'}} onClick={() => { setCat('Juego'); setView('inventario') }}><div className="kpi-label">PRENDAS DE JUEGO</div><div className="kpi-value">{kpis.juego}</div><div className="kpi-sub">unidades en stock →</div></div>
                 <div className="kpi-card" style={{cursor:'pointer'}} onClick={() => { setCat('Casual'); setView('inventario') }}><div className="kpi-label">PRENDAS CASUAL</div><div className="kpi-value">{kpis.casual}</div><div className="kpi-sub">unidades en stock →</div></div>
+                <div className="kpi-card" style={{cursor:'pointer'}} onClick={() => setView('reposiciones')}><div className="kpi-label">REPOSICIONES PRIMERA DIVISIÓN</div><div className="kpi-value">{(db.reposiciones||[]).length}</div><div className="kpi-sub">reposiciones registradas →</div></div>
               </div>
               <div className="panel-grid">
                 <div className="card">
