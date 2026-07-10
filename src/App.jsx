@@ -1752,6 +1752,8 @@ export default function App() {
             const totalUsado = data.reduce((s, r) => s + r.unidades, 0)
             const pctTotal = totalUsado / TOTAL_CONTRATO * 100
             const COLORS = ['#FFD200','#2e9b5e','#4A90D9','#E87C3E','#9B59B6','#C2473D','#1ABC9C','#F39C12']
+            const maxPct = Math.max(...data.map(r => r.pct), 1)
+            const BAR_HEIGHT = 220
             return (
               <div style={{display:'flex',flexDirection:'column',gap:20}}>
                 {/* KPI global */}
@@ -1773,53 +1775,59 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Barra global */}
-                <div className="card" style={{padding:'16px 20px'}}>
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-                    <span style={{fontWeight:700,fontSize:13}}>Uso total del contrato</span>
-                    <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13}}>{pctTotal.toFixed(1)}%</span>
-                  </div>
-                  <div style={{height:18,background:'#F0F0EC',borderRadius:9,overflow:'hidden'}}>
-                    <div style={{height:'100%',width:`${Math.min(pctTotal,100)}%`,background:'#FFD200',borderRadius:9,transition:'width .4s'}} />
-                  </div>
-                  {/* Barra apilada por receptor */}
-                  <div style={{height:12,background:'#F0F0EC',borderRadius:6,overflow:'hidden',marginTop:8,display:'flex'}}>
-                    {data.filter(r=>r.unidades>0).map((r,i)=>(
-                      <div key={r.name} title={`${r.name}: ${r.pct.toFixed(1)}%`}
-                        style={{height:'100%',width:`${r.pct}%`,background:COLORS[i%COLORS.length],transition:'width .4s'}} />
-                    ))}
-                  </div>
-                </div>
-
-                {/* Tabla por receptor */}
-                <div className="card" style={{padding:0,overflow:'hidden'}}>
-                  <div className="table-header" style={{gridTemplateColumns:'1fr 120px 120px 180px'}}>
-                    <div>RECEPTOR</div>
-                    <div style={{textAlign:'right'}}>UNIDADES</div>
-                    <div style={{textAlign:'right'}}>% DEL CONTRATO</div>
-                    <div style={{paddingLeft:12}}>BARRA</div>
-                  </div>
-                  {data.map((r, i) => (
-                    <div key={r.name} className="table-row" style={{gridTemplateColumns:'1fr 120px 120px 180px',alignItems:'center'}}>
-                      <div style={{display:'flex',alignItems:'center',gap:8}}>
-                        <div style={{width:10,height:10,borderRadius:'50%',background:COLORS[i%COLORS.length],flexShrink:0}} />
-                        <span style={{fontWeight:500}}>{r.name}</span>
-                      </div>
-                      <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>{r.unidades.toLocaleString('es-UY')}</div>
-                      <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace',color:'#6a6a62'}}>{r.pct.toFixed(2)}%</div>
-                      <div style={{paddingLeft:12}}>
-                        <div style={{height:8,background:'#F0F0EC',borderRadius:4,overflow:'hidden'}}>
-                          <div style={{height:'100%',width:`${Math.min(r.pct/pctTotal*100||0,100)}%`,background:COLORS[i%COLORS.length],borderRadius:4}} />
-                        </div>
+                {/* Gráfica de barras verticales */}
+                <div className="card" style={{padding:'20px 24px'}}>
+                  <div style={{fontWeight:700,fontSize:13,marginBottom:16}}>Artículos por receptor · % sobre {TOTAL_CONTRATO.toLocaleString('es-UY')} totales</div>
+                  <div style={{display:'flex',alignItems:'flex-end',gap:12,height:BAR_HEIGHT+40,overflowX:'auto',paddingBottom:4}}>
+                    {/* Eje Y referencia */}
+                    <div style={{display:'flex',flexDirection:'column',justifyContent:'space-between',height:BAR_HEIGHT,alignItems:'flex-end',flexShrink:0,paddingRight:6}}>
+                      {[100,75,50,25,0].map(v => (
+                        <span key={v} style={{fontSize:10,color:'#aaa',lineHeight:1}}>{v}%</span>
+                      ))}
+                    </div>
+                    {/* Líneas guía + barras */}
+                    <div style={{position:'relative',flex:1,height:BAR_HEIGHT,minWidth:0}}>
+                      {/* Líneas horizontales */}
+                      {[0,25,50,75,100].map(v => (
+                        <div key={v} style={{position:'absolute',left:0,right:0,bottom:`${v}%`,borderTop:'1px dashed #E8E8E0',zIndex:0}} />
+                      ))}
+                      {/* Barras */}
+                      <div style={{display:'flex',alignItems:'flex-end',gap:8,height:'100%',position:'relative',zIndex:1}}>
+                        {data.map((r, i) => {
+                          const barH = (r.pct / 100) * BAR_HEIGHT
+                          return (
+                            <div key={r.name} style={{display:'flex',flexDirection:'column',alignItems:'center',flex:1,minWidth:40,height:'100%',justifyContent:'flex-end'}}>
+                              {/* Etiqueta de valor */}
+                              <div style={{fontSize:10,fontWeight:700,color:COLORS[i%COLORS.length],marginBottom:3,whiteSpace:'nowrap'}}>
+                                {r.pct.toFixed(1)}%
+                              </div>
+                              <div style={{fontSize:10,color:'#8a8a82',marginBottom:3,whiteSpace:'nowrap'}}>
+                                {r.unidades.toLocaleString('es-UY')}
+                              </div>
+                              {/* Barra */}
+                              <div style={{
+                                width:'100%',
+                                height: barH || 2,
+                                background: COLORS[i%COLORS.length],
+                                borderRadius:'4px 4px 0 0',
+                                transition:'height .4s',
+                                minHeight: r.unidades > 0 ? 4 : 2,
+                                opacity: r.unidades === 0 ? 0.25 : 1
+                              }} />
+                            </div>
+                          )
+                        })}
                       </div>
                     </div>
-                  ))}
-                  {/* Fila total */}
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 120px 120px 180px',padding:'10px 16px',background:'#121212',color:'#FFD200',fontWeight:700,fontSize:13,alignItems:'center'}}>
-                    <div>TOTAL</div>
-                    <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace'}}>{totalUsado.toLocaleString('es-UY')}</div>
-                    <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace'}}>{pctTotal.toFixed(2)}%</div>
-                    <div />
+                  </div>
+                  {/* Etiquetas eje X */}
+                  <div style={{display:'flex',gap:8,marginLeft:42,marginTop:8}}>
+                    {data.map((r, i) => (
+                      <div key={r.name} style={{flex:1,minWidth:40,display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
+                        <div style={{width:8,height:8,borderRadius:'50%',background:COLORS[i%COLORS.length]}} />
+                        <div style={{fontSize:10,color:'#5a5a52',textAlign:'center',lineHeight:1.2}}>{r.name}</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
