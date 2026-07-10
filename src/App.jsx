@@ -1693,7 +1693,7 @@ export default function App() {
           {/* RECEPTORES */}
           {view === 'usuarios-reg' && (
             <div style={{display:'flex',flexDirection:'column',gap:10,padding:'0 2px'}}>
-              {db.users.map(u => (
+              {[...db.users].sort((a,b) => (a.role==='admin'?0:1)-(b.role==='admin'?0:1)).map(u => (
                 <div key={u.username} className="card" style={{padding:'16px 20px',display:'flex',alignItems:'center',gap:14,borderLeft: u.status==='pendiente' ? '3px solid #FFD200' : undefined}}>
                   <div className="avatar" style={{flexShrink:0,width:42,height:42,fontSize:15,opacity:u.status==='pendiente'?.6:1}}>{ini(u.displayName||u.username)}</div>
                   <div style={{flex:1,minWidth:0}}>
