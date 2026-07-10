@@ -852,7 +852,11 @@ export default function App() {
   const receptorCards = RECEPTORES.map(name => {
     const ds = deliveries.filter(d => d.receptor===name)
     const unidades = ds.reduce((s,d) => s+d.lines.reduce((x,l)=>x+l.qty,0),0)
-    return { name, ini:ini(name), count:ds.length, unidades }
+    const monto = ds.reduce((s,d) => s+d.lines.reduce((x,l)=>{
+      const art = articles.find(a=>a.code===l.code)
+      return x+(art?.precio||0)*l.qty
+    },0),0)
+    return { name, ini:ini(name), count:ds.length, unidades, monto }
   })
 
   // selA: for modals that operate on a specific entry (selectedId)
@@ -1767,7 +1771,7 @@ export default function App() {
               .map(r => {
                 const extra = r.name === '1° División' ? repUnidades : 0
                 const total = r.unidades + extra
-                return { name: r.name, unidades: total, pct: total / TOTAL_CONTRATO * 100 }
+                return { name: r.name, unidades: total, pct: total / TOTAL_CONTRATO * 100, monto: r.monto }
               })
             const data = baseData.sort((a, b) => {
                 const ia = RECEPTOR_ORDER.indexOf(a.name)
@@ -1800,6 +1804,11 @@ export default function App() {
                     <div className="kpi-value">{(TOTAL_CONTRATO - totalUsado).toLocaleString('es-UY')}</div>
                     <div className="kpi-sub">{(100 - pctTotal).toFixed(1)}% restante</div>
                   </div>
+                  <div className="kpi-card" style={{minWidth:180}}>
+                    <div className="kpi-label">MONTO TOTAL ENTREGADO</div>
+                    <div className="kpi-value" style={{fontSize:20}}>$ {data.reduce((s,r)=>s+(r.monto||0),0).toLocaleString('es-UY',{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
+                    <div className="kpi-sub">en base a precios del inventario</div>
+                  </div>
                 </div>
 
                 {/* Gráfica de barras verticales */}
@@ -1829,12 +1838,15 @@ export default function App() {
                               title={`Ver entregas de ${r.name}`}
                             >
                               {/* Etiqueta de valor */}
-                              <div style={{fontSize:10,fontWeight:700,color:RECEPTOR_COLORS[r.name]||'#999',marginBottom:3,whiteSpace:'nowrap'}}>
+                              <div style={{fontSize:10,fontWeight:700,color:RECEPTOR_COLORS[r.name]||'#999',marginBottom:2,whiteSpace:'nowrap'}}>
                                 {r.pct.toFixed(1)}%
                               </div>
-                              <div style={{fontSize:10,color:'#8a8a82',marginBottom:3,whiteSpace:'nowrap'}}>
-                                {r.unidades.toLocaleString('es-UY')}
+                              <div style={{fontSize:10,color:'#8a8a82',marginBottom:2,whiteSpace:'nowrap'}}>
+                                {r.unidades.toLocaleString('es-UY')} uds.
                               </div>
+                              {r.monto > 0 && <div style={{fontSize:9,color:'#5a8a5a',fontWeight:600,marginBottom:3,whiteSpace:'nowrap'}}>
+                                $ {r.monto.toLocaleString('es-UY',{minimumFractionDigits:0,maximumFractionDigits:0})}
+                              </div>}
                               {/* Barra */}
                               <div style={{
                                 width:'100%',
