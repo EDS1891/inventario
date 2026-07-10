@@ -1095,7 +1095,7 @@ export default function App() {
         <div style={{background:'#121212',padding:'18px 24px',display:'flex',alignItems:'center',gap:16}}>
           <img src="/escudo.png" alt="Peñarol" style={{height:44}} />
           <div style={{flex:1}}>
-            <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:14,color:'#FFD200',letterSpacing:'.05em'}}>DEPÓSITO · INDUMENTARIA</div>
+            <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:14,color:'#FFD200',letterSpacing:'.05em'}}>{currentUser?.role==='receptor' ? 'INDUMENTARIA CLUB ATLÉTICO PEÑAROL' : 'DEPÓSITO · INDUMENTARIA'}</div>
             <div style={{fontSize:13,color:'#fff',marginTop:2}}>Hola, <b>{currentUser?.displayName || session}</b></div>
           </div>
           <button onClick={() => window.location.reload()} style={{background:'#2a2a2a',border:'1px solid #3a3a3a',color:'#ccc',borderRadius:8,padding:'8px 14px',cursor:'pointer',fontSize:13,marginRight:8}}>↺</button>
@@ -1230,7 +1230,7 @@ export default function App() {
           <img src="/escudo.png" alt="Peñarol" />
           <div className="sidebar-logo-text">
             <div className="name">PEÑAROL</div>
-            <div className="sub">DEPÓSITO · INDUMENTARIA</div>
+            <div className="sub">{currentUser?.role==='receptor' ? 'INDUMENTARIA CLUB ATLÉTICO PEÑAROL' : 'DEPÓSITO · INDUMENTARIA'}</div>
           </div>
         </div>
         <nav className="sidebar-nav">
