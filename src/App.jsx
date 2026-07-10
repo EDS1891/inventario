@@ -1196,7 +1196,7 @@ export default function App() {
           </div>
         </div>
         <nav className="sidebar-nav">
-          {[['panel','PANEL PRINCIPAL'],['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES'],['reposiciones','REPOSICIÓN CAMISETAS'],['utileria','CAMISETAS UTILERÍA'],['usuarios-reg','USUARIOS REGISTRADOS']].map(([key,label]) => {
+          {[['panel','PANEL PRINCIPAL'],['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES'],['reposiciones','REPOSICIÓN CAMISETAS'],['utileria','CAMISETAS UTILERÍA'],['contrato-puma','CONTRATO PUMA'],['usuarios-reg','USUARIOS REGISTRADOS']].map(([key,label]) => {
             const isActive = view===key||(key==='inventario'&&view==='detalle')
             return (
               <button key={key} className={`nav-item${isActive?' active':''}`} onClick={() => goView(key)}>
@@ -1232,7 +1232,7 @@ export default function App() {
           </button>
           <img src="/1891_Amarillo.jpg" alt="1891" style={{height:28,width:'auto'}} />
           <div className="topbar-title">
-            {{panel:'PANEL PRINCIPAL',inventario:'INVENTARIO',detalle:'DETALLE',entregas:'ENTREGAS',movimientos:'MOVIMIENTOS',receptores:'RECEPTORES','usuarios-reg':'USUARIOS REGISTRADOS',utileria:'CAMISETAS UTILERÍA',reposiciones:'REPOSICIÓN CAMISETAS'}[view]}
+            {{panel:'PANEL PRINCIPAL',inventario:'INVENTARIO',detalle:'DETALLE',entregas:'ENTREGAS',movimientos:'MOVIMIENTOS',receptores:'RECEPTORES','usuarios-reg':'USUARIOS REGISTRADOS',utileria:'CAMISETAS UTILERÍA',reposiciones:'REPOSICIÓN CAMISETAS','contrato-puma':'CONTRATO PUMA'}[view]}
           </div>
           <div className="topbar-spacer" />
           <div className="search-box">
@@ -1742,6 +1742,89 @@ export default function App() {
               </div>
             </div>
           )}
+
+          {/* CONTRATO PUMA */}
+          {view === 'contrato-puma' && (() => {
+            const TOTAL_CONTRATO = 17200
+            const data = receptorCards
+              .map(r => ({ name: r.name, unidades: r.unidades, pct: r.unidades / TOTAL_CONTRATO * 100 }))
+              .sort((a, b) => b.unidades - a.unidades)
+            const totalUsado = data.reduce((s, r) => s + r.unidades, 0)
+            const pctTotal = totalUsado / TOTAL_CONTRATO * 100
+            const COLORS = ['#FFD200','#2e9b5e','#4A90D9','#E87C3E','#9B59B6','#C2473D','#1ABC9C','#F39C12']
+            return (
+              <div style={{display:'flex',flexDirection:'column',gap:20}}>
+                {/* KPI global */}
+                <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
+                  <div className="kpi-card" style={{minWidth:180}}>
+                    <div className="kpi-label">TOTAL CONTRATO</div>
+                    <div className="kpi-value">{TOTAL_CONTRATO.toLocaleString('es-UY')}</div>
+                    <div className="kpi-sub">unidades totales</div>
+                  </div>
+                  <div className="kpi-card" style={{minWidth:180}}>
+                    <div className="kpi-label">UTILIZADO</div>
+                    <div className="kpi-value">{totalUsado.toLocaleString('es-UY')}</div>
+                    <div className="kpi-sub">{pctTotal.toFixed(1)}% del contrato</div>
+                  </div>
+                  <div className="kpi-card" style={{minWidth:180}}>
+                    <div className="kpi-label">DISPONIBLE</div>
+                    <div className="kpi-value">{(TOTAL_CONTRATO - totalUsado).toLocaleString('es-UY')}</div>
+                    <div className="kpi-sub">{(100 - pctTotal).toFixed(1)}% restante</div>
+                  </div>
+                </div>
+
+                {/* Barra global */}
+                <div className="card" style={{padding:'16px 20px'}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                    <span style={{fontWeight:700,fontSize:13}}>Uso total del contrato</span>
+                    <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13}}>{pctTotal.toFixed(1)}%</span>
+                  </div>
+                  <div style={{height:18,background:'#F0F0EC',borderRadius:9,overflow:'hidden'}}>
+                    <div style={{height:'100%',width:`${Math.min(pctTotal,100)}%`,background:'#FFD200',borderRadius:9,transition:'width .4s'}} />
+                  </div>
+                  {/* Barra apilada por receptor */}
+                  <div style={{height:12,background:'#F0F0EC',borderRadius:6,overflow:'hidden',marginTop:8,display:'flex'}}>
+                    {data.filter(r=>r.unidades>0).map((r,i)=>(
+                      <div key={r.name} title={`${r.name}: ${r.pct.toFixed(1)}%`}
+                        style={{height:'100%',width:`${r.pct}%`,background:COLORS[i%COLORS.length],transition:'width .4s'}} />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Tabla por receptor */}
+                <div className="card" style={{padding:0,overflow:'hidden'}}>
+                  <div className="table-header" style={{gridTemplateColumns:'1fr 120px 120px 180px'}}>
+                    <div>RECEPTOR</div>
+                    <div style={{textAlign:'right'}}>UNIDADES</div>
+                    <div style={{textAlign:'right'}}>% DEL CONTRATO</div>
+                    <div style={{paddingLeft:12}}>BARRA</div>
+                  </div>
+                  {data.map((r, i) => (
+                    <div key={r.name} className="table-row" style={{gridTemplateColumns:'1fr 120px 120px 180px',alignItems:'center'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8}}>
+                        <div style={{width:10,height:10,borderRadius:'50%',background:COLORS[i%COLORS.length],flexShrink:0}} />
+                        <span style={{fontWeight:500}}>{r.name}</span>
+                      </div>
+                      <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>{r.unidades.toLocaleString('es-UY')}</div>
+                      <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace',color:'#6a6a62'}}>{r.pct.toFixed(2)}%</div>
+                      <div style={{paddingLeft:12}}>
+                        <div style={{height:8,background:'#F0F0EC',borderRadius:4,overflow:'hidden'}}>
+                          <div style={{height:'100%',width:`${Math.min(r.pct/pctTotal*100||0,100)}%`,background:COLORS[i%COLORS.length],borderRadius:4}} />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {/* Fila total */}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 120px 120px 180px',padding:'10px 16px',background:'#121212',color:'#FFD200',fontWeight:700,fontSize:13,alignItems:'center'}}>
+                    <div>TOTAL</div>
+                    <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace'}}>{totalUsado.toLocaleString('es-UY')}</div>
+                    <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace'}}>{pctTotal.toFixed(2)}%</div>
+                    <div />
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
 
           {/* REPOSICIÓN CAMISETAS */}
           {view === 'reposiciones' && (
