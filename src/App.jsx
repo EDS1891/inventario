@@ -771,9 +771,12 @@ export default function App() {
     showToast('Camiseta eliminada.')
   }
 
+  const TORNEOS_CON_FECHA = ['APERTURA','CLAUSURA','INTERMEDIO']
   const openRepModal = () => {
     setRepForm({
       concepto:'',
+      torneo:'APERTURA',
+      fechaTorneo:'1',
       tipoCamisetaJugador: REP_TIPOS_JUGADOR[0],
       tipoCamisetaGolero: REP_TIPOS_GOLERO[0],
       rows:(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j=>({...j,cantCamiseta:'',cantShort:''}))
@@ -791,8 +794,10 @@ export default function App() {
           tipoCamiseta: tipo, cantCamiseta:Number(r.cantCamiseta)||0, cantShort:Number(r.cantShort)||0 }
       })
     if (!jugadores.length) { showToast('Ingresá al menos una cantidad.'); return }
+    const tieneFecha = TORNEOS_CON_FECHA.includes(repForm.torneo)
     setDb(s => {
       const rep = { id:s.nextRep, fecha:today(), concepto:repForm.concepto.trim(), creadoPor:currentUser?.displayName||session,
+        torneo:repForm.torneo, fechaTorneo: tieneFecha ? Number(repForm.fechaTorneo) : null,
         tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores }
       return { ...s, reposiciones:[rep,...(s.reposiciones||[])], nextRep:s.nextRep+1 }
     })
@@ -1953,6 +1958,33 @@ export default function App() {
                 <label className="field-label">Concepto</label>
                 <input className="field-input" value={repForm.concepto} onChange={e => setRepForm(p=>({...p,concepto:e.target.value}))} placeholder="Ej. Reposición vs Nacional" autoFocus />
               </div>
+              {/* Torneo y Fecha */}
+              <div style={{display:'flex',gap:12,marginTop:4,alignItems:'flex-end'}}>
+                <div className="form-group" style={{flex:1,marginBottom:0}}>
+                  <label className="field-label">Torneo</label>
+                  <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                    {['APERTURA','CLAUSURA','INTERMEDIO','COPA AUF'].map(t=>(
+                      <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,torneo:t}))}
+                        style={{padding:'6px 10px',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:11,cursor:'pointer',
+                          borderColor:repForm.torneo===t?'#FFD200':'#ECECE8',
+                          background:repForm.torneo===t?'#FFF8D6':'#fff',
+                          color:repForm.torneo===t?'#7a5800':'#8a8a82'}}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {TORNEOS_CON_FECHA.includes(repForm.torneo) && (
+                  <div className="form-group" style={{width:80,marginBottom:0}}>
+                    <label className="field-label">Fecha</label>
+                    <select className="field-input" value={repForm.fechaTorneo} onChange={e=>setRepForm(p=>({...p,fechaTorneo:e.target.value}))}>
+                      {Array.from({length:15},(_,i)=>i+1).map(n=>(
+                        <option key={n} value={n}>{n}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
               {/* Selector de tipo de camiseta — uno por posición */}
               <div style={{display:'flex',gap:16,marginTop:14}}>
                 <div style={{flex:1}}>
@@ -2026,7 +2058,12 @@ export default function App() {
             <div className="modal-header">
               <div>
                 <div className="modal-title">{repDetail.concepto}</div>
-                <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>{repDetail.fecha}{repDetail.creadoPor ? ' · '+repDetail.creadoPor : ''}</div>
+                <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>
+                  {repDetail.fecha}{repDetail.creadoPor ? ' · '+repDetail.creadoPor : ''}
+                  {repDetail.torneo && <span style={{marginLeft:8,fontWeight:700,color:'#7a5800',background:'#FFF8D6',border:'1px solid #FFD200',borderRadius:4,padding:'1px 7px',fontSize:11}}>
+                    {repDetail.torneo}{repDetail.fechaTorneo ? ' · Fecha '+repDetail.fechaTorneo : ''}
+                  </span>}
+                </div>
               </div>
               <button className="modal-close" onClick={() => setRepDetail(null)}>×</button>
             </div>
