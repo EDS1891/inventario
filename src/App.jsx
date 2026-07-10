@@ -137,7 +137,7 @@ export default function App() {
   const [repModal, setRepModal] = useState(false)
   const [repDetail, setRepDetail] = useState(null)
   const [repTab, setRepTab] = useState('reposiciones')
-  const [plantelForm, setPlantelForm] = useState({id:null,numero:'',nombre:'',talleCamiseta:'L',talleShort:'L'})
+  const [plantelForm, setPlantelForm] = useState({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',talleShort:'L'})
   const [plantelModal, setPlantelModal] = useState(false)
   const [rechazarModal, setRechazarModal] = useState({ delId: null, motivo: '' })
   const [toast, setToast] = useState('')
@@ -1751,19 +1751,20 @@ export default function App() {
               {repTab === 'plantel' && (<>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                   <span style={{fontSize:12.5,color:'#8a8a82'}}>Jugadores con su talle de camiseta y short</span>
-                  <button className="btn btn-dark" onClick={() => { setPlantelForm({id:null,numero:'',nombre:'',talleCamiseta:'L',talleShort:'L'}); setPlantelModal(true) }}>+ Jugador</button>
+                  <button className="btn btn-dark" onClick={() => { setPlantelForm({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',talleShort:'L'}); setPlantelModal(true) }}>+ Jugador</button>
                 </div>
                 {(db.plantel||[]).length === 0
                   ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay jugadores en el plantel.</div>
                   : (
                     <div className="card" style={{padding:0,overflow:'hidden'}}>
-                      <div className="table-header" style={{gridTemplateColumns:'50px 1fr 90px 90px 72px'}}>
-                        <div>Nº</div><div>NOMBRE</div><div>CAMISETA</div><div>SHORT</div><div/>
+                      <div className="table-header" style={{gridTemplateColumns:'50px 1fr 80px 90px 90px 72px'}}>
+                        <div>Nº</div><div>NOMBRE</div><div>POSICIÓN</div><div>CAMISETA</div><div>SHORT</div><div/>
                       </div>
                       {(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => (
-                        <div key={j.id} className="table-row" style={{gridTemplateColumns:'50px 1fr 90px 90px 72px'}}>
+                        <div key={j.id} className="table-row" style={{gridTemplateColumns:'50px 1fr 80px 90px 90px 72px'}}>
                           <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>{j.numero||'—'}</div>
                           <div style={{fontWeight:500}}>{j.nombre}</div>
+                          <div style={{color:'#6a6a62',fontSize:12}}>{j.posicion||'Jugador'}</div>
                           <div style={{color:'#6a6a62'}}>{j.talleCamiseta}</div>
                           <div style={{color:'#6a6a62'}}>{j.talleShort}</div>
                           <div style={{display:'flex',gap:6,justifyContent:'flex-end'}}>
@@ -2034,6 +2035,18 @@ export default function App() {
                     onChange={e => setPlantelForm(p=>({...p,nombre:e.target.value}))}
                     placeholder="Ej. Maximiliano Olivera" autoFocus />
                 </div>
+              </div>
+              <div style={{display:'flex',gap:8,marginTop:4}}>
+                {['Jugador','Golero'].map(pos => (
+                  <button key={pos} type="button"
+                    onClick={() => setPlantelForm(p=>({...p,posicion:pos}))}
+                    style={{flex:1,padding:'8px 0',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:13,cursor:'pointer',
+                      borderColor: plantelForm.posicion===pos ? '#FFD200' : '#ECECE8',
+                      background: plantelForm.posicion===pos ? '#FFF8D6' : '#fff',
+                      color: plantelForm.posicion===pos ? '#7a5800' : '#8a8a82'}}>
+                    {pos}
+                  </button>
+                ))}
               </div>
               <div style={{display:'flex',gap:12,marginTop:4}}>
                 <div className="form-group" style={{flex:1}}>
