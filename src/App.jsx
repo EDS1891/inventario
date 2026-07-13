@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from './supabase.js'
 import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 
 const TALLE_ORDER = ['2','4','6','8','10','12','14','Único','S','M','L','XL','XXL','XXXL']
 const TALLES_ADULTO = ['S','M','L','XL','XXL','XXXL','Único']
@@ -877,23 +878,63 @@ export default function App() {
     setRepDetail(null)
     showToast('Reposición eliminada.')
   }
-  const exportRepToExcel = (rep) => {
-    const filas = (rep.jugadores||[]).map(j => ({
-      'NÚMERO': j.numero||'—',
-      'NOMBRE': j.nombre||'—',
-      'CAMISETA': j.talleCamiseta||'—',
-      'CANTIDAD CAM': Number(j.cantCamiseta)||0,
-      'SHORT': j.talleShort||'—',
-      'CANTIDAD SHORT': Number(j.cantShort)||0,
-    }))
-    const totCam = filas.reduce((s,r)=>s+r['CANTIDAD CAM'],0)
-    const totSht = filas.reduce((s,r)=>s+r['CANTIDAD SHORT'],0)
-    filas.push({'NÚMERO':'','NOMBRE':'TOTAL','CAMISETA':'','CANTIDAD CAM':totCam,'SHORT':'','CANTIDAD SHORT':totSht})
-    const ws = XLSX.utils.json_to_sheet(filas)
-    ws['!cols'] = [{wch:8},{wch:28},{wch:10},{wch:13},{wch:10},{wch:13}]
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, rep.concepto.slice(0,31))
-    XLSX.writeFile(wb, `${rep.concepto.replace(/[\\/:*?"<>|]/g,'-')}.xlsx`)
+  const exportRepToExcel = async (rep) => {
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet(rep.concepto.slice(0,31))
+    ws.columns = [
+      {width:8.5},{width:17.625},{width:9.25},{width:10.25},{width:6.5},{width:9.75}
+    ]
+    const YELLOW    = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
+    const FILL_ALT  = {type:'pattern',pattern:'solid',fgColor:{argb:'FFE2EFDA'}}
+    const FILL_WHT  = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFFFF'}}
+    const F_BOLD    = {name:'Arial',size:12,bold:true}
+    const F_NORM    = {name:'Arial',size:12}
+    const CENTER    = {horizontal:'center',vertical:'middle'}
+    const BORDER    = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
+    const style = (cell,fill,font) => { cell.fill=fill; cell.font=font; cell.alignment=CENTER; cell.border=BORDER }
+
+    // Fila 1: concepto - torneo fecha
+    ws.mergeCells('A1:F1')
+    const titulo = [rep.concepto.toUpperCase(), rep.torneo?(rep.torneo+(rep.fechaTorneo?' FECHA '+rep.fechaTorneo:'')):null].filter(Boolean).join(' - ')
+    style(ws.getCell('A1'), YELLOW, F_BOLD); ws.getCell('A1').value = titulo; ws.getRow(1).height = 20
+
+    // Fila 2: equipo tipo jugador / golero
+    ws.mergeCells('A2:F2')
+    const equipo = ['EQUIPO',rep.tipoCamisetaJugador||'','GOLERO',rep.tipoCamisetaGolero||''].join(' ').replace(/\s+/g,' ').trim()
+    style(ws.getCell('A2'), YELLOW, F_BOLD); ws.getCell('A2').value = equipo; ws.getRow(2).height = 20
+
+    // Fila 3: headers
+    ;['NÚMERO','NOMBRE','CAMISETA','CANTIDAD','SHORT','CANTIDAD'].forEach((h,i) => {
+      const c = ws.getRow(3).getCell(i+1); style(c, YELLOW, F_BOLD); c.value = h
+    })
+    ws.getRow(3).height = 20
+
+    // Filas de jugadores
+    ;(rep.jugadores||[]).forEach((j,idx) => {
+      const r = ws.getRow(idx+4)
+      r.height = 18
+      const fill = idx%2===0 ? FILL_ALT : FILL_WHT
+      ;[j.numero||'—', j.nombre||'—', j.talleCamiseta||'—', Number(j.cantCamiseta)||0, j.talleShort||'—', Number(j.cantShort)||0].forEach((v,i) => {
+        const c = r.getCell(i+1); style(c, fill, F_NORM); c.value = v
+      })
+    })
+
+    // Fila TOTAL
+    const totN = (rep.jugadores||[]).length + 4
+    const totCam = (rep.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
+    const totSht = (rep.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
+    ws.mergeCells(`A${totN}:B${totN}`)
+    ws.getRow(totN).height = 20
+    ;[[1,'TOTAL'],[3,''],[4,totCam],[5,''],[6,totSht]].forEach(([col,val]) => {
+      const c = ws.getRow(totN).getCell(col); style(c, YELLOW, F_BOLD); c.value = val
+    })
+
+    // Descargar
+    const buf = await wb.xlsx.writeBuffer()
+    const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href=url; a.download=`${rep.concepto.replace(/[\\/:*?"<>|]/g,'-')}.xlsx`; a.click()
+    URL.revokeObjectURL(url)
   }
   const saveDisciplinaEdit = (deliveryId) => {
     if (!disciplinaEdit?.trim()) { showToast('Ingresá la disciplina.'); return }
