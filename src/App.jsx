@@ -1341,7 +1341,7 @@ export default function App() {
             <span className="nav-group-arrow">{depositosOpen ? '▾' : '▸'}</span>
             DEPOSITOS PALACIO
           </button>
-          {depositosOpen && [['panel','PANEL PRINCIPAL'],['inventario','INVENTARIO'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES']].map(([key,label]) => {
+          {depositosOpen && [['panel','PANEL PRINCIPAL'],['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES']].map(([key,label]) => {
             const isActive = view===key||(key==='inventario'&&view==='detalle')
             return (
               <button key={key} className={`nav-item nav-item-sub${isActive?' active':''}`} onClick={() => goView(key)}>
