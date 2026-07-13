@@ -885,13 +885,22 @@ export default function App() {
       {width:8.5},{width:17.625},{width:9.25},{width:10.25},{width:6.5},{width:9.75}
     ]
     const YELLOW    = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
-    const FILL_ALT  = {type:'pattern',pattern:'solid',fgColor:{argb:'FFE2EFDA'}}
     const FILL_WHT  = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFFFF'}}
+    const FILL_GRAY = {type:'pattern',pattern:'solid',fgColor:{argb:'FFD0D0D0'}}
+    const FILL_ORAN = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFE5CC'}}
+    const FILL_CREM = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFF8E8'}}
     const F_BOLD    = {name:'Arial',size:12,bold:true}
     const F_NORM    = {name:'Arial',size:12}
     const CENTER    = {horizontal:'center',vertical:'middle'}
     const BORDER    = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
     const style = (cell,fill,font) => { cell.fill=fill; cell.font=font; cell.alignment=CENTER; cell.border=BORDER }
+    const goleroFill = (j) => {
+      if (j.posicion !== 'Golero') return FILL_WHT
+      if (j.tipoCamiseta === 'NEGRO')   return FILL_GRAY
+      if (j.tipoCamiseta === 'NARANJA') return FILL_ORAN
+      if (j.tipoCamiseta === 'CREMA')   return FILL_CREM
+      return FILL_WHT
+    }
 
     // Fila 1: concepto - torneo fecha
     ws.mergeCells('A1:F1')
@@ -913,7 +922,7 @@ export default function App() {
     ;(rep.jugadores||[]).forEach((j,idx) => {
       const r = ws.getRow(idx+4)
       r.height = 18
-      const fill = idx%2===0 ? FILL_ALT : FILL_WHT
+      const fill = goleroFill(j)
       ;[j.numero||'—', j.nombre||'—', j.talleCamiseta||'—', Number(j.cantCamiseta)||0, j.talleShort||'—', Number(j.cantShort)||0].forEach((v,i) => {
         const c = r.getCell(i+1); style(c, fill, F_NORM); c.value = v
       })
