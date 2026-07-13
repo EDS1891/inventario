@@ -2098,12 +2098,12 @@ export default function App() {
                         <div className="kpi-sub">registradas</div>
                       </div>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepResumen('ambos')}>
-                        <div className="kpi-label">CAMISETAS ENTREGADAS</div>
+                        <div className="kpi-label">CAMISETAS PARA DESCONTAR</div>
                         <div className="kpi-value">{totalEquipos}</div>
                         <div className="kpi-sub">camisetas en total →</div>
                       </div>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepResumen('ambos')}>
-                        <div className="kpi-label">SHORTS ENTREGADOS</div>
+                        <div className="kpi-label">SHORTS PARA DESCONTAR</div>
                         <div className="kpi-value">{totalShorts}</div>
                         <div className="kpi-sub">shorts en total →</div>
                       </div>
