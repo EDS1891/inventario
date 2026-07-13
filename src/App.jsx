@@ -1340,7 +1340,7 @@ export default function App() {
           {(() => { const isGrpActive = ['panel','inventario','detalle','entregas','movimientos','receptores','utileria'].includes(view); return (
             <button className={`nav-item${isGrpActive?' active':''}`} onClick={() => setDepositosOpen(o => !o)}>
               <span className="nav-dot" />
-              DEPOSITOS PALACIO
+              DEPÓSITO
               <span style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:6}}>
                 <span style={{fontSize:10,opacity:0.6}}>{depositosOpen ? '▾' : '▸'}</span>
                 {isGrpActive && <img src="/escudo.png" alt="" style={{height:20,width:'auto',opacity:0.85}} />}
