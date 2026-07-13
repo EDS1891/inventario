@@ -159,7 +159,7 @@ export default function App() {
   const [utiFilterModelo, setUtiFilterModelo] = useState('')
   const [utiForm, setUtiForm] = useState({ tipo:'', competicion:'', numero:'', jugador:'', talle:'S', modelo:'', estampado:'', parches:'', detalle:'', temporada:'', id:null })
   const [utiModal, setUtiModal] = useState(false)
-  const [repForm, setRepForm] = useState({ editId:null, concepto:'', rows:[] })
+  const [repForm, setRepForm] = useState({ editId:null, concepto:'', descuento:true, rows:[] })
   const [repModal, setRepModal] = useState(false)
   const [repDetail, setRepDetail] = useState(null)
   const [repResumen, setRepResumen] = useState(null)
@@ -818,6 +818,7 @@ export default function App() {
     setRepForm({
       editId:null,
       concepto:'',
+      descuento:true,
       torneo:'APERTURA',
       fechaTorneo:'1',
       tipoCamisetaJugador: REP_TIPOS_JUGADOR[0],
@@ -834,6 +835,7 @@ export default function App() {
     setRepForm({
       editId: rep.id,
       concepto: rep.concepto,
+      descuento: rep.descuento !== false,
       torneo: rep.torneo || 'APERTURA',
       fechaTorneo: rep.fechaTorneo != null ? String(rep.fechaTorneo) : '1',
       tipoCamisetaJugador: rep.tipoCamisetaJugador || REP_TIPOS_JUGADOR[0],
@@ -857,7 +859,7 @@ export default function App() {
     const tieneFecha = TORNEOS_CON_FECHA.includes(repForm.torneo)
     if (repForm.editId) {
       setDb(s => ({...s, reposiciones:(s.reposiciones||[]).map(r => r.id===repForm.editId
-        ? {...r, concepto:repForm.concepto.trim(), torneo:repForm.torneo,
+        ? {...r, concepto:repForm.concepto.trim(), torneo:repForm.torneo, descuento:repForm.descuento,
             fechaTorneo: tieneFecha ? Number(repForm.fechaTorneo) : null,
             tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores}
         : r)}))
@@ -865,7 +867,7 @@ export default function App() {
     } else {
       setDb(s => {
         const rep = { id:s.nextRep, fecha:today(), concepto:repForm.concepto.trim(), creadoPor:currentUser?.displayName||session,
-          torneo:repForm.torneo, fechaTorneo: tieneFecha ? Number(repForm.fechaTorneo) : null,
+          torneo:repForm.torneo, fechaTorneo: tieneFecha ? Number(repForm.fechaTorneo) : null, descuento:repForm.descuento,
           tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores }
         return { ...s, reposiciones:[rep,...(s.reposiciones||[])], nextRep:s.nextRep+1 }
       })
@@ -2087,9 +2089,9 @@ export default function App() {
               {/* Tab: Reposiciones */}
               {repTab === 'reposiciones' && (<>
                 {(() => {
-                  const esReposicion = r => /^reposici[oó]n\.?\s+vs/i.test((r.concepto||'').trim())
-                  const totalEquipos = (db.reposiciones||[]).filter(esReposicion).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
-                  const totalShorts = (db.reposiciones||[]).filter(esReposicion).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
+                  const conDescuento = r => r.descuento !== false
+                  const totalEquipos = (db.reposiciones||[]).filter(conDescuento).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
+                  const totalShorts = (db.reposiciones||[]).filter(conDescuento).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
                   const totalCamTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
                   const totalShtTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
                   return (
@@ -2389,6 +2391,20 @@ export default function App() {
               <div className="form-group">
                 <label className="field-label">Concepto</label>
                 <input className="field-input" value={repForm.concepto} onChange={e => setRepForm(p=>({...p,concepto:e.target.value}))} placeholder="Ej. Reposición vs Nacional" autoFocus />
+              </div>
+              <div className="form-group">
+                <label className="field-label">Descuento de contrato</label>
+                <div style={{display:'flex',gap:8}}>
+                  {[true,false].map(v=>(
+                    <button key={String(v)} type="button" onClick={()=>setRepForm(p=>({...p,descuento:v}))}
+                      style={{padding:'7px 20px',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:13,cursor:'pointer',
+                        borderColor:repForm.descuento===v?'#FFD200':'#ECECE8',
+                        background:repForm.descuento===v?'#FFF8D6':'#fff',
+                        color:repForm.descuento===v?'#7a5800':'#8a8a82'}}>
+                      {v?'SÍ':'NO'}
+                    </button>
+                  ))}
+                </div>
               </div>
               {/* Torneo y Fecha */}
               <div style={{display:'flex',gap:12,marginTop:4,alignItems:'flex-end'}}>
