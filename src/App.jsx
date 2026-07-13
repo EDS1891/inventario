@@ -879,18 +879,18 @@ export default function App() {
   }
   const exportRepToExcel = (rep) => {
     const filas = (rep.jugadores||[]).map(j => ({
-      'Nº': j.numero||'—',
+      'NÚMERO': j.numero||'—',
       'NOMBRE': j.nombre||'—',
-      'POSICIÓN': j.posicion||'—',
-      'CAMISETAS': Number(j.cantCamiseta)||0,
-      'SHORTS': Number(j.cantShort)||0,
-      'TOTAL': (Number(j.cantCamiseta)||0)+(Number(j.cantShort)||0),
+      'CAMISETA': j.talleCamiseta||'—',
+      'CANTIDAD CAM': Number(j.cantCamiseta)||0,
+      'SHORT': j.talleShort||'—',
+      'CANTIDAD SHORT': Number(j.cantShort)||0,
     }))
-    const totCam = filas.reduce((s,r)=>s+r['CAMISETAS'],0)
-    const totSht = filas.reduce((s,r)=>s+r['SHORTS'],0)
-    filas.push({'Nº':'','NOMBRE':'TOTAL','POSICIÓN':'','CAMISETAS':totCam,'SHORTS':totSht,'TOTAL':totCam+totSht})
+    const totCam = filas.reduce((s,r)=>s+r['CANTIDAD CAM'],0)
+    const totSht = filas.reduce((s,r)=>s+r['CANTIDAD SHORT'],0)
+    filas.push({'NÚMERO':'','NOMBRE':'TOTAL','CAMISETA':'','CANTIDAD CAM':totCam,'SHORT':'','CANTIDAD SHORT':totSht})
     const ws = XLSX.utils.json_to_sheet(filas)
-    ws['!cols'] = [{wch:6},{wch:28},{wch:12},{wch:12},{wch:10},{wch:8}]
+    ws['!cols'] = [{wch:8},{wch:28},{wch:10},{wch:13},{wch:10},{wch:13}]
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, rep.concepto.slice(0,31))
     XLSX.writeFile(wb, `${rep.concepto.replace(/[\\/:*?"<>|]/g,'-')}.xlsx`)
