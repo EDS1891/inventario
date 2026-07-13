@@ -69,25 +69,6 @@ nav.sidebar-nav {
   flex-shrink: 0;
 }
 .nav-item.active .nav-dot { background: #121212; }
-.nav-group-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px 6px;
-  border-radius: 4px;
-  font-size: 11px;
-  cursor: pointer;
-  color: #8a8a82;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  border: none;
-  background: transparent;
-  text-align: left;
-  width: 100%;
-  margin-top: 6px;
-}
-.nav-group-header:hover { color: #cacac4; }
-.nav-group-arrow { font-size: 10px; }
 .nav-item-sub { padding-left: 30px; font-size: 12.5px; }
 
 .sidebar-user {

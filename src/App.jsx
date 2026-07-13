@@ -1337,10 +1337,16 @@ export default function App() {
         </div>
         <nav className="sidebar-nav">
           {/* Grupo DEPOSITOS PALACIO */}
-          <button className="nav-group-header" onClick={() => setDepositosOpen(o => !o)}>
-            <span className="nav-group-arrow">{depositosOpen ? '▾' : '▸'}</span>
-            DEPOSITOS PALACIO
-          </button>
+          {(() => { const isGrpActive = ['panel','inventario','detalle','entregas','movimientos','receptores','utileria'].includes(view); return (
+            <button className={`nav-item${isGrpActive?' active':''}`} onClick={() => setDepositosOpen(o => !o)}>
+              <span className="nav-dot" />
+              DEPOSITOS PALACIO
+              <span style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:6}}>
+                <span style={{fontSize:10,opacity:0.6}}>{depositosOpen ? '▾' : '▸'}</span>
+                {isGrpActive && <img src="/escudo.png" alt="" style={{height:20,width:'auto',opacity:0.85}} />}
+              </span>
+            </button>
+          )})()}
           {depositosOpen && [['panel','PANEL PRINCIPAL'],['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES'],['utileria','CAMISETAS UTILERÍA']].map(([key,label]) => {
             const isActive = view===key||(key==='inventario'&&view==='detalle')
             return (
