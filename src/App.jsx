@@ -2476,7 +2476,7 @@ export default function App() {
                       <input className="field-input mono" type="number" min="0" value={r.cantShort}
                         onChange={e=>setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,cantShort:e.target.value}:x)}))}
                         placeholder="0" style={{textAlign:'center',padding:'5px 4px'}} />
-                      {hasQty && !isLibre ? (
+                      {!isLibre ? (
                         <button type="button"
                           onClick={()=>setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,descuento:!x.descuento}:x)}))}
                           style={{padding:'4px 6px',borderRadius:5,border:'2px solid',fontWeight:700,fontSize:11,cursor:'pointer',width:'100%',
