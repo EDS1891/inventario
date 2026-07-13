@@ -2029,12 +2029,12 @@ export default function App() {
                         <div className="kpi-value">{(db.reposiciones||[]).length}</div>
                         <div className="kpi-sub">registradas</div>
                       </div>
-                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepResumen('equipos')}>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepResumen('ambos')}>
                         <div className="kpi-label">CAMISETAS ENTREGADAS</div>
                         <div className="kpi-value">{totalEquipos}</div>
                         <div className="kpi-sub">camisetas en total →</div>
                       </div>
-                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepResumen('shorts')}>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepResumen('ambos')}>
                         <div className="kpi-label">SHORTS ENTREGADOS</div>
                         <div className="kpi-value">{totalShorts}</div>
                         <div className="kpi-sub">shorts en total →</div>
@@ -2493,20 +2493,7 @@ export default function App() {
 
       {/* Modal: Resumen entregas por jugador por mes */}
       {repResumen && (() => {
-        const campo = repResumen === 'equipos' ? 'cantCamiseta' : 'cantShort'
-        const titulo = repResumen === 'equipos' ? 'Equipos entregados por jugador' : 'Shorts entregados por jugador'
-
-        // Meses únicos ordenados cronológicamente (de r.fecha = DD/MM/YYYY)
-        const meses = [...new Set((db.reposiciones||[]).map(r => {
-          const p = (r.fecha||'').split('/')
-          return p.length===3 ? p[1]+'/'+p[2] : r.fecha
-        }))].sort((a,b) => {
-          const [ma,ya] = a.split('/').map(Number)
-          const [mb,yb] = b.split('/').map(Number)
-          return ya!==yb ? ya-yb : ma-mb
-        })
-
-        // Jugadores únicos (número + nombre) presentes en alguna reposición
+        // Jugadores únicos presentes en alguna reposición
         const jugMap = {}
         ;(db.reposiciones||[]).forEach(r => (r.jugadores||[]).forEach(j => {
           const key = (j.numero||'—')+'|'+j.nombre
@@ -2518,68 +2505,52 @@ export default function App() {
         const esRep = r => /^reposici[oó]n\s+vs/i.test((r.concepto||'').trim())
         const repsValidas = (db.reposiciones||[]).filter(esRep)
 
-        // Suma por jugador x mes
-        const getQty = (nombre, mes) =>
-          repsValidas.filter(r => {
-            const p = (r.fecha||'').split('/')
-            return (p.length===3 ? p[1]+'/'+p[2] : r.fecha) === mes
-          }).reduce((acc,r) => {
-            const j = (r.jugadores||[]).find(x=>x.nombre===nombre)
-            return acc + (j ? Number(j[campo])||0 : 0)
-          }, 0)
+        const getTotalCam = nombre => repsValidas.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);return acc+(j?Number(j.cantCamiseta)||0:0)},0)
+        const getTotalShort = nombre => repsValidas.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);return acc+(j?Number(j.cantShort)||0:0)},0)
 
-        const getTotal = (nombre) =>
-          repsValidas.reduce((acc,r)=>{
-            const j=(r.jugadores||[]).find(x=>x.nombre===nombre)
-            return acc+(j?Number(j[campo])||0:0)
-          },0)
-
-        const MESES_ES = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
-        const fmtMes = mes => { const [m,y]=mes.split('/'); return MESES_ES[Number(m)]+' '+y }
+        const totalCam = jugs.reduce((acc,j)=>acc+getTotalCam(j.nombre),0)
+        const totalShort = jugs.reduce((acc,j)=>acc+getTotalShort(j.nombre),0)
 
         return (
           <div className="modal-backdrop" onClick={()=>setRepResumen(null)}>
-            <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:700,width:'96%'}}>
+            <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:560,width:'96%'}}>
               <div className="modal-header">
-                <div className="modal-title">{titulo}</div>
+                <div className="modal-title">Detalle por jugador</div>
                 <button className="modal-close" onClick={()=>setRepResumen(null)}>×</button>
               </div>
               <div className="modal-body" style={{padding:0,overflowX:'auto',maxHeight:'70vh',overflowY:'auto'}}>
-                <table style={{width:'100%',borderCollapse:'collapse',fontSize:13,minWidth:400}}>
+                <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
                   <thead>
                     <tr style={{background:'#121212',color:'#FFD200'}}>
                       <th style={{padding:'8px 12px',textAlign:'left',fontWeight:700,fontSize:11,letterSpacing:'.04em',position:'sticky',left:0,background:'#121212'}}>JUGADOR</th>
-                      {meses.map(m=>(
-                        <th key={m} style={{padding:'8px 10px',textAlign:'center',fontWeight:700,fontSize:11,letterSpacing:'.04em',whiteSpace:'nowrap'}}>{fmtMes(m)}</th>
-                      ))}
-                      <th style={{padding:'8px 10px',textAlign:'center',fontWeight:700,fontSize:11,letterSpacing:'.04em',color:'#FFD200'}}>TOTAL</th>
+                      <th style={{padding:'8px 14px',textAlign:'center',fontWeight:700,fontSize:11,letterSpacing:'.04em'}}>CAMISETAS</th>
+                      <th style={{padding:'8px 14px',textAlign:'center',fontWeight:700,fontSize:11,letterSpacing:'.04em'}}>SHORTS</th>
+                      <th style={{padding:'8px 14px',textAlign:'center',fontWeight:700,fontSize:11,letterSpacing:'.04em',color:'#FFD200'}}>TOTAL</th>
                     </tr>
                   </thead>
                   <tbody>
                     {jugs.map((j,i)=>{
-                      const total = getTotal(j.nombre)
+                      const cam = getTotalCam(j.nombre)
+                      const sht = getTotalShort(j.nombre)
+                      const tot = cam + sht
+                      if (tot === 0) return null
                       return (
                         <tr key={i} style={{borderBottom:'1px solid #F5F5F0',background:i%2===0?'#fff':'#FAFAF8'}}>
                           <td style={{padding:'7px 12px',fontWeight:500,position:'sticky',left:0,background:i%2===0?'#fff':'#FAFAF8',whiteSpace:'nowrap'}}>
                             <span style={{fontFamily:'IBM Plex Mono,monospace',color:'#8a8a82',marginRight:8,fontSize:11}}>{j.numero}</span>
                             {j.nombre}
                           </td>
-                          {meses.map(m=>{
-                            const q=getQty(j.nombre,m)
-                            return <td key={m} style={{padding:'7px 10px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:q>0?700:400,color:q>0?'#1a1a1a':'#ccc'}}>{q>0?q:'—'}</td>
-                          })}
-                          <td style={{padding:'7px 10px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:total>0?'#1a1a1a':'#ccc',background:total>0?'#FFF8D6':'transparent'}}>{total>0?total:'—'}</td>
+                          <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:cam>0?700:400,color:cam>0?'#1a1a1a':'#ccc'}}>{cam>0?cam:'—'}</td>
+                          <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:sht>0?700:400,color:sht>0?'#1a1a1a':'#ccc'}}>{sht>0?sht:'—'}</td>
+                          <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,background:'#FFF8D6'}}>{tot}</td>
                         </tr>
                       )
                     })}
-                    {/* Fila de totales */}
                     <tr style={{background:'#121212',color:'#FFD200',fontWeight:700}}>
                       <td style={{padding:'8px 12px',fontSize:11,letterSpacing:'.04em',position:'sticky',left:0,background:'#121212'}}>TOTAL</td>
-                      {meses.map(m=>{
-                        const t=jugs.reduce((acc,j)=>acc+getQty(j.nombre,m),0)
-                        return <td key={m} style={{padding:'8px 10px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace'}}>{t>0?t:'—'}</td>
-                      })}
-                      <td style={{padding:'8px 10px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace'}}>{jugs.reduce((acc,j)=>acc+getTotal(j.nombre),0)}</td>
+                      <td style={{padding:'8px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace'}}>{totalCam}</td>
+                      <td style={{padding:'8px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace'}}>{totalShort}</td>
+                      <td style={{padding:'8px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace'}}>{totalCam+totalShort}</td>
                     </tr>
                   </tbody>
                 </table>
