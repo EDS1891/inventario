@@ -2493,67 +2493,90 @@ export default function App() {
 
       {/* Modal: Resumen entregas por jugador por mes */}
       {repResumen && (() => {
-        // Jugadores únicos presentes en alguna reposición
-        const jugMap = {}
-        ;(db.reposiciones||[]).forEach(r => (r.jugadores||[]).forEach(j => {
-          const key = (j.numero||'—')+'|'+j.nombre
-          if (!jugMap[key]) jugMap[key] = {numero:j.numero||'—', nombre:j.nombre}
-        }))
-        const jugs = Object.values(jugMap).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0))
-
-        // Solo reposiciones "Reposición vs ..."
+        const MESES_ES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
         const esRep = r => /^reposici[oó]n\s+vs/i.test((r.concepto||'').trim())
         const repsValidas = (db.reposiciones||[]).filter(esRep)
 
-        const getTotalCam = nombre => repsValidas.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);return acc+(j?Number(j.cantCamiseta)||0:0)},0)
-        const getTotalShort = nombre => repsValidas.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);return acc+(j?Number(j.cantShort)||0:0)},0)
-
-        const totalCam = jugs.reduce((acc,j)=>acc+getTotalCam(j.nombre),0)
-        const totalShort = jugs.reduce((acc,j)=>acc+getTotalShort(j.nombre),0)
+        // Agrupar por mes (clave MM/YYYY)
+        const mesesMap = {}
+        repsValidas.forEach(r => {
+          const p = (r.fecha||'').split('/')
+          const key = p.length===3 ? p[1]+'/'+p[2] : r.fecha||'?'
+          if (!mesesMap[key]) mesesMap[key] = []
+          mesesMap[key].push(r)
+        })
+        const mesesOrdenados = Object.keys(mesesMap).sort((a,b)=>{
+          const [ma,ya] = a.split('/').map(Number)
+          const [mb,yb] = b.split('/').map(Number)
+          return ya!==yb ? ya-yb : ma-mb
+        })
 
         return (
           <div className="modal-backdrop" onClick={()=>setRepResumen(null)}>
-            <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:560,width:'96%'}}>
+            <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:580,width:'96%'}}>
               <div className="modal-header">
                 <div className="modal-title">Detalle por jugador</div>
                 <button className="modal-close" onClick={()=>setRepResumen(null)}>×</button>
               </div>
-              <div className="modal-body" style={{padding:0,overflowX:'auto',maxHeight:'70vh',overflowY:'auto'}}>
-                <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
-                  <thead>
-                    <tr style={{background:'#121212',color:'#FFD200'}}>
-                      <th style={{padding:'8px 12px',textAlign:'left',fontWeight:700,fontSize:11,letterSpacing:'.04em',position:'sticky',left:0,background:'#121212'}}>JUGADOR</th>
-                      <th style={{padding:'8px 14px',textAlign:'center',fontWeight:700,fontSize:11,letterSpacing:'.04em'}}>CAMISETAS</th>
-                      <th style={{padding:'8px 14px',textAlign:'center',fontWeight:700,fontSize:11,letterSpacing:'.04em'}}>SHORTS</th>
-                      <th style={{padding:'8px 14px',textAlign:'center',fontWeight:700,fontSize:11,letterSpacing:'.04em',color:'#FFD200'}}>TOTAL</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {jugs.map((j,i)=>{
-                      const cam = getTotalCam(j.nombre)
-                      const sht = getTotalShort(j.nombre)
-                      const tot = cam + sht
-                      if (tot === 0) return null
-                      return (
-                        <tr key={i} style={{borderBottom:'1px solid #F5F5F0',background:i%2===0?'#fff':'#FAFAF8'}}>
-                          <td style={{padding:'7px 12px',fontWeight:500,position:'sticky',left:0,background:i%2===0?'#fff':'#FAFAF8',whiteSpace:'nowrap'}}>
-                            <span style={{fontFamily:'IBM Plex Mono,monospace',color:'#8a8a82',marginRight:8,fontSize:11}}>{j.numero}</span>
-                            {j.nombre}
-                          </td>
-                          <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:cam>0?700:400,color:cam>0?'#1a1a1a':'#ccc'}}>{cam>0?cam:'—'}</td>
-                          <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:sht>0?700:400,color:sht>0?'#1a1a1a':'#ccc'}}>{sht>0?sht:'—'}</td>
-                          <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,background:'#FFF8D6'}}>{tot}</td>
-                        </tr>
-                      )
-                    })}
-                    <tr style={{background:'#121212',color:'#FFD200',fontWeight:700}}>
-                      <td style={{padding:'8px 12px',fontSize:11,letterSpacing:'.04em',position:'sticky',left:0,background:'#121212'}}>TOTAL</td>
-                      <td style={{padding:'8px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace'}}>{totalCam}</td>
-                      <td style={{padding:'8px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace'}}>{totalShort}</td>
-                      <td style={{padding:'8px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace'}}>{totalCam+totalShort}</td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div className="modal-body" style={{padding:'0 0 8px',maxHeight:'72vh',overflowY:'auto'}}>
+                {mesesOrdenados.length === 0 && (
+                  <div style={{padding:32,textAlign:'center',color:'#888',fontSize:14}}>Sin datos</div>
+                )}
+                {mesesOrdenados.map(mesKey => {
+                  const [mm, yyyy] = mesKey.split('/')
+                  const mesNombre = `${MESES_ES[Number(mm)]||mm} ${yyyy}`
+                  const repsDelMes = mesesMap[mesKey]
+
+                  const jugMapMes = {}
+                  repsDelMes.forEach(r => (r.jugadores||[]).forEach(j => {
+                    if (!jugMapMes[j.nombre]) jugMapMes[j.nombre] = {numero:j.numero||'—', nombre:j.nombre}
+                  }))
+                  const jugsMes = Object.values(jugMapMes).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0))
+
+                  const getCam = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);return acc+(j?Number(j.cantCamiseta)||0:0)},0)
+                  const getSht = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);return acc+(j?Number(j.cantShort)||0:0)},0)
+
+                  const filas = jugsMes.map(j=>({...j,cam:getCam(j.nombre),sht:getSht(j.nombre)})).filter(f=>f.cam+f.sht>0)
+                  const totCam = filas.reduce((s,f)=>s+f.cam,0)
+                  const totSht = filas.reduce((s,f)=>s+f.sht,0)
+
+                  return (
+                    <div key={mesKey}>
+                      <div style={{background:'#121212',color:'#FFD200',fontWeight:700,fontSize:12,letterSpacing:'.06em',padding:'9px 14px',position:'sticky',top:0,zIndex:2}}>
+                        {mesNombre.toUpperCase()}
+                      </div>
+                      <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                        <thead>
+                          <tr style={{background:'#2a2a2a',color:'#ccc'}}>
+                            <th style={{padding:'6px 12px',textAlign:'left',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>JUGADOR</th>
+                            <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>CAMISETAS</th>
+                            <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>SHORTS</th>
+                            <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>TOTAL</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filas.map((f,i)=>(
+                            <tr key={i} style={{borderBottom:'1px solid #F0F0EC',background:i%2===0?'#fff':'#FAFAF8'}}>
+                              <td style={{padding:'7px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
+                                <span style={{fontFamily:'IBM Plex Mono,monospace',color:'#8a8a82',marginRight:8,fontSize:11}}>{f.numero}</span>
+                                {f.nombre}
+                              </td>
+                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:f.cam>0?700:400,color:f.cam>0?'#1a1a1a':'#ccc'}}>{f.cam>0?f.cam:'—'}</td>
+                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:f.sht>0?700:400,color:f.sht>0?'#1a1a1a':'#ccc'}}>{f.sht>0?f.sht:'—'}</td>
+                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,background:'#FFF8D6'}}>{f.cam+f.sht}</td>
+                            </tr>
+                          ))}
+                          <tr style={{background:'#F5F2E8',borderTop:'2px solid #E8E4D8'}}>
+                            <td style={{padding:'6px 12px',fontSize:11,fontWeight:700,letterSpacing:'.04em',color:'#555'}}>SUBTOTAL</td>
+                            <td style={{padding:'6px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#333'}}>{totCam||'—'}</td>
+                            <td style={{padding:'6px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#333'}}>{totSht||'—'}</td>
+                            <td style={{padding:'6px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{totCam+totSht}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+                })}
               </div>
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={()=>setRepResumen(null)}>Cerrar</button>
