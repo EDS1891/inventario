@@ -2019,9 +2019,8 @@ export default function App() {
               {/* Tab: Reposiciones */}
               {repTab === 'reposiciones' && (<>
                 {(() => {
-                  const esReposicion = r => /^reposici[oó]n\s+vs/i.test((r.concepto||'').trim())
-                  const totalEquipos = (db.reposiciones||[]).filter(esReposicion).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
-                  const totalShorts = (db.reposiciones||[]).filter(esReposicion).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
+                  const totalEquipos = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
+                  const totalShorts = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
                   return (
                     <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
@@ -2494,8 +2493,7 @@ export default function App() {
       {/* Modal: Resumen entregas por jugador por mes */}
       {repResumen && (() => {
         const MESES_ES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-        const esRep = r => /^reposici[oó]n\s+vs/i.test((r.concepto||'').trim())
-        const repsValidas = (db.reposiciones||[]).filter(esRep)
+        const repsValidas = db.reposiciones||[]
 
         // Agrupar por mes (clave MM/YYYY)
         const mesesMap = {}
