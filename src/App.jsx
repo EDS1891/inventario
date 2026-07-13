@@ -2090,6 +2090,8 @@ export default function App() {
                   const esReposicion = r => /^reposici[oó]n\.?\s+vs/i.test((r.concepto||'').trim())
                   const totalEquipos = (db.reposiciones||[]).filter(esReposicion).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
                   const totalShorts = (db.reposiciones||[]).filter(esReposicion).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
+                  const totalCamTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
+                  const totalShtTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
                   return (
                     <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
@@ -2106,6 +2108,16 @@ export default function App() {
                         <div className="kpi-label">SHORTS PARA DESCONTAR</div>
                         <div className="kpi-value">{totalShorts}</div>
                         <div className="kpi-sub">shorts en total →</div>
+                      </div>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
+                        <div className="kpi-label">CAMISETAS ENVIADAS</div>
+                        <div className="kpi-value">{totalCamTodas}</div>
+                        <div className="kpi-sub">en todas las entregas</div>
+                      </div>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
+                        <div className="kpi-label">SHORTS ENVIADOS</div>
+                        <div className="kpi-value">{totalShtTodas}</div>
+                        <div className="kpi-sub">en todas las entregas</div>
                       </div>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepTab('plantel')}>
                         <div className="kpi-label">PLANTEL</div>
