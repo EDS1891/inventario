@@ -1331,8 +1331,8 @@ export default function App() {
         <div className="sidebar-logo">
           <img src="/escudo.png" alt="Peñarol" />
           <div className="sidebar-logo-text">
-            <div className="name">PEÑAROL</div>
-            <div className="sub">{currentUser?.role==='receptor' ? 'INDUMENTARIA CLUB ATLÉTICO PEÑAROL' : 'DEPÓSITO · INDUMENTARIA'}</div>
+            <div className="name">CLUB ATLÉTICO PEÑAROL</div>
+            <div className="sub">Indumentaria</div>
           </div>
         </div>
         <nav className="sidebar-nav">
