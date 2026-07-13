@@ -152,6 +152,7 @@ export default function App() {
   const [delFilterReceptor, setDelFilterReceptor] = useState('')
   const [delFilterDisciplina, setDelFilterDisciplina] = useState('')
   const [delFilterPersona, setDelFilterPersona] = useState('')
+  const [delFilterPaga, setDelFilterPaga] = useState('')
   const [selectedDeliveryId, setSelectedDeliveryId] = useState(null)
   const [selectedReceptor, setSelectedReceptor] = useState(null)
   const [utiFilter, setUtiFilter] = useState('')
@@ -779,6 +780,7 @@ export default function App() {
     .filter(d => !delFilterReceptor || delFilterReceptor === REP_FILTER || d.receptor === delFilterReceptor)
     .filter(d => delFilterReceptor !== 'Deportes Anexos' || !delFilterDisciplina || d.disciplina === delFilterDisciplina)
     .filter(d => !delFilterPersona || d.persona.toLowerCase().includes(delFilterPersona.toLowerCase()))
+    .filter(d => delFilterReceptor !== 'Protocolo' || !delFilterPaga || d.paga === delFilterPaga)
   const repRows = (db.reposiciones||[]).map(r => {
     const totalCamisetas = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
     const totalShorts = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
@@ -1704,11 +1706,11 @@ export default function App() {
             <>
               <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginBottom:delFilterReceptor==='Deportes Anexos'?6:12}}>
                 <div style={{display:'flex',gap:6,flexWrap:'wrap',flex:1}}>
-                  <button className={`chip${delFilterReceptor===''?' active':''}`} onClick={() => { setDelFilterReceptor(''); setDelFilterDisciplina('') }}>Todos</button>
+                  <button className={`chip${delFilterReceptor===''?' active':''}`} onClick={() => { setDelFilterReceptor(''); setDelFilterDisciplina(''); setDelFilterPaga('') }}>Todos</button>
                   {deliveryReceptores.map(r => (
-                    <button key={r} className={`chip${delFilterReceptor===r?' active':''}`} onClick={() => { setDelFilterReceptor(r); setDelFilterDisciplina('') }}>{r}</button>
+                    <button key={r} className={`chip${delFilterReceptor===r?' active':''}`} onClick={() => { setDelFilterReceptor(r); setDelFilterDisciplina(''); setDelFilterPaga('') }}>{r}</button>
                   ))}
-                  <button className={`chip${delFilterReceptor===REP_FILTER?' active':''}`} onClick={() => { setDelFilterReceptor(REP_FILTER); setDelFilterDisciplina('') }}>Reposiciones 1° División</button>
+                  <button className={`chip${delFilterReceptor===REP_FILTER?' active':''}`} onClick={() => { setDelFilterReceptor(REP_FILTER); setDelFilterDisciplina(''); setDelFilterPaga('') }}>Reposiciones 1° División</button>
                 </div>
                 <input className="field-input" style={{width:200,flexShrink:0}} placeholder="Buscar integrante…" value={delFilterPersona} onChange={e => setDelFilterPersona(e.target.value)} />
               </div>
@@ -1718,6 +1720,14 @@ export default function App() {
                   {deportesAnexosDisciplinas.map(d => (
                     <button key={d} className={`chip${delFilterDisciplina===d?' active':''}`} onClick={() => setDelFilterDisciplina(d)}>{d}</button>
                   ))}
+                </div>
+              )}
+              {delFilterReceptor==='Protocolo' && (
+                <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center',marginBottom:12}}>
+                  <span style={{fontSize:12,color:'#8a8a82',fontWeight:600}}>Paga:</span>
+                  <button className={`chip${delFilterPaga===''?' active':''}`} onClick={() => setDelFilterPaga('')}>Todos</button>
+                  <button className={`chip${delFilterPaga==='si'?' active':''}`} onClick={() => setDelFilterPaga('si')}>SÍ</button>
+                  <button className={`chip${delFilterPaga==='no'?' active':''}`} onClick={() => setDelFilterPaga('no')}>NO</button>
                 </div>
               )}
             <div className="card table-wrap">
