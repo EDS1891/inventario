@@ -158,7 +158,7 @@ export default function App() {
   const [utiFilterModelo, setUtiFilterModelo] = useState('')
   const [utiForm, setUtiForm] = useState({ tipo:'', competicion:'', numero:'', jugador:'', talle:'S', modelo:'', estampado:'', parches:'', detalle:'', temporada:'', id:null })
   const [utiModal, setUtiModal] = useState(false)
-  const [repForm, setRepForm] = useState({ concepto:'', rows:[] })
+  const [repForm, setRepForm] = useState({ editId:null, concepto:'', rows:[] })
   const [repModal, setRepModal] = useState(false)
   const [repDetail, setRepDetail] = useState(null)
   const [repResumen, setRepResumen] = useState(null)
@@ -815,6 +815,7 @@ export default function App() {
   const TORNEOS_CON_FECHA = ['APERTURA','CLAUSURA','INTERMEDIO']
   const openRepModal = () => {
     setRepForm({
+      editId:null,
       concepto:'',
       torneo:'APERTURA',
       fechaTorneo:'1',
@@ -822,6 +823,23 @@ export default function App() {
       tipoCamisetaGolero: REP_TIPOS_GOLERO[0],
       rows:(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j=>({...j,cantCamiseta:'',cantShort:''}))
     })
+    setRepModal(true)
+  }
+  const openRepEdit = (rep) => {
+    const plantelRows = (db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => {
+      const ex = (rep.jugadores||[]).find(jj => jj.nombre===j.nombre)
+      return { ...j, cantCamiseta: ex ? String(ex.cantCamiseta) : '', cantShort: ex ? String(ex.cantShort) : '' }
+    })
+    setRepForm({
+      editId: rep.id,
+      concepto: rep.concepto,
+      torneo: rep.torneo || 'APERTURA',
+      fechaTorneo: rep.fechaTorneo != null ? String(rep.fechaTorneo) : '1',
+      tipoCamisetaJugador: rep.tipoCamisetaJugador || REP_TIPOS_JUGADOR[0],
+      tipoCamisetaGolero: rep.tipoCamisetaGolero || REP_TIPOS_GOLERO[0],
+      rows: plantelRows
+    })
+    setRepDetail(null)
     setRepModal(true)
   }
   const saveReposicion = () => {
@@ -836,14 +854,23 @@ export default function App() {
       })
     if (!jugadores.length) { showToast('Ingresá al menos una cantidad.'); return }
     const tieneFecha = TORNEOS_CON_FECHA.includes(repForm.torneo)
-    setDb(s => {
-      const rep = { id:s.nextRep, fecha:today(), concepto:repForm.concepto.trim(), creadoPor:currentUser?.displayName||session,
-        torneo:repForm.torneo, fechaTorneo: tieneFecha ? Number(repForm.fechaTorneo) : null,
-        tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores }
-      return { ...s, reposiciones:[rep,...(s.reposiciones||[])], nextRep:s.nextRep+1 }
-    })
+    if (repForm.editId) {
+      setDb(s => ({...s, reposiciones:(s.reposiciones||[]).map(r => r.id===repForm.editId
+        ? {...r, concepto:repForm.concepto.trim(), torneo:repForm.torneo,
+            fechaTorneo: tieneFecha ? Number(repForm.fechaTorneo) : null,
+            tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores}
+        : r)}))
+      showToast('Reposición actualizada.')
+    } else {
+      setDb(s => {
+        const rep = { id:s.nextRep, fecha:today(), concepto:repForm.concepto.trim(), creadoPor:currentUser?.displayName||session,
+          torneo:repForm.torneo, fechaTorneo: tieneFecha ? Number(repForm.fechaTorneo) : null,
+          tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores }
+        return { ...s, reposiciones:[rep,...(s.reposiciones||[])], nextRep:s.nextRep+1 }
+      })
+      showToast('Reposición registrada.')
+    }
     setRepModal(false)
-    showToast('Reposición registrada.')
   }
   const deleteReposicion = (id) => {
     setDb(s => ({...s, reposiciones:(s.reposiciones||[]).filter(r=>r.id!==id)}))
@@ -2275,7 +2302,7 @@ export default function App() {
         <div className="modal-backdrop" onClick={() => setRepModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:600,width:'96%'}}>
             <div className="modal-header">
-              <div className="modal-title">Nueva reposición</div>
+              <div className="modal-title">{repForm.editId ? 'Editar reposición' : 'Nueva reposición'}</div>
               <button className="modal-close" onClick={() => setRepModal(false)}>×</button>
             </div>
             <div className="modal-body" style={{maxHeight:'70vh',overflowY:'auto'}}>
@@ -2375,7 +2402,7 @@ export default function App() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => setRepModal(false)}>Cancelar</button>
-              <button className="btn btn-dark" onClick={saveReposicion}>Guardar reposición</button>
+              <button className="btn btn-dark" onClick={saveReposicion}>{repForm.editId ? 'Guardar cambios' : 'Guardar reposición'}</button>
             </div>
           </div>
         </div>
@@ -2456,6 +2483,7 @@ export default function App() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => setRepDetail(null)}>Cerrar</button>
+              <button className="btn btn-dark" onClick={() => openRepEdit(repDetail)}>Editar</button>
               <button style={{padding:'8px 16px',borderRadius:7,border:'1px solid #C2473D',background:'#FBEAE8',color:'#C2473D',fontWeight:700,cursor:'pointer'}}
                 onClick={() => { if(window.confirm('¿Eliminar esta reposición?')) deleteReposicion(repDetail.id) }}>Eliminar</button>
             </div>
