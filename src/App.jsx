@@ -455,7 +455,20 @@ export default function App() {
     const ubic = estante === 'TRANSITO' ? 'TRANSITO' : (estante||'1') + (altura||'A')
     const sizes = tallesArr.map(t => ({talle:t, qty:tallesQty[t]||0, min:tallesMins[t]||0}))
     const precioNum = parseFloat(precio)||0
-    setDb(s => ({ ...s, articles:[{id:s.nextId, code, name, cat:ncat, ubic, precio:precioNum, sizes}, ...s.articles], nextId:s.nextId+1 }))
+    const fecha = today()
+    setDb(s => {
+      let nextMov = s.nextMov
+      const newMovs = sizes
+        .filter(sz => sz.qty > 0)
+        .map(sz => ({id:nextMov++, code, name, tipo:'entrada', fecha, talle:sz.talle, qty:sz.qty, detalle:'Stock inicial', creadoPor:currentUser?.displayName||session}))
+      return {
+        ...s,
+        articles: [{id:s.nextId, code, name, cat:ncat, ubic, precio:precioNum, sizes}, ...s.articles],
+        nextId: s.nextId+1,
+        movimientos: [...newMovs, ...s.movimientos],
+        nextMov
+      }
+    })
     setModal(null); setView('inventario')
     showToast('Artículo «'+name+'» creado.')
   }
