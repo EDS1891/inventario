@@ -877,6 +877,24 @@ export default function App() {
     setRepDetail(null)
     showToast('Reposición eliminada.')
   }
+  const exportRepToExcel = (rep) => {
+    const filas = (rep.jugadores||[]).map(j => ({
+      'Nº': j.numero||'—',
+      'NOMBRE': j.nombre||'—',
+      'POSICIÓN': j.posicion||'—',
+      'CAMISETAS': Number(j.cantCamiseta)||0,
+      'SHORTS': Number(j.cantShort)||0,
+      'TOTAL': (Number(j.cantCamiseta)||0)+(Number(j.cantShort)||0),
+    }))
+    const totCam = filas.reduce((s,r)=>s+r['CAMISETAS'],0)
+    const totSht = filas.reduce((s,r)=>s+r['SHORTS'],0)
+    filas.push({'Nº':'','NOMBRE':'TOTAL','POSICIÓN':'','CAMISETAS':totCam,'SHORTS':totSht,'TOTAL':totCam+totSht})
+    const ws = XLSX.utils.json_to_sheet(filas)
+    ws['!cols'] = [{wch:6},{wch:28},{wch:12},{wch:12},{wch:10},{wch:8}]
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, rep.concepto.slice(0,31))
+    XLSX.writeFile(wb, `${rep.concepto.replace(/[\\/:*?"<>|]/g,'-')}.xlsx`)
+  }
   const saveDisciplinaEdit = (deliveryId) => {
     if (!disciplinaEdit?.trim()) { showToast('Ingresá la disciplina.'); return }
     setDb(s => ({...s, deliveries:s.deliveries.map(d=>d.id===deliveryId?{...d,disciplina:disciplinaEdit.trim()}:d)}))
@@ -2483,6 +2501,7 @@ export default function App() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => setRepDetail(null)}>Cerrar</button>
+              <button className="btn btn-ghost" style={{border:'1px solid #2d6a4f',color:'#2d6a4f'}} onClick={() => exportRepToExcel(repDetail)}>↓ Excel</button>
               <button className="btn btn-dark" onClick={() => openRepEdit(repDetail)}>Editar</button>
               <button style={{padding:'8px 16px',borderRadius:7,border:'1px solid #C2473D',background:'#FBEAE8',color:'#C2473D',fontWeight:700,cursor:'pointer'}}
                 onClick={() => { if(window.confirm('¿Eliminar esta reposición?')) deleteReposicion(repDetail.id) }}>Eliminar</button>
