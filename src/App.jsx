@@ -2393,7 +2393,7 @@ export default function App() {
                 <input className="field-input" value={repForm.concepto} onChange={e => setRepForm(p=>({...p,concepto:e.target.value}))} placeholder="Ej. Reposición vs Nacional" autoFocus />
               </div>
               <div className="form-group">
-                <label className="field-label">Descuento de contrato</label>
+                <label className="field-label">Descuento</label>
                 <div style={{display:'flex',gap:8}}>
                   {[true,false].map(v=>(
                     <button key={String(v)} type="button" onClick={()=>setRepForm(p=>({...p,descuento:v}))}
