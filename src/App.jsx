@@ -1336,8 +1336,16 @@ export default function App() {
           </div>
         </div>
         <nav className="sidebar-nav">
-          {/* Grupo DEPOSITOS PALACIO */}
-          {(() => { const isGrpActive = ['panel','inventario','detalle','entregas','movimientos','receptores','utileria'].includes(view); return (
+          {/* PANEL PRINCIPAL top-level */}
+          {(() => { const isActive = view==='panel'; return (
+            <button className={`nav-item${isActive?' active':''}`} onClick={() => goView('panel')}>
+              <span className="nav-dot" />
+              PANEL PRINCIPAL
+              {isActive && <img src="/escudo.png" alt="" style={{height:20,width:'auto',marginLeft:'auto',opacity:0.85}} />}
+            </button>
+          )})()}
+          {/* Grupo DEPÓSITO */}
+          {(() => { const isGrpActive = ['inventario','detalle','entregas','movimientos','receptores','utileria'].includes(view); return (
             <button className={`nav-item${isGrpActive?' active':''}`} onClick={() => setDepositosOpen(o => !o)}>
               <span className="nav-dot" />
               DEPÓSITO
@@ -1347,7 +1355,7 @@ export default function App() {
               </span>
             </button>
           )})()}
-          {depositosOpen && [['panel','PANEL PRINCIPAL'],['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES'],['utileria','CAMISETAS UTILERÍA']].map(([key,label]) => {
+          {depositosOpen && [['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES'],['utileria','CAMISETAS UTILERÍA']].map(([key,label]) => {
             const isActive = view===key||(key==='inventario'&&view==='detalle')
             return (
               <button key={key} className={`nav-item nav-item-sub${isActive?' active':''}`} onClick={() => goView(key)}>
