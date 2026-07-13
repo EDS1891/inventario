@@ -24,7 +24,6 @@ const getRepTipos = (posicion) => posicion === 'Golero' ? REP_TIPOS_GOLERO : REP
 
 const DEFAULT_USERS = [
   { username:'compras', password:'peniarol1891', role:'admin', displayName:'Compras Peñarol', status:'aprobado' },
-  { username:'compras@capenarol.com.uy', password:'peniarol1891', role:'admin', displayName:'Compras Peñarol', status:'aprobado' },
   { username:'iabella@capenarol.com.uy', password:'Temporal2026', role:'receptor', displayName:'Ignacio Abella Goday', status:'aprobado' },
   { username:'jfalero@capenarol.com.uy', password:'Temporal2026', role:'receptor', displayName:'Joaquín Falero', status:'aprobado' },
   { username:'rferrari@capenarol.com.uy', password:'Temporal2026', role:'receptor', displayName:'Rodrigo Ferrari', status:'aprobado' },
@@ -57,6 +56,8 @@ async function loadFromSupabase() {
         : DEFAULT_USERS
     } catch { users = DEFAULT_USERS }
   }
+  // Eliminar usuario legacy con email como username
+  users = users.filter(u => u.username !== 'compras@capenarol.com.uy')
   // Siempre garantizar que los usuarios de DEFAULT_USERS estén presentes
   DEFAULT_USERS.forEach(du => {
     if (!users.find(u => u.username === du.username)) users.push(du)
