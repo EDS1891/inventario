@@ -2025,7 +2025,7 @@ export default function App() {
                   return (
                     <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
-                        <div className="kpi-label">REPOSICIONES</div>
+                        <div className="kpi-label">ENTREGAS</div>
                         <div className="kpi-value">{(db.reposiciones||[]).length}</div>
                         <div className="kpi-sub">registradas</div>
                       </div>
