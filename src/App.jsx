@@ -365,8 +365,8 @@ export default function App() {
     if(ndUbicsAll.length > 1 && !nd.cUbic) { showToast('Seleccioná la ubicación primero.'); return }
     const ubicToUse = nd.cUbic || (ndUbicsAll[0] || '')
     if(nd.mode !== 'devolucion') {
-      const srcArt = db.articles.find(a => a.code === nd.cCode && (!ubicToUse || a.ubic === ubicToUse))
-      const avail = srcArt ? (srcArt.sizes.find(x => x.talle === nd.cTalle)?.qty || 0) : 0
+      const srcArts = db.articles.filter(a => a.code === nd.cCode && (!ubicToUse || a.ubic === ubicToUse))
+      const avail = srcArts.reduce((s,a) => s+(a.sizes.find(x=>x.talle===nd.cTalle)?.qty||0), 0)
       const already = nd.lines.filter(l => l.code === nd.cCode && l.talle === nd.cTalle && l.ubic === ubicToUse).reduce((s,l) => s+l.qty, 0)
       if(avail === 0 || qty + already > avail) { showToast('Stock insuficiente ('+(avail-already)+' disp.).'); return }
     }
@@ -1078,10 +1078,13 @@ export default function App() {
   const ndUbics = nd.cCode ? [...new Set(db.articles.filter(a => a.code === nd.cCode).map(a => a.ubic).filter(Boolean))] : []
   const ndHasMultiUbic = ndUbics.length > 1
   const effectiveUbic = nd.cUbic || (ndUbics.length === 1 ? ndUbics[0] : '')
-  const ndA = nd.cCode ? db.articles.find(a => a.code === nd.cCode && (!effectiveUbic || a.ubic === effectiveUbic)) : null
-  const ndTalleOptions = ndA ? ndA.sizes.filter(s => s.qty > 0).map(s => ({value:s.talle, label:s.talle+' ('+s.qty+' disp.)'})) : []
+  const ndArts = nd.cCode ? db.articles.filter(a => a.code === nd.cCode && (!effectiveUbic || a.ubic === effectiveUbic)) : []
+  const ndA = ndArts[0] || null
+  const ndTalleOptions = ndArts.length > 0
+    ? TALLE_ORDER.map(t => ({ value:t, qty: ndArts.reduce((s,a) => s+(a.sizes.find(z=>z.talle===t)?.qty||0), 0) })).filter(s=>s.qty>0).map(s=>({value:s.value,label:s.value+' ('+s.qty+' disp.)'}))
+    : []
   let stockHint = ''
-  if(nd.cCode && nd.cTalle && ndA) { const z=ndA.sizes.find(s=>s.talle===nd.cTalle); if(z) stockHint='Disponible: '+z.qty+' u. en talle '+nd.cTalle+(effectiveUbic?' · Ubic. '+effectiveUbic:'') }
+  if(nd.cCode && nd.cTalle && ndArts.length > 0) { const qty=ndArts.reduce((s,a)=>s+(a.sizes.find(z=>z.talle===nd.cTalle)?.qty||0),0); if(qty>0) stockHint='Disponible: '+qty+' u. en talle '+nd.cTalle+(effectiveUbic?' · Ubic. '+effectiveUbic:'') }
   const ndTotal = nd.lines.reduce((s,l) => s+l.qty, 0)
   const ndMonto = nd.receptor === 'Protocolo' && nd.paga === 'si'
     ? nd.lines.reduce((s,l) => { const art=articles.find(a=>a.code===l.code); return s+(art?.precio||0)*l.qty }, 0) * 0.5
