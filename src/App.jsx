@@ -593,13 +593,30 @@ export default function App() {
   // ---- Editar ----
   const openEdit = () => {
     const a = db.articles.find(x => x.id === selectedId); if(!a) return
-    setEditing({id:a.id, code:a.code, name:a.name, cat:a.cat, ubic:a.ubic||'', precio:a.precio||''}); setModal('edit')
+    setEditing({id:a.id, code:a.code, name:a.name, cat:a.cat, ubic:a.ubic||'', precio:a.precio||'', photo:a.photo||''}); setModal('edit')
   }
   const saveEdit = () => {
     if(!editing.code.trim() || !editing.name.trim()) { showToast('Completá código y nombre.'); return }
-    setDb(s => ({...s, articles:s.articles.map(a => a.id===editing.id?{...a,code:editing.code.trim(),name:editing.name.trim(),cat:editing.cat,ubic:editing.ubic.trim(),precio:parseFloat(editing.precio)||0}:a)}))
+    setDb(s => ({...s, articles:s.articles.map(a => a.id===editing.id?{...a,code:editing.code.trim(),name:editing.name.trim(),cat:editing.cat,ubic:editing.ubic.trim(),precio:parseFloat(editing.precio)||0,photo:editing.photo||''}:a)}))
     setModal(null); showToast('Artículo actualizado.')
   }
+  const compressImage = (file) => new Promise(resolve => {
+    const reader = new FileReader()
+    reader.onload = e => {
+      const img = new Image()
+      img.onload = () => {
+        const MAX = 900
+        let w = img.width, h = img.height
+        if (w > MAX || h > MAX) { const r = Math.min(MAX/w, MAX/h); w = Math.round(w*r); h = Math.round(h*r) }
+        const canvas = document.createElement('canvas')
+        canvas.width = w; canvas.height = h
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+        resolve(canvas.toDataURL('image/jpeg', 0.78))
+      }
+      img.src = e.target.result
+    }
+    reader.readAsDataURL(file)
+  })
 
   // ---- Eliminar ----
   const askDeleteDelivery = (id) => {
@@ -1043,6 +1060,7 @@ export default function App() {
       ubic: selEntries.map(e => e.ubic || '—').join(' · '),
       movs,
       noMovs: movs.length === 0,
+      photo: selEntries.find(e => e.photo)?.photo || '',
     }
   }
 
@@ -1638,6 +1656,13 @@ export default function App() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Foto del artículo */}
+                  {detail.photo && (
+                    <div style={{padding:'0 24px 18px'}}>
+                      <img src={detail.photo} alt={detail.name} style={{width:'100%',maxHeight:260,objectFit:'contain',borderRadius:8,border:'1px solid #E0E0DA',background:'#fafafa'}} />
+                    </div>
+                  )}
 
                   {/* Stock por ubicación */}
                   <div style={{padding:'18px 24px'}}>
@@ -3236,6 +3261,25 @@ export default function App() {
                   <label className="field-label">Precio Tienda (Socio)</label>
                   <input type="number" min="0" step="0.01" className="field-input" value={editing.precio} onChange={e => setEditing(p=>({...p,precio:e.target.value}))} placeholder="0.00" />
                 </div>
+              </div>
+              <div className="form-group">
+                <label className="field-label">Foto del artículo <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional)</span></label>
+                {editing.photo ? (
+                  <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                    <img src={editing.photo} alt="foto" style={{width:'100%',maxHeight:200,objectFit:'contain',borderRadius:8,border:'1px solid #E0E0DA',background:'#fafafa'}} />
+                    <button type="button" className="btn btn-ghost" style={{color:'#C2473D',borderColor:'#C2473D',fontSize:12}} onClick={() => setEditing(p=>({...p,photo:''}))}>Eliminar foto</button>
+                  </div>
+                ) : (
+                  <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',padding:'10px 14px',border:'2px dashed #E0E0DA',borderRadius:8,color:'#8a8a82',fontSize:13}}>
+                    <span style={{fontSize:20}}>📷</span>
+                    <span>Subir foto…</span>
+                    <input type="file" accept="image/*" style={{display:'none'}} onChange={async e => {
+                      const file = e.target.files?.[0]; if(!file) return
+                      const b64 = await compressImage(file)
+                      setEditing(p => ({...p, photo: b64}))
+                    }} />
+                  </label>
+                )}
               </div>
             </div>
             <div className="modal-footer">
