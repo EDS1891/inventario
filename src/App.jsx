@@ -1520,11 +1520,7 @@ export default function App() {
                     ))
                   }
                 </div>
-                <div style={{marginTop:10,padding:'10px 14px',borderRadius:8,background:kpis.sinFoto>0?'#FBEAE8':'#EDF7F2',border:`1px solid ${kpis.sinFoto>0?'#C2473D':'#2e9b5e'}`,display:'flex',alignItems:'center',gap:10}}>
-                  <span style={{fontWeight:700,fontSize:13,color:kpis.sinFoto>0?'#C2473D':'#2e9b5e'}}>{kpis.sinFoto}</span>
-                  <span style={{fontSize:13,color:kpis.sinFoto>0?'#C2473D':'#2e9b5e'}}>artículo{kpis.sinFoto!==1?'s':''} sin foto cargada</span>
-                </div>
-                {!isReceptor && (() => {
+{!isReceptor && (() => {
                   const myPending = db.deliveries.filter(d => d.toUser === session && (d.status||'aceptado') === 'pendiente')
                   if (!myPending.length) return null
                   return (
