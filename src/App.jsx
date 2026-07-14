@@ -685,9 +685,10 @@ export default function App() {
     entregas: deliveries.length,
   }
 
-  const q = search.trim().toLowerCase()
+  const normStr = s => s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()
+  const q = normStr(search.trim())
   let filtered = articles.filter(a => cat==='Todas' || a.cat===cat)
-  if(q) filtered = filtered.filter(a => a.name.toLowerCase().includes(q) || a.code.toLowerCase().includes(q) || (a.ubic||'').toLowerCase().includes(q))
+  if(q) filtered = filtered.filter(a => normStr(a.name).includes(q) || normStr(a.code).includes(q) || normStr(a.ubic||'').includes(q))
   if(filterUbic) filtered = filtered.filter(a => (a.ubic||'') === filterUbic)
 
   const parseUbic = u => {
