@@ -154,6 +154,7 @@ export default function App() {
   const [delFilterPersona, setDelFilterPersona] = useState('')
   const [delFilterPaga, setDelFilterPaga] = useState('')
   const [selectedDeliveryId, setSelectedDeliveryId] = useState(null)
+  const [movsExpanded, setMovsExpanded] = useState(false)
   const [selectedReceptor, setSelectedReceptor] = useState(null)
   const [utiFilter, setUtiFilter] = useState('')
   const [utiFilterTipo, setUtiFilterTipo] = useState('')
@@ -1663,13 +1664,6 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Foto del artículo */}
-                  {detail.photo && (
-                    <div style={{padding:'0 24px 18px',display:'flex',justifyContent:'center'}}>
-                      <img src={detail.photo} alt={detail.name} style={{display:'block',maxWidth:'100%',maxHeight:400,borderRadius:8,border:'1px solid #E0E0DA'}} />
-                    </div>
-                  )}
-
                   {/* Stock por ubicación */}
                   <div style={{padding:'18px 24px'}}>
                     {detail.entries.map((entry, idx) => {
@@ -1715,7 +1709,7 @@ export default function App() {
                 <div className="card">
                   <div className="card-header"><div className="card-title">Movimientos</div></div>
                   {detail.noMovs && <div className="empty">Sin movimientos registrados.</div>}
-                  {detail.movs.map(m => (
+                  {(movsExpanded ? detail.movs : detail.movs.slice(0,4)).map(m => (
                     <div key={m.id} style={{display:'flex',alignItems:'center',gap:12,padding:'13px 20px',borderBottom:'1px solid #F0F0EC'}}>
                       <span style={{width:9,height:9,borderRadius:'50%',flexShrink:0,background:m.tipo==='entrada'?'#2e9b5e':'#C2473D'}} />
                       <div style={{flex:1,minWidth:0}}>
@@ -1728,6 +1722,16 @@ export default function App() {
                       {!isSoloVista && <button className="btn-del" onClick={() => m.delId ? askDeleteDelivery(m.delId) : askDeleteMov(m.id)}>✕</button>}
                     </div>
                   ))}
+                  {detail.movs.length > 4 && (
+                    <button onClick={() => setMovsExpanded(p=>!p)} style={{width:'100%',padding:'11px',border:'none',background:'none',cursor:'pointer',fontSize:12.5,color:'#8a8a82',fontWeight:600,borderTop:'1px solid #F0F0EC'}}>
+                      {movsExpanded ? 'Ver menos ▲' : `Ver todos (${detail.movs.length}) ▼`}
+                    </button>
+                  )}
+                  {detail.photo && (
+                    <div style={{padding:'16px 20px',borderTop: detail.noMovs ? 'none' : '1px solid #F0F0EC',display:'flex',justifyContent:'center'}}>
+                      <img src={detail.photo} alt={detail.name} style={{display:'block',maxWidth:'100%',maxHeight:400,borderRadius:8,border:'1px solid #E0E0DA'}} />
+                    </div>
+                  )}
                 </div>
               </div>
             </>
