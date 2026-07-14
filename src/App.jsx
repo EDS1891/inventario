@@ -751,6 +751,8 @@ export default function App() {
       return ua.l.localeCompare(ub.l)
     })
     const ubics = [...new Set(sortedEntries.map(e => e.ubic).filter(Boolean))].join(' · ')
+    const entryWithPhoto = g._entries.find(x => x.photos?.length || x.photo)
+    const photos = entryWithPhoto ? (entryWithPhoto.photos?.length ? entryWithPhoto.photos : [entryWithPhoto.photo]) : []
     return {
       ...g,
       totalFmt: fmt(tot),
@@ -760,6 +762,7 @@ export default function App() {
       _firstUbic: sortedEntries[0]?.ubic || '',
       precio: g.precio || 0,
       dupUbic: false,
+      photos,
     }
   }).sort((a, b) => {
     const ua = parseUbic(a._firstUbic), ub = parseUbic(b._firstUbic)
