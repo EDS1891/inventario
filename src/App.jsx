@@ -3020,7 +3020,15 @@ export default function App() {
               <div className="form-cols-2" style={{gap:12}}>
                 <div className="form-group">
                   <label className="field-label">Código (SKU)</label>
-                  <input className="field-input mono" value={na.code} onChange={e => setNa(p=>({...p,code:e.target.value.toUpperCase()}))} placeholder="CAM-XXX-26" />
+                  <input className="field-input mono" value={na.code} onChange={e => {
+                    const code = e.target.value.toUpperCase()
+                    const existing = db.articles.find(a => a.code === code)
+                    setNa(p => ({
+                      ...p,
+                      code,
+                      ...(existing ? { name: existing.name, cat: existing.cat || p.cat, precio: existing.precio != null ? String(existing.precio) : p.precio } : {})
+                    }))
+                  }} placeholder="CAM-XXX-26" />
                   {(() => {
                     const existing = na.code ? db.articles.find(a => a.code === na.code) : null
                     if (!existing?.ubic) return null
