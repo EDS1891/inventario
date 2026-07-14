@@ -1783,14 +1783,18 @@ export default function App() {
                   ))}
                 </div>
               )}
-              {delFilterReceptor==='Protocolo' && (
-                <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center',marginBottom:12}}>
-                  <span style={{fontSize:12,color:'#8a8a82',fontWeight:600}}>Paga:</span>
-                  <button className={`chip${delFilterPaga===''?' active':''}`} onClick={() => setDelFilterPaga('')}>Todos</button>
-                  <button className={`chip${delFilterPaga==='si'?' active':''}`} onClick={() => setDelFilterPaga('si')}>SÍ</button>
-                  <button className={`chip${delFilterPaga==='no'?' active':''}`} onClick={() => setDelFilterPaga('no')}>NO</button>
-                </div>
-              )}
+              {delFilterReceptor==='Protocolo' && (() => {
+                const totalRec = deliveryRows.filter(d => d.receptor==='Protocolo' && d.paga==='si' && (!delFilterPersona || d.persona.toLowerCase().includes(delFilterPersona.toLowerCase()))).reduce((s,d) => s+(d.monto||0), 0)
+                return (
+                  <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center',marginBottom:12}}>
+                    <span style={{fontSize:12,color:'#8a8a82',fontWeight:600}}>Paga:</span>
+                    <button className={`chip${delFilterPaga===''?' active':''}`} onClick={() => setDelFilterPaga('')}>Todos</button>
+                    <button className={`chip${delFilterPaga==='si'?' active':''}`} onClick={() => setDelFilterPaga('si')}>SÍ</button>
+                    <button className={`chip${delFilterPaga==='no'?' active':''}`} onClick={() => setDelFilterPaga('no')}>NO</button>
+                    {totalRec > 0 && <span style={{marginLeft:'auto',fontSize:12,fontWeight:700,color:'#2e9b5e'}}>Recaudado: $ {totalRec.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>}
+                  </div>
+                )
+              })()}
             <div className="card table-wrap">
               <div className="card-header">
                 <div className="card-title">{delFilterReceptor===REP_FILTER ? 'Reposiciones 1° División' : 'Historial de entregas'}</div>
