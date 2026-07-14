@@ -595,15 +595,16 @@ export default function App() {
   // ---- Editar ----
   const openEdit = () => {
     const a = db.articles.find(x => x.id === selectedId); if(!a) return
-    setEditing({id:a.id, code:a.code, name:a.name, cat:a.cat, ubic:a.ubic||'', precio:a.precio||'', photo:a.photo||''}); setModal('edit')
+    const photos = a.photos?.length ? a.photos : (a.photo ? [a.photo] : [])
+    setEditing({id:a.id, code:a.code, name:a.name, cat:a.cat, ubic:a.ubic||'', precio:a.precio||'', photos}); setModal('edit')
   }
   const saveEdit = () => {
     if(!editing.code.trim() || !editing.name.trim()) { showToast('Completá código y nombre.'); return }
     const newCode = editing.code.trim()
-    const newPhoto = editing.photo || ''
+    const newPhotos = editing.photos || []
     setDb(s => ({...s, articles:s.articles.map(a => {
-      if(a.id === editing.id) return {...a, code:newCode, name:editing.name.trim(), cat:editing.cat, ubic:editing.ubic.trim(), precio:parseFloat(editing.precio)||0, photo:newPhoto}
-      if(a.code === newCode) return {...a, photo:newPhoto}
+      if(a.id === editing.id) return {...a, code:newCode, name:editing.name.trim(), cat:editing.cat, ubic:editing.ubic.trim(), precio:parseFloat(editing.precio)||0, photos:newPhotos, photo:''}
+      if(a.code === newCode) return {...a, photos:newPhotos, photo:''}
       return a
     })}))
     setModal(null); showToast('Artículo actualizado.')
@@ -708,7 +709,7 @@ export default function App() {
     casual: fmt(catTotal('Casual')),
     bajo: articles.filter(isLow).length,
     entregas: deliveries.length,
-    sinFoto: new Set(articles.filter(a => !a.photo).map(a => a.code)).size,
+    sinFoto: new Set(articles.filter(a => !a.photos?.length && !a.photo).map(a => a.code)).size,
   }
 
   const normStr = s => s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()
@@ -1069,7 +1070,7 @@ export default function App() {
       ubic: selEntries.map(e => e.ubic || '—').join(' · '),
       movs,
       noMovs: movs.length === 0,
-      photo: selEntries.find(e => e.photo)?.photo || '',
+      photos: (() => { const e = selEntries.find(x => x.photos?.length || x.photo); return e ? (e.photos?.length ? e.photos : [e.photo]) : [] })(),
     }
   }
 
@@ -1631,9 +1632,9 @@ export default function App() {
                     <div className="inv-col-sizes" style={{color:'#1a1a1a'}}>{r.sizesLabel}</div>
                     <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{r.totalFmt}</div>
                     <div style={{textAlign:'center'}}>
-                      {r.photo
-                        ? <button onClick={e=>{e.stopPropagation();setPhotoPreview({src:r.photo,name:r.name})}} style={{padding:'3px 9px',borderRadius:5,border:'1px solid #E0E0DA',background:'#F5F5F0',fontSize:11.5,fontWeight:600,cursor:'pointer',color:'#1a1a1a'}}>Ver foto</button>
-                        : <span style={{color:'#ccc'}}>—</span>}
+                      {(() => { const ph = r.photos?.length ? r.photos : (r.photo ? [r.photo] : []); return ph.length
+                        ? <button onClick={e=>{e.stopPropagation();setPhotoPreview({photos:ph,name:r.name,idx:0})}} style={{padding:'3px 9px',borderRadius:5,border:'1px solid #E0E0DA',background:'#F5F5F0',fontSize:11.5,fontWeight:600,cursor:'pointer',color:'#1a1a1a'}}>Ver foto{ph.length>1?` (${ph.length})`:''}</button>
+                        : <span style={{color:'#ccc'}}>—</span> })()}
                     </div>
                     <div style={{textAlign:'right',display:'flex',gap:4,justifyContent:'flex-end',flexWrap:'wrap'}}>
                       {r.low && <span className="badge low">Bajo mín.</span>}
@@ -1716,9 +1717,18 @@ export default function App() {
                   </div>
                 </div>
                 <div className="card">
-                  {detail.photo && (
-                    <div style={{padding:'16px 20px',borderBottom:'1px solid #F0F0EC',display:'flex',justifyContent:'center'}}>
-                      <img src={detail.photo} alt={detail.name} style={{display:'block',maxWidth:'100%',maxHeight:400,borderRadius:8,border:'1px solid #E0E0DA'}} />
+                  {detail.photos?.length > 0 && (
+                    <div style={{padding:'16px 20px',borderBottom:'1px solid #F0F0EC'}}>
+                      {detail.photos.length === 1
+                        ? <div style={{display:'flex',justifyContent:'center'}}>
+                            <img src={detail.photos[0]} alt={detail.name} style={{display:'block',maxWidth:'100%',maxHeight:400,borderRadius:8,border:'1px solid #E0E0DA',cursor:'pointer'}} onClick={()=>setPhotoPreview({photos:detail.photos,name:detail.name,idx:0})} />
+                          </div>
+                        : <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(120px,1fr))',gap:8}}>
+                            {detail.photos.map((src,i) => (
+                              <img key={i} src={src} alt={`${detail.name} ${i+1}`} onClick={()=>setPhotoPreview({photos:detail.photos,name:detail.name,idx:i})} style={{width:'100%',aspectRatio:'1',objectFit:'cover',borderRadius:8,border:'1px solid #E0E0DA',cursor:'pointer'}} />
+                            ))}
+                          </div>
+                      }
                     </div>
                   )}
                   <div className="card-header"><div className="card-title">Movimientos</div></div>
@@ -3282,20 +3292,27 @@ export default function App() {
                 </div>
               </div>
               <div className="form-group">
-                <label className="field-label">Foto del artículo <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional)</span></label>
-                {editing.photo ? (
-                  <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                    <img src={editing.photo} alt="foto" style={{width:'100%',maxHeight:200,objectFit:'contain',borderRadius:8,border:'1px solid #E0E0DA',background:'#fafafa'}} />
-                    <button type="button" className="btn btn-ghost" style={{color:'#C2473D',borderColor:'#C2473D',fontSize:12}} onClick={() => setEditing(p=>({...p,photo:''}))}>Eliminar foto</button>
+                <label className="field-label">Fotos <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional · máx. 6)</span></label>
+                {(editing.photos||[]).length > 0 && (
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(90px,1fr))',gap:8,marginBottom:8}}>
+                    {(editing.photos||[]).map((src,i) => (
+                      <div key={i} style={{position:'relative'}}>
+                        <img src={src} alt={`foto ${i+1}`} style={{width:'100%',aspectRatio:'1',objectFit:'cover',borderRadius:8,border:'1px solid #E0E0DA'}} />
+                        <button type="button" onClick={()=>setEditing(p=>({...p,photos:p.photos.filter((_,j)=>j!==i)}))}
+                          style={{position:'absolute',top:4,right:4,width:20,height:20,borderRadius:'50%',border:'none',background:'rgba(0,0,0,0.55)',color:'#fff',fontSize:11,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>✕</button>
+                      </div>
+                    ))}
                   </div>
-                ) : (
+                )}
+                {(editing.photos||[]).length < 6 && (
                   <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',padding:'10px 14px',border:'2px dashed #E0E0DA',borderRadius:8,color:'#8a8a82',fontSize:13}}>
                     <span style={{fontSize:20}}>📷</span>
-                    <span>Subir foto…</span>
-                    <input type="file" accept="image/*" style={{display:'none'}} onChange={async e => {
-                      const file = e.target.files?.[0]; if(!file) return
-                      const b64 = await compressImage(file)
-                      setEditing(p => ({...p, photo: b64}))
+                    <span>{(editing.photos||[]).length === 0 ? 'Subir foto…' : 'Agregar otra foto…'}</span>
+                    <input type="file" accept="image/*" multiple style={{display:'none'}} onChange={async e => {
+                      const files = [...(e.target.files||[])].slice(0, 6-(editing.photos||[]).length)
+                      const b64s = await Promise.all(files.map(compressImage))
+                      setEditing(p => ({...p, photos:[...(p.photos||[]),...b64s].slice(0,6)}))
+                      e.target.value = ''
                     }} />
                   </label>
                 )}
@@ -3539,19 +3556,34 @@ export default function App() {
       )}
 
       {/* Lightbox foto */}
-      {photoPreview && (
-        <div onClick={() => setPhotoPreview(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
-          <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:12,overflow:'hidden',maxWidth:600,width:'100%',boxShadow:'0 8px 40px rgba(0,0,0,0.35)'}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 16px',borderBottom:'1px solid #E7E7E3'}}>
-              <div style={{fontWeight:700,fontSize:14,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{photoPreview.name}</div>
-              <button onClick={() => setPhotoPreview(null)} style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'#8a8a82',flexShrink:0}}>✕</button>
-            </div>
-            <div style={{padding:16,display:'flex',justifyContent:'center'}}>
-              <img src={photoPreview.src} alt={photoPreview.name} style={{maxWidth:'100%',maxHeight:'70vh',borderRadius:8,objectFit:'contain'}} />
+      {photoPreview && (() => {
+        const { photos, name, idx } = photoPreview
+        const total = photos.length
+        const prev = () => setPhotoPreview(p => ({...p, idx:(p.idx-1+total)%total}))
+        const next = () => setPhotoPreview(p => ({...p, idx:(p.idx+1)%total}))
+        return (
+          <div onClick={() => setPhotoPreview(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.80)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
+            <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:12,overflow:'hidden',maxWidth:640,width:'100%',boxShadow:'0 8px 40px rgba(0,0,0,0.4)'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 16px',borderBottom:'1px solid #E7E7E3'}}>
+                <div style={{fontWeight:700,fontSize:14,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{name}{total>1 ? ` · ${idx+1}/${total}` : ''}</div>
+                <button onClick={() => setPhotoPreview(null)} style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'#8a8a82',flexShrink:0}}>✕</button>
+              </div>
+              <div style={{padding:16,display:'flex',alignItems:'center',gap:10}}>
+                {total > 1 && <button onClick={prev} style={{flexShrink:0,width:32,height:32,borderRadius:'50%',border:'1px solid #E0E0DA',background:'#F5F5F0',cursor:'pointer',fontSize:16}}>‹</button>}
+                <div style={{flex:1,display:'flex',justifyContent:'center'}}>
+                  <img src={photos[idx]} alt={`${name} ${idx+1}`} style={{maxWidth:'100%',maxHeight:'70vh',borderRadius:8,objectFit:'contain'}} />
+                </div>
+                {total > 1 && <button onClick={next} style={{flexShrink:0,width:32,height:32,borderRadius:'50%',border:'1px solid #E0E0DA',background:'#F5F5F0',cursor:'pointer',fontSize:16}}>›</button>}
+              </div>
+              {total > 1 && (
+                <div style={{display:'flex',gap:6,justifyContent:'center',padding:'0 16px 14px'}}>
+                  {photos.map((_,i) => <div key={i} onClick={()=>setPhotoPreview(p=>({...p,idx:i}))} style={{width:8,height:8,borderRadius:'50%',background:i===idx?'#121212':'#D0D0C8',cursor:'pointer'}} />)}
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Toast */}
       {toast && (
