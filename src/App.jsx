@@ -1464,7 +1464,7 @@ export default function App() {
             <>
               <div className="kpi-grid">
                 <div className="kpi-card"><div className="kpi-label">ARTÍCULOS</div><div className="kpi-value">{kpis.articulos}</div><div className="kpi-sub">referencias activas</div></div>
-                <div className="kpi-card"><div className="kpi-label">ARTÍCULOS SIN FOTO</div><div className="kpi-value" style={{color:kpis.sinFoto>0?'#C2473D':'#2e9b5e'}}>{kpis.sinFoto}</div><div className="kpi-sub">sin imagen cargada</div></div>
+
                 <div className="kpi-card"><div className="kpi-label">UNIDADES EN STOCK</div><div className="kpi-value">{kpis.unidades}</div><div className="kpi-sub">suma de todos los talles</div></div>
 
                 <div className="kpi-card"><div className="kpi-label">MONTO TOTAL EN ARTÍCULOS</div><div className="kpi-value" style={{fontSize:24}}>$ {kpis.valorStock.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</div></div>
@@ -1519,6 +1519,10 @@ export default function App() {
                       </div>
                     ))
                   }
+                </div>
+                <div style={{marginTop:10,padding:'10px 14px',borderRadius:8,background:kpis.sinFoto>0?'#FBEAE8':'#EDF7F2',border:`1px solid ${kpis.sinFoto>0?'#C2473D':'#2e9b5e'}`,display:'flex',alignItems:'center',gap:10}}>
+                  <span style={{fontWeight:700,fontSize:13,color:kpis.sinFoto>0?'#C2473D':'#2e9b5e'}}>{kpis.sinFoto}</span>
+                  <span style={{fontSize:13,color:kpis.sinFoto>0?'#C2473D':'#2e9b5e'}}>artículo{kpis.sinFoto!==1?'s':''} sin foto cargada</span>
                 </div>
                 {!isReceptor && (() => {
                   const myPending = db.deliveries.filter(d => d.toUser === session && (d.status||'aceptado') === 'pendiente')
