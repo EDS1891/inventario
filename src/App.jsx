@@ -1665,8 +1665,8 @@ export default function App() {
 
                   {/* Foto del artículo */}
                   {detail.photo && (
-                    <div style={{padding:'0 24px 18px'}}>
-                      <img src={detail.photo} alt={detail.name} style={{width:'100%',maxHeight:260,objectFit:'contain',borderRadius:8,border:'1px solid #E0E0DA',background:'#fafafa'}} />
+                    <div style={{padding:'0 24px 18px',display:'flex',justifyContent:'center'}}>
+                      <img src={detail.photo} alt={detail.name} style={{display:'block',maxWidth:'100%',maxHeight:400,borderRadius:8,border:'1px solid #E0E0DA'}} />
                     </div>
                   )}
 
