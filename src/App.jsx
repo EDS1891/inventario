@@ -155,6 +155,7 @@ export default function App() {
   const [delFilterPaga, setDelFilterPaga] = useState('')
   const [selectedDeliveryId, setSelectedDeliveryId] = useState(null)
   const [movsExpanded, setMovsExpanded] = useState(false)
+  const [photoPreview, setPhotoPreview] = useState(null)
   const [selectedReceptor, setSelectedReceptor] = useState(null)
   const [utiFilter, setUtiFilter] = useState('')
   const [utiFilterTipo, setUtiFilterTipo] = useState('')
@@ -1615,6 +1616,7 @@ export default function App() {
                   <div className="inv-col-cat">CATEGORÍA</div>
                   <div className="inv-col-sizes">TALLES</div>
                   <div style={{textAlign:'right'}}>STOCK</div>
+                  <div style={{textAlign:'center'}}>FOTO</div>
                   <div style={{textAlign:'right'}}>ESTADO</div>
                   <div className="inv-col-precio" style={{textAlign:'right'}}>PRECIO SOCIO</div>
                 </div>
@@ -1626,6 +1628,11 @@ export default function App() {
                     <div className="inv-col-cat" style={{color:'#1a1a1a'}}>{r.cat}</div>
                     <div className="inv-col-sizes" style={{color:'#1a1a1a'}}>{r.sizesLabel}</div>
                     <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{r.totalFmt}</div>
+                    <div style={{textAlign:'center'}}>
+                      {r.photo
+                        ? <button onClick={e=>{e.stopPropagation();setPhotoPreview({src:r.photo,name:r.name})}} style={{padding:'3px 9px',borderRadius:5,border:'1px solid #E0E0DA',background:'#F5F5F0',fontSize:11.5,fontWeight:600,cursor:'pointer',color:'#1a1a1a'}}>Ver foto</button>
+                        : <span style={{color:'#ccc'}}>—</span>}
+                    </div>
                     <div style={{textAlign:'right',display:'flex',gap:4,justifyContent:'flex-end',flexWrap:'wrap'}}>
                       {r.low && <span className="badge low">Bajo mín.</span>}
                     </div>
@@ -3524,6 +3531,21 @@ export default function App() {
               </div>
               {changePassForm.err && <div style={{fontSize:12.5,color:'#C2473D',fontWeight:600}}>{changePassForm.err}</div>}
               <button className="btn btn-dark" style={{width:'100%',justifyContent:'center',height:42}} onClick={doChangePass}>Guardar contraseña</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox foto */}
+      {photoPreview && (
+        <div onClick={() => setPhotoPreview(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.75)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:12,overflow:'hidden',maxWidth:600,width:'100%',boxShadow:'0 8px 40px rgba(0,0,0,0.35)'}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 16px',borderBottom:'1px solid #E7E7E3'}}>
+              <div style={{fontWeight:700,fontSize:14,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{photoPreview.name}</div>
+              <button onClick={() => setPhotoPreview(null)} style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'#8a8a82',flexShrink:0}}>✕</button>
+            </div>
+            <div style={{padding:16,display:'flex',justifyContent:'center'}}>
+              <img src={photoPreview.src} alt={photoPreview.name} style={{maxWidth:'100%',maxHeight:'70vh',borderRadius:8,objectFit:'contain'}} />
             </div>
           </div>
         </div>
