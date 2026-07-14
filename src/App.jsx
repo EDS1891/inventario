@@ -597,7 +597,13 @@ export default function App() {
   }
   const saveEdit = () => {
     if(!editing.code.trim() || !editing.name.trim()) { showToast('Completá código y nombre.'); return }
-    setDb(s => ({...s, articles:s.articles.map(a => a.id===editing.id?{...a,code:editing.code.trim(),name:editing.name.trim(),cat:editing.cat,ubic:editing.ubic.trim(),precio:parseFloat(editing.precio)||0,photo:editing.photo||''}:a)}))
+    const newCode = editing.code.trim()
+    const newPhoto = editing.photo || ''
+    setDb(s => ({...s, articles:s.articles.map(a => {
+      if(a.id === editing.id) return {...a, code:newCode, name:editing.name.trim(), cat:editing.cat, ubic:editing.ubic.trim(), precio:parseFloat(editing.precio)||0, photo:newPhoto}
+      if(a.code === newCode) return {...a, photo:newPhoto}
+      return a
+    })}))
     setModal(null); showToast('Artículo actualizado.')
   }
   const compressImage = (file) => new Promise(resolve => {
