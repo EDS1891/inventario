@@ -543,6 +543,20 @@ export default function App() {
     XLSX.utils.book_append_sheet(wb, ws, 'Stock por Ubicación')
     XLSX.writeFile(wb, 'stock-deposito-peniarol.xlsx')
   }
+  const downloadPlantelExcel = () => {
+    const rows = (db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => ({
+      'Nº': j.numero || '',
+      'NOMBRE': j.nombre,
+      'POSICIÓN': j.posicion || 'Jugador',
+      'CAMISETA': j.talleCamiseta,
+      'SHORT': j.talleShort,
+    }))
+    const ws = XLSX.utils.json_to_sheet(rows, { header: ['Nº','NOMBRE','POSICIÓN','CAMISETA','SHORT'] })
+    ws['!cols'] = [{ wch: 6 }, { wch: 28 }, { wch: 12 }, { wch: 12 }, { wch: 10 }]
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Plantel')
+    XLSX.writeFile(wb, 'plantel-peniarol.xlsx')
+  }
   const mvConfirm = () => {
     const toMove = Object.entries(mv.qtys).map(([t,q]) => [t, parseInt(q,10)||0]).filter(([,q]) => q > 0)
     if(toMove.length === 0) { showToast('Ingresá la cantidad a mover en al menos un talle.'); return }
@@ -2302,7 +2316,10 @@ export default function App() {
               {repTab === 'plantel' && (<>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                   <span style={{fontSize:12.5,color:'#8a8a82'}}>Jugadores con su talle de camiseta y short</span>
-                  <button className="btn btn-dark" onClick={() => { setPlantelForm({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',talleShort:'L'}); setPlantelModal(true) }}>+ Jugador</button>
+                  <div style={{display:'flex',gap:8}}>
+                    {(db.plantel||[]).length > 0 && <button className="btn" onClick={downloadPlantelExcel} style={{fontSize:12.5}}>⬇ Excel</button>}
+                    <button className="btn btn-dark" onClick={() => { setPlantelForm({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',talleShort:'L'}); setPlantelModal(true) }}>+ Jugador</button>
+                  </div>
                 </div>
                 {(db.plantel||[]).length === 0
                   ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay jugadores en el plantel.</div>
