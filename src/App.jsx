@@ -437,7 +437,7 @@ export default function App() {
   }
 
   // ---- Nuevo artículo ----
-  const openArticulo = () => { setNa({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', precio:'', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' }); setModal('articulo') }
+  const openArticulo = () => { setNa({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', precio:'', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A', photos:[] }); setModal('articulo') }
 
   const naToggleTalle = (t) => {
     setNa(p => {
@@ -467,7 +467,7 @@ export default function App() {
         .map(sz => ({id:nextMov++, code, name, tipo:'entrada', fecha, talle:sz.talle, qty:sz.qty, detalle:'Stock inicial', creadoPor:currentUser?.displayName||session}))
       return {
         ...s,
-        articles: [{id:s.nextId, code, name, cat:ncat, ubic, precio:precioNum, sizes}, ...s.articles],
+        articles: [{id:s.nextId, code, name, cat:ncat, ubic, precio:precioNum, sizes, photos:na.photos||[]}, ...s.articles],
         nextId: s.nextId+1,
         movimientos: [...newMovs, ...s.movimientos],
         nextMov
@@ -3266,6 +3266,32 @@ export default function App() {
                   </div>
                   )}
                 </div>
+              </div>
+              <div className="form-group">
+                <label className="field-label">Fotos <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional · máx. 6)</span></label>
+                {(na.photos||[]).length > 0 && (
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(90px,1fr))',gap:8,marginBottom:8}}>
+                    {(na.photos||[]).map((src,i) => (
+                      <div key={i} style={{position:'relative'}}>
+                        <img src={src} alt={`foto ${i+1}`} style={{width:'100%',aspectRatio:'1',objectFit:'cover',borderRadius:8,border:'1px solid #E0E0DA'}} />
+                        <button type="button" onClick={()=>setNa(p=>({...p,photos:p.photos.filter((_,j)=>j!==i)}))}
+                          style={{position:'absolute',top:4,right:4,width:20,height:20,borderRadius:'50%',border:'none',background:'rgba(0,0,0,0.55)',color:'#fff',fontSize:11,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {(na.photos||[]).length < 6 && (
+                  <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',padding:'10px 14px',border:'2px dashed #E0E0DA',borderRadius:8,color:'#8a8a82',fontSize:13}}>
+                    <span style={{fontSize:20}}>📷</span>
+                    <span>{(na.photos||[]).length === 0 ? 'Subir foto…' : 'Agregar otra foto…'}</span>
+                    <input type="file" accept="image/*" multiple style={{display:'none'}} onChange={async e => {
+                      const files = [...(e.target.files||[])].slice(0, 6-(na.photos||[]).length)
+                      const b64s = await Promise.all(files.map(compressImage))
+                      setNa(p => ({...p, photos:[...(p.photos||[]),...b64s].slice(0,6)}))
+                      e.target.value = ''
+                    }} />
+                  </label>
+                )}
               </div>
             </div>
             <div className="modal-footer">
