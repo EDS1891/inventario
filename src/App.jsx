@@ -170,6 +170,7 @@ export default function App() {
   const [repFilterTorneo, setRepFilterTorneo] = useState('')
   const [repConceptoEdit, setRepConceptoEdit] = useState(null)
   const [disciplinaEdit, setDisciplinaEdit] = useState(null)
+  const [editDelivery, setEditDelivery] = useState(null)
   const [pumaMetric, setPumaMetric] = useState('unidades')
   const [repTab, setRepTab] = useState('reposiciones')
   const [plantelForm, setPlantelForm] = useState({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',talleShort:'L'})
@@ -1014,6 +1015,19 @@ export default function App() {
     setDb(s => ({...s, deliveries:s.deliveries.map(d=>d.id===deliveryId?{...d,disciplina:disciplinaEdit.trim()}:d)}))
     setDisciplinaEdit(null)
     showToast('Disciplina actualizada.')
+  }
+  const saveEditDelivery = () => {
+    if (!editDelivery?.persona?.trim()) { showToast('El nombre no puede estar vacío.'); return }
+    setDb(s => ({...s, deliveries: s.deliveries.map(d => {
+      if (d.id !== editDelivery.id) return d
+      const updatedPaga = d.receptor === 'Protocolo' ? editDelivery.paga : d.paga
+      const updatedMonto = d.receptor === 'Protocolo' && editDelivery.paga === 'si'
+        ? d.lines.reduce((s,l) => { const art=db.articles.find(a=>a.code===l.code); return s+(art?.precio||0)*l.qty }, 0) * 0.5
+        : null
+      return {...d, persona:editDelivery.persona.trim(), fecha:editDelivery.fecha, paga:updatedPaga, monto:updatedMonto}
+    })}))
+    setEditDelivery(null)
+    showToast('Entrega actualizada.')
   }
   const saveRepConcepto = () => {
     if (!repConceptoEdit?.trim()) { showToast('El concepto no puede estar vacío.'); return }
@@ -2430,12 +2444,56 @@ export default function App() {
               </div>
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={() => setSelectedDeliveryId(null)}>Cerrar</button>
-                <button className="btn btn-red" onClick={() => { setSelectedDeliveryId(null); askDeleteDelivery(d.id) }}>Eliminar entrega</button>
+                {!isSoloVista && <button className="btn" onClick={() => { setEditDelivery({id:d.id,persona:d.persona,fecha:d.fecha,paga:d.paga}); setSelectedDeliveryId(null) }}>✎ Editar</button>}
+                {!isSoloVista && <button className="btn btn-red" onClick={() => { setSelectedDeliveryId(null); askDeleteDelivery(d.id) }}>Eliminar entrega</button>}
               </div>
             </div>
           </div>
         )
       })()}
+
+      {/* Modal: Editar entrega */}
+      {editDelivery && (
+        <div className="modal-backdrop" onClick={() => setEditDelivery(null)}>
+          <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">Editar entrega</div>
+              <button className="modal-close" onClick={() => setEditDelivery(null)}>×</button>
+            </div>
+            <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:14}}>
+              <div className="form-group">
+                <label className="field-label">Nombre</label>
+                <input className="field-input" value={editDelivery.persona} autoFocus
+                  onChange={e => setEditDelivery(p => ({...p, persona:e.target.value}))}
+                  onKeyDown={e => e.key==='Enter' && saveEditDelivery()} />
+              </div>
+              <div className="form-group">
+                <label className="field-label">Fecha</label>
+                <input className="field-input" type="date" value={editDelivery.fecha}
+                  onChange={e => setEditDelivery(p => ({...p, fecha:e.target.value}))} />
+              </div>
+              {editDelivery.paga !== null && editDelivery.paga !== undefined && (
+                <div className="form-group">
+                  <label className="field-label">Paga</label>
+                  <div style={{display:'flex',gap:8}}>
+                    {[['si','SÍ'],['no','NO']].map(([v,l]) => (
+                      <button key={v} className={`talle-btn${editDelivery.paga===v?' active':''}`}
+                        style={{flex:1,padding:'9px 0',fontSize:13,fontWeight:700}}
+                        onClick={() => setEditDelivery(p => ({...p, paga:v}))}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setEditDelivery(null)}>Cancelar</button>
+              <button className="btn btn-dark" onClick={saveEditDelivery}>Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal: Camiseta Utilería */}
       {utiModal && (
