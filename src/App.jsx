@@ -2765,7 +2765,15 @@ export default function App() {
                   </div>
                 )
               })}
-              <div style={{marginTop:10,fontSize:12,color:'#8a8a82',textAlign:'right'}}>{(repDetail.jugadores||[]).length} jugadores</div>
+              {(() => {
+                const totCam = (repDetail.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
+                const totSht = (repDetail.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
+                return <div style={{marginTop:10,fontSize:12,color:'#8a8a82',textAlign:'right'}}>
+                  {totCam > 0 && <span>{totCam} camiseta{totCam!==1?'s':''}</span>}
+                  {totCam > 0 && totSht > 0 && <span style={{margin:'0 6px'}}>·</span>}
+                  {totSht > 0 && <span>{totSht} short{totSht!==1?'s':''}</span>}
+                </div>
+              })()}
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => setRepDetail(null)}>Cerrar</button>
