@@ -465,6 +465,23 @@ export default function App() {
       const newMovs = sizes
         .filter(sz => sz.qty > 0)
         .map(sz => ({id:nextMov++, code, name, tipo:'entrada', fecha, talle:sz.talle, qty:sz.qty, detalle:'Stock inicial', creadoPor:currentUser?.displayName||session}))
+      // Si ya existe un registro con el mismo código y ubicación, fusionar talles
+      const existing = s.articles.find(a => a.code === code && a.ubic === ubic)
+      if (existing) {
+        const mergedSizes = TALLE_ORDER.map(t => {
+          const exSz = existing.sizes.find(z => z.talle === t)
+          const newSz = sizes.find(z => z.talle === t)
+          if (!exSz && !newSz) return null
+          return { talle: t, qty: (exSz?.qty||0) + (newSz?.qty||0), min: Math.max(exSz?.min||0, newSz?.min||0) }
+        }).filter(Boolean)
+        const mergedPhotos = existing.photos?.length ? existing.photos : (na.photos||[])
+        return {
+          ...s,
+          articles: s.articles.map(a => a.id === existing.id ? { ...a, sizes: mergedSizes, photos: mergedPhotos, precio: precioNum||a.precio } : a),
+          movimientos: [...newMovs, ...s.movimientos],
+          nextMov
+        }
+      }
       return {
         ...s,
         articles: [{id:s.nextId, code, name, cat:ncat, ubic, precio:precioNum, sizes, photos:na.photos||[]}, ...s.articles],
@@ -1048,6 +1065,27 @@ export default function App() {
     })
     setPlantelModal(false)
     showToast(plantelForm.id!==null ? 'Jugador actualizado.' : 'Jugador agregado al plantel.')
+  }
+  const mergeEntriesByUbic = (code, ubic) => {
+    setDb(s => {
+      const toMerge = s.articles.filter(a => a.code === code && a.ubic === ubic)
+      if (toMerge.length < 2) return s
+      const keeper = toMerge[0]
+      const mergedSizes = TALLE_ORDER.map(t => {
+        const qty = toMerge.reduce((sum, a) => sum + (a.sizes.find(z => z.talle === t)?.qty || 0), 0)
+        const min = Math.max(...toMerge.map(a => a.sizes.find(z => z.talle === t)?.min || 0))
+        return { talle: t, qty, min }
+      }).filter(s => toMerge.some(a => a.sizes.find(z => z.talle === s.talle)))
+      const photos = (() => { const e = toMerge.find(x => x.photos?.length || x.photo); return e ? (e.photos?.length ? e.photos : [e.photo]) : [] })()
+      const removeIds = new Set(toMerge.slice(1).map(a => a.id))
+      return {
+        ...s,
+        articles: s.articles
+          .filter(a => !removeIds.has(a.id))
+          .map(a => a.id === keeper.id ? { ...a, sizes: mergedSizes, photos } : a)
+      }
+    })
+    showToast('Registros unificados.')
   }
   const deletePlantelJugador = (id) => {
     setDb(s => ({...s, plantel:(s.plantel||[]).filter(j=>j.id!==id)}))
@@ -1710,16 +1748,26 @@ export default function App() {
 
                   {/* Stock por ubicación */}
                   <div style={{padding:'18px 24px'}}>
-                    {detail.entries.map((entry, idx) => {
+                    {(() => {
+                      const ubicCounts = {}
+                      detail.entries.forEach(e => { ubicCounts[e.ubic] = (ubicCounts[e.ubic]||0) + 1 })
+                      return detail.entries.map((entry, idx) => {
                       const entryTot = entry.sizes.reduce((s, z) => s + z.qty, 0)
+                      const hasDup = ubicCounts[entry.ubic] > 1
                       return (
                         <div key={entry.id}>
                           {idx > 0 && <div style={{borderTop:'1px solid #E7E7E3',margin:'20px 0'}} />}
-                          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+                          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14,flexWrap:'wrap'}}>
                             <span className="ubic-badge" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200',fontWeight:700}}>
                               <span style={{fontSize:11,color:'#9a7d00',fontFamily:'Archivo,sans-serif'}}>UBIC. </span>{entry.ubic}
                             </span>
                             <span style={{fontSize:12.5,color:'#8a8a82'}}>{fmt(entryTot)} u.</span>
+                            {hasDup && !isSoloVista && idx === 0 && (
+                              <button onClick={() => mergeEntriesByUbic(detail.code, entry.ubic)}
+                                style={{marginLeft:'auto',padding:'4px 12px',borderRadius:6,border:'1px solid #C2473D',background:'#FBEAE8',color:'#C2473D',fontSize:12,fontWeight:700,cursor:'pointer'}}>
+                                ⚠ Unificar registros duplicados
+                              </button>
+                            )}
                           </div>
                           <div style={{fontSize:12,color:'#8a8a82',fontWeight:700,letterSpacing:'.04em',marginBottom:14}}>STOCK POR TALLE</div>
                           {entry.sizes.map(s => (
@@ -1740,7 +1788,7 @@ export default function App() {
                           </div>
                         </div>
                       )
-                    })}
+                    })})()}
 
                     {/* Acciones globales */}
                     <div className="detail-actions" style={{marginTop:24,paddingTop:20,borderTop:'1px solid #E7E7E3'}}>
