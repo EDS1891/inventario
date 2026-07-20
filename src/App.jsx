@@ -194,7 +194,7 @@ export default function App() {
   const dbRef = useRef(db)
 
   // delivery/devolución form
-  const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', disciplina:'', fecha:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' })
+  const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', disciplina:'', fecha:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'', obs:'' })
   // new article form
   const [na, setNa] = useState({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', precio:'', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' })
   // reponer form
@@ -354,10 +354,10 @@ export default function App() {
   const openDetail = (code) => { setSelectedCode(code); setView('detalle'); setSidebarOpen(false) }
 
   // ---- Entregas / Devoluciones ----
-  const openEntrega = () => { setNd({ mode:'entrega', persona:'', receptor:'', disciplina:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
-  const openDevolucion = () => { setNd({ mode:'devolucion', persona:'', receptor:'', disciplina:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
-  const openEntregaFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'entrega', persona:'', receptor:'', disciplina:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
-  const openDevolucionFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'devolucion', persona:'', receptor:'', disciplina:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
+  const openEntrega = () => { setNd({ mode:'entrega', persona:'', receptor:'', disciplina:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'', obs:'' }); setModal('entrega') }
+  const openDevolucion = () => { setNd({ mode:'devolucion', persona:'', receptor:'', disciplina:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'', obs:'' }); setModal('entrega') }
+  const openEntregaFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'entrega', persona:'', receptor:'', disciplina:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'', obs:'' }); setModal('entrega') }
+  const openDevolucionFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'devolucion', persona:'', receptor:'', disciplina:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'', obs:'' }); setModal('entrega') }
 
   const ndAddLine = () => {
     const qty = parseInt(nd.cQty, 10)
@@ -405,7 +405,7 @@ export default function App() {
       const toUser = nd.toUser || null
       const status = toUser ? 'pendiente' : 'aceptado'
       const confirmedAt = toUser ? null : fecha
-      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, disciplina:nd.receptor==='Deportes Anexos'?nd.disciplina.trim():undefined, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, lines:[...nd.lines], toUser, status, confirmedAt, creadoPor:currentUser?.displayName||session}, ...s.deliveries]
+      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, disciplina:nd.receptor==='Deportes Anexos'?nd.disciplina.trim():undefined, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, obs:nd.obs?.trim()||undefined, lines:[...nd.lines], toUser, status, confirmedAt, creadoPor:currentUser?.displayName||session}, ...s.deliveries]
       const r = { ...s, articles:activeArticles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid }
       newDbState = r; return r
     })
@@ -1041,7 +1041,7 @@ export default function App() {
       const updatedMonto = d.receptor === 'Protocolo' && editDelivery.paga === 'si'
         ? d.lines.reduce((s,l) => { const art=db.articles.find(a=>a.code===l.code); return s+(art?.precio||0)*l.qty }, 0) * 0.5
         : null
-      return {...d, persona:editDelivery.persona.trim(), fecha:editDelivery.fecha, paga:updatedPaga, monto:updatedMonto}
+      return {...d, persona:editDelivery.persona.trim(), fecha:editDelivery.fecha, paga:updatedPaga, monto:updatedMonto, obs:editDelivery.obs?.trim()||undefined}
     })}))
     setEditDelivery(null)
     showToast('Entrega actualizada.')
@@ -2453,6 +2453,7 @@ export default function App() {
                     {d.receptor !== 'Deportes Anexos' && d.disciplina ? ' · ' + d.disciplina : ''}
                     {' · '}{d.fecha}
                   </div>
+                  {d.obs && <div style={{fontSize:13,color:'#4a4a42',marginTop:4,fontStyle:'italic'}}>"{d.obs}"</div>}
                   {d.creadoPor && <div style={{fontSize:12,color:'#aaa',marginTop:2}}>Registrado por: {d.creadoPor}</div>}
                 </div>
                 <span style={{...stStyle,borderRadius:5,padding:'3px 9px',fontSize:11,fontWeight:700,marginLeft:'auto',marginRight:12,whiteSpace:'nowrap'}}>{stLabel}</span>
@@ -2492,7 +2493,7 @@ export default function App() {
               </div>
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={() => setSelectedDeliveryId(null)}>Cerrar</button>
-                {!isSoloVista && <button className="btn" onClick={() => { setEditDelivery({id:d.id,persona:d.persona,fecha:d.fecha,paga:d.paga}); setSelectedDeliveryId(null) }}>✎ Editar</button>}
+                {!isSoloVista && <button className="btn" onClick={() => { setEditDelivery({id:d.id,persona:d.persona,fecha:d.fecha,paga:d.paga,obs:d.obs||''}); setSelectedDeliveryId(null) }}>✎ Editar</button>}
                 {!isSoloVista && <button className="btn btn-red" onClick={() => { setSelectedDeliveryId(null); askDeleteDelivery(d.id) }}>Eliminar entrega</button>}
               </div>
             </div>
@@ -2534,6 +2535,12 @@ export default function App() {
                   </div>
                 </div>
               )}
+              <div className="form-group">
+                <label className="field-label">Observaciones <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional)</span></label>
+                <textarea className="field-input" value={editDelivery.obs||''} onChange={e => setEditDelivery(p => ({...p, obs:e.target.value}))}
+                  placeholder="Ej. Entrega para partido del sábado" rows={2}
+                  style={{resize:'vertical',minHeight:60,fontFamily:'inherit',fontSize:14}} />
+              </div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => setEditDelivery(null)}>Cancelar</button>
@@ -3050,6 +3057,12 @@ export default function App() {
               <div className="form-group">
                 <label className="field-label">{ndIsDev ? 'Integrante que devuelve' : 'Integrante que recibe'}</label>
                 <input className="field-input" value={nd.persona} onChange={e => setNd(p=>({...p,persona:e.target.value}))} placeholder="Ej. Maximiliano Olivera" />
+              </div>
+              <div className="form-group">
+                <label className="field-label">Observaciones <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional)</span></label>
+                <textarea className="field-input" value={nd.obs||''} onChange={e => setNd(p=>({...p,obs:e.target.value}))}
+                  placeholder="Ej. Entrega para partido del sábado" rows={2}
+                  style={{resize:'vertical',minHeight:60,fontFamily:'inherit',fontSize:14}} />
               </div>
               <div className="form-group">
                 <label className="field-label">Fecha <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional — por defecto hoy)</span></label>
