@@ -599,6 +599,7 @@ export default function App() {
       }).filter(Boolean)
       // Agregar en destino
       const targetEntry = arts.find(a => a.code === code && a.ubic === newUbic)
+      const srcPhotos = selA.photos?.length ? selA.photos : (selA.photo ? [selA.photo] : [])
       if(targetEntry) {
         arts = arts.map(a => {
           if(a.id !== targetEntry.id) return a
@@ -609,14 +610,15 @@ export default function App() {
             if(idx >= 0) newSizes[idx] = {...newSizes[idx], qty: newSizes[idx].qty + q}
             else newSizes.push({talle:t, qty:q, min:src?.min||0})
           })
-          return {...a, sizes: newSizes}
+          const photos = a.photos?.length ? a.photos : srcPhotos
+          return {...a, sizes: newSizes, photos}
         })
       } else {
         const newSizes = toMove.map(([t, q]) => {
           const src = selA.sizes.find(sz => sz.talle === t)
           return {talle:t, qty:q, min:src?.min||0}
         })
-        arts = [...arts, {id:nextId++, code, name:selA.name, cat:selA.cat, ubic:newUbic, sizes:newSizes, precio:selA.precio||0}]
+        arts = [...arts, {id:nextId++, code, name:selA.name, cat:selA.cat, ubic:newUbic, sizes:newSizes, precio:selA.precio||0, photos:srcPhotos}]
       }
       return {...prev, articles:arts, nextId}
     })
