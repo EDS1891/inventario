@@ -630,17 +630,34 @@ export default function App() {
   const openEdit = () => {
     const a = db.articles.find(x => x.id === selectedId); if(!a) return
     const photos = a.photos?.length ? a.photos : (a.photo ? [a.photo] : [])
-    setEditing({id:a.id, code:a.code, name:a.name, cat:a.cat, ubic:a.ubic||'', precio:a.precio||'', photos}); setModal('edit')
+    const sizes = a.sizes.map(s=>({...s}))
+    setEditing({id:a.id, code:a.code, name:a.name, cat:a.cat, ubic:a.ubic||'', precio:a.precio||'', photos, sizes, _origSizes:sizes}); setModal('edit')
   }
   const saveEdit = () => {
     if(!editing.code.trim() || !editing.name.trim()) { showToast('Completá código y nombre.'); return }
     const newCode = editing.code.trim()
     const newPhotos = editing.photos || []
-    setDb(s => ({...s, articles:s.articles.map(a => {
-      if(a.id === editing.id) return {...a, code:newCode, name:editing.name.trim(), cat:editing.cat, ubic:editing.ubic.trim(), precio:parseFloat(editing.precio)||0, photos:newPhotos, photo:''}
-      if(a.code === newCode) return {...a, photos:newPhotos, photo:''}
-      return a
-    })}))
+    const newSizes = (editing.sizes || []).filter(s => s.qty > 0 || (editing._origSizes||[]).find(o=>o.talle===s.talle))
+    setDb(s => {
+      const origArt = s.articles.find(a => a.id === editing.id)
+      const origSizes = origArt?.sizes || []
+      let nextMov = s.nextMov
+      const fecha = today()
+      const newMovs = (editing.sizes||[]).filter(sz => {
+        const orig = origSizes.find(o => o.talle === sz.talle)
+        return !orig && sz.qty > 0
+      }).map(sz => ({id:nextMov++, code:newCode, name:editing.name.trim(), tipo:'entrada', fecha, talle:sz.talle, qty:sz.qty, detalle:'Stock inicial (nuevo talle)', creadoPor:currentUser?.displayName||session}))
+      return {
+        ...s,
+        nextMov,
+        movimientos: [...newMovs, ...s.movimientos],
+        articles: s.articles.map(a => {
+          if(a.id === editing.id) return {...a, code:newCode, name:editing.name.trim(), cat:editing.cat, ubic:editing.ubic.trim(), precio:parseFloat(editing.precio)||0, photos:newPhotos, photo:'', sizes:newSizes}
+          if(a.code === newCode) return {...a, photos:newPhotos, photo:''}
+          return a
+        })
+      }
+    })
     setModal(null); showToast('Artículo actualizado.')
   }
   const compressImage = (file) => new Promise(resolve => {
@@ -3472,6 +3489,64 @@ export default function App() {
                   <label className="field-label">Precio Tienda (Socio)</label>
                   <input type="number" min="0" step="0.01" className="field-input" value={editing.precio} onChange={e => setEditing(p=>({...p,precio:e.target.value}))} placeholder="0.00" />
                 </div>
+              </div>
+              <div className="form-group">
+                <label className="field-label">Talles</label>
+                {(() => {
+                  const sizes = editing.sizes || []
+                  const activeTalles = new Set(sizes.map(s => s.talle))
+                  const allTalles = [...TALLES_ADULTO, ...TALLES_NINO]
+                  const toggleTalle = (t) => {
+                    const existing = sizes.find(s => s.talle === t)
+                    if (existing) {
+                      if (existing.qty > 0) { showToast('Tiene ' + existing.qty + ' u. en stock. Usá Ajustar stock primero.'); return }
+                      setEditing(p => ({...p, sizes: p.sizes.filter(s => s.talle !== t)}))
+                    } else {
+                      setEditing(p => ({...p, sizes: [...p.sizes, {talle:t, qty:0, min:0}]}))
+                    }
+                  }
+                  return (
+                    <>
+                      <div className="talle-grid" style={{marginBottom: sizes.length > 0 ? 12 : 0}}>
+                        {allTalles.map(t => (
+                          <button key={t} type="button"
+                            className={`talle-btn${activeTalles.has(t) ? ' active' : ''}`}
+                            onClick={() => toggleTalle(t)}>{t}</button>
+                        ))}
+                      </div>
+                      {sizes.length > 0 && (
+                        <div style={{border:'1px solid #E7E7E3',borderRadius:8,overflow:'hidden'}}>
+                          <div style={{display:'grid',gridTemplateColumns:'56px 1fr 1fr 36px',background:'#FAFAF8',padding:'7px 12px',borderBottom:'1px solid #E7E7E3'}}>
+                            <div style={{fontSize:11,fontWeight:700,color:'#8a8a82'}}>TALLE</div>
+                            <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',textAlign:'center'}}>STOCK</div>
+                            <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',textAlign:'center'}}>MÍN.</div>
+                            <div/>
+                          </div>
+                          {TALLE_ORDER.filter(t => activeTalles.has(t)).concat(sizes.filter(s=>!TALLE_ORDER.includes(s.talle)).map(s=>s.talle)).map(t => {
+                            const sz = sizes.find(s => s.talle === t); if(!sz) return null
+                            const isNew = !(editing._origSizes||[]).find(o=>o.talle===t) && sz.qty === 0
+                            return (
+                              <div key={t} style={{display:'grid',gridTemplateColumns:'56px 1fr 1fr 36px',gap:6,padding:'7px 12px',borderBottom:'1px solid #F0F0EC',alignItems:'center'}}>
+                                <span style={{fontWeight:700,fontSize:13.5}}>{t}</span>
+                                {isNew
+                                  ? <input type="number" min="0" className="field-input" style={{height:32,textAlign:'center',padding:'0 6px',fontSize:13}}
+                                      value={sz.qty||''} placeholder="0"
+                                      onChange={e => setEditing(p=>({...p,sizes:p.sizes.map(s=>s.talle===t?{...s,qty:parseInt(e.target.value,10)||0}:s)}))} />
+                                  : <span style={{textAlign:'center',fontWeight:600,fontFamily:'IBM Plex Mono,monospace',color:'#1a1a1a'}}>{sz.qty}</span>
+                                }
+                                <input type="number" min="0" className="field-input" style={{height:32,textAlign:'center',padding:'0 6px',fontSize:13}}
+                                  value={sz.min||''} placeholder="0"
+                                  onChange={e => setEditing(p=>({...p,sizes:p.sizes.map(s=>s.talle===t?{...s,min:parseInt(e.target.value,10)||0}:s)}))} />
+                                <button type="button" onClick={() => toggleTalle(t)}
+                                  style={{width:24,height:24,borderRadius:'50%',border:'none',background:'#FBEAE8',color:'#C2473D',fontSize:14,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700}}>×</button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </>
+                  )
+                })()}
               </div>
               <div className="form-group">
                 <label className="field-label">Fotos <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional · máx. 6)</span></label>
