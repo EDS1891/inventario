@@ -922,14 +922,17 @@ export default function App() {
       fechaTorneo:'1',
       tipoCamisetaJugador: REP_TIPOS_JUGADOR[0],
       tipoCamisetaGolero: REP_TIPOS_GOLERO[0],
-      rows:(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j=>({...j,cantCamiseta:'',cantShort:'',descuento:true}))
+      rows:(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j=>({...j,cantCamiseta:'',cantShort:'',descuentoCamiseta:true,descuentoShort:true}))
     })
     setRepModal(true)
   }
   const openRepEdit = (rep) => {
     const plantelRows = (db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => {
       const ex = (rep.jugadores||[]).find(jj => jj.nombre===j.nombre)
-      return { ...j, cantCamiseta: ex ? String(ex.cantCamiseta) : '', cantShort: ex ? String(ex.cantShort) : '', descuento: ex ? ex.descuento !== false : true }
+      const descFallback = ex ? ex.descuento !== false : true
+      return { ...j, cantCamiseta: ex ? String(ex.cantCamiseta) : '', cantShort: ex ? String(ex.cantShort) : '',
+        descuentoCamiseta: ex ? (ex.descuentoCamiseta !== undefined ? ex.descuentoCamiseta !== false : descFallback) : true,
+        descuentoShort: ex ? (ex.descuentoShort !== undefined ? ex.descuentoShort !== false : descFallback) : true }
     })
     setRepForm({
       editId: rep.id,
@@ -951,7 +954,8 @@ export default function App() {
       .map(r => {
         const tipo = (r.posicion||'Jugador')==='Golero' ? repForm.tipoCamisetaGolero : repForm.tipoCamisetaJugador
         return { numero:r.numero, nombre:r.nombre, posicion:r.posicion||'Jugador',
-          talleCamiseta:r.talleCamiseta, talleShort:r.talleShort, descuento:r.descuento !== false,
+          talleCamiseta:r.talleCamiseta, talleShort:r.talleShort,
+          descuentoCamiseta:r.descuentoCamiseta !== false, descuentoShort:r.descuentoShort !== false,
           tipoCamiseta: tipo, cantCamiseta:Number(r.cantCamiseta)||0, cantShort:Number(r.cantShort)||0 }
       })
     if (!jugadores.length) { showToast('Ingresá al menos una cantidad.'); return }
@@ -2304,8 +2308,10 @@ export default function App() {
               {/* Tab: Reposiciones */}
               {repTab === 'reposiciones' && (<>
                 {(() => {
-                  const totalEquipos = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(j.descuento!==false?Number(j.cantCamiseta)||0:0),0),0)
-                  const totalShorts  = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(j.descuento!==false?Number(j.cantShort)||0:0),0),0)
+                  const descCam = j => j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
+                  const descSht = j => j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
+                  const totalEquipos = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
+                  const totalShorts  = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
                   const totalCamTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
                   const totalShtTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
                   return (
@@ -2725,14 +2731,17 @@ export default function App() {
               </div>
 
               <div style={{marginTop:16}}>
-                <div style={{display:'grid',gridTemplateColumns:'40px 1fr 80px 80px 56px',gap:6,marginBottom:4,fontSize:10,fontWeight:700,color:'#8a8a82',padding:'4px 6px',background:'#F5F5F0',borderRadius:6}}>
-                  <div>Nº</div><div>NOMBRE</div><div style={{textAlign:'center'}}>CAMISETA</div><div style={{textAlign:'center'}}>SHORT</div><div style={{textAlign:'center'}}>DESC.</div>
+                <div style={{display:'grid',gridTemplateColumns:'40px 1fr 62px 38px 62px 38px',gap:4,marginBottom:4,fontSize:10,fontWeight:700,color:'#8a8a82',padding:'4px 6px',background:'#F5F5F0',borderRadius:6}}>
+                  <div>Nº</div><div>NOMBRE</div><div style={{textAlign:'center'}}>CAM.</div><div style={{textAlign:'center'}}>DC</div><div style={{textAlign:'center'}}>SHT.</div><div style={{textAlign:'center'}}>DS</div>
                 </div>
                 {repForm.rows.map((r, i) => {
                   const hasQty = Number(r.cantCamiseta)>0 || Number(r.cantShort)>0
                   const isLibre = r.nombre.trim().toLowerCase()==='libre'
+                  const dcam = r.descuentoCamiseta !== false
+                  const dsht = r.descuentoShort !== false
+                  const toggle = (field) => setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,[field]:!x[field]}:x)}))
                   return (
-                    <div key={i} style={{display:'grid',gridTemplateColumns:'40px 1fr 80px 80px 56px',gap:6,marginBottom:3,alignItems:'center',padding:'5px 6px',borderRadius:6,
+                    <div key={i} style={{display:'grid',gridTemplateColumns:'40px 1fr 62px 38px 62px 38px',gap:4,marginBottom:3,alignItems:'center',padding:'5px 6px',borderRadius:6,
                       background:isLibre?'#3a3a3a':hasQty?'#FFFDF0':'transparent',border:hasQty?'1px solid #FFD200':'1px solid transparent'}}>
                       <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,color:isLibre?'#888':undefined}}>{r.numero||'—'}</div>
                       <div>
@@ -2741,20 +2750,24 @@ export default function App() {
                       </div>
                       <input className="field-input mono" type="number" min="0" value={r.cantCamiseta}
                         onChange={e=>setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,cantCamiseta:e.target.value}:x)}))}
-                        placeholder="0" style={{textAlign:'center',padding:'5px 4px'}} />
+                        placeholder="0" style={{textAlign:'center',padding:'5px 2px'}} />
+                      {!isLibre
+                        ? <button type="button" onClick={()=>toggle('descuentoCamiseta')}
+                            style={{padding:'4px 2px',borderRadius:5,border:'2px solid',fontWeight:700,fontSize:10,cursor:'pointer',width:'100%',
+                              borderColor:dcam?'#2d6a4f':'#ccc',background:dcam?'#d8f3dc':'#f5f5f5',color:dcam?'#1b4332':'#999'}}>
+                            {dcam?'SÍ':'NO'}
+                          </button>
+                        : <div/>}
                       <input className="field-input mono" type="number" min="0" value={r.cantShort}
                         onChange={e=>setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,cantShort:e.target.value}:x)}))}
-                        placeholder="0" style={{textAlign:'center',padding:'5px 4px'}} />
-                      {!isLibre ? (
-                        <button type="button"
-                          onClick={()=>setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,descuento:!x.descuento}:x)}))}
-                          style={{padding:'4px 6px',borderRadius:5,border:'2px solid',fontWeight:700,fontSize:11,cursor:'pointer',width:'100%',
-                            borderColor:r.descuento!==false?'#2d6a4f':'#ccc',
-                            background:r.descuento!==false?'#d8f3dc':'#f5f5f5',
-                            color:r.descuento!==false?'#1b4332':'#999'}}>
-                          {r.descuento!==false?'SÍ':'NO'}
-                        </button>
-                      ) : <div/>}
+                        placeholder="0" style={{textAlign:'center',padding:'5px 2px'}} />
+                      {!isLibre
+                        ? <button type="button" onClick={()=>toggle('descuentoShort')}
+                            style={{padding:'4px 2px',borderRadius:5,border:'2px solid',fontWeight:700,fontSize:10,cursor:'pointer',width:'100%',
+                              borderColor:dsht?'#2d6a4f':'#ccc',background:dsht?'#d8f3dc':'#f5f5f5',color:dsht?'#1b4332':'#999'}}>
+                            {dsht?'SÍ':'NO'}
+                          </button>
+                        : <div/>}
                     </div>
                   )
                 })}
