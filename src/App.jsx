@@ -2639,7 +2639,7 @@ ${rowsHtml}
                 <button className="btn btn-ghost" onClick={() => setSelectedDeliveryId(null)}>Cerrar</button>
                 {!isSoloVista && st === 'pendiente_separar' && (
                   <button className="btn" style={{background:'#FFD200',color:'#121212',fontWeight:700}}
-                    onClick={() => confirmarSeparar(d.id)}>✓ Confirmar separación</button>
+                    onClick={() => confirmarSeparar(d.id)}>✓ Confirmar entrega</button>
                 )}
                 {!isSoloVista && st === 'pendiente_separar' && (
                   <button className="btn btn-ghost" onClick={() => openPrintWindow(buildPedidoHtml(d.lines, d.persona, d.receptor, d.disciplina, d.fecha))}>🖨 Reimprimir</button>
