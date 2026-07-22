@@ -2636,7 +2636,7 @@ ${rowsHtml}
                 )}
               </div>
               <div className="modal-footer">
-                <button className="btn btn-ghost" onClick={() => setSelectedDeliveryId(null)}>Cerrar</button>
+                {st !== 'pendiente_separar' && <button className="btn btn-ghost" onClick={() => setSelectedDeliveryId(null)}>Cerrar</button>}
                 {!isSoloVista && st === 'pendiente_separar' && (
                   <button className="btn" style={{background:'#FFD200',color:'#121212',fontWeight:700}}
                     onClick={() => confirmarSeparar(d.id)}>✓ Confirmar entrega</button>
