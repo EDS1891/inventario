@@ -2809,7 +2809,7 @@ ${rowsHtml}
                 <div className="form-group" style={{flex:1,marginBottom:0}}>
                   <label className="field-label">Torneo</label>
                   <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                    {['APERTURA','CLAUSURA','INTERMEDIO','COPA AUF'].map(t=>(
+                    {['APERTURA','CLAUSURA','INTERMEDIO','COPA AUF','LIBERTADORES','SUDAMERICANA'].map(t=>(
                       <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,torneo:t}))}
                         style={{padding:'6px 10px',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:11,cursor:'pointer',
                           borderColor:repForm.torneo===t?'#FFD200':'#ECECE8',
