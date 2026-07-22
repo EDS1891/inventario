@@ -1060,11 +1060,11 @@ export default function App() {
     if (!editDelivery?.persona?.trim()) { showToast('El nombre no puede estar vacío.'); return }
     setDb(s => ({...s, deliveries: s.deliveries.map(d => {
       if (d.id !== editDelivery.id) return d
-      const updatedPaga = d.receptor === 'Protocolo' ? editDelivery.paga : d.paga
-      const updatedMonto = d.receptor === 'Protocolo' && editDelivery.paga === 'si'
+      const updatedPaga = editDelivery.receptor === 'Protocolo' ? editDelivery.paga : null
+      const updatedMonto = editDelivery.receptor === 'Protocolo' && editDelivery.paga === 'si'
         ? d.lines.reduce((s,l) => { const art=db.articles.find(a=>a.code===l.code); return s+(art?.precio||0)*l.qty }, 0) * 0.5
         : null
-      return {...d, persona:editDelivery.persona.trim(), fecha:editDelivery.fecha, paga:updatedPaga, monto:updatedMonto, obs:editDelivery.obs?.trim()||undefined}
+      return {...d, receptor:editDelivery.receptor, persona:editDelivery.persona.trim(), fecha:editDelivery.fecha, paga:updatedPaga, monto:updatedMonto, obs:editDelivery.obs?.trim()||undefined}
     })}))
     setEditDelivery(null)
     showToast('Entrega actualizada.')
@@ -2518,7 +2518,7 @@ export default function App() {
               </div>
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={() => setSelectedDeliveryId(null)}>Cerrar</button>
-                {!isSoloVista && <button className="btn" onClick={() => { setEditDelivery({id:d.id,persona:d.persona,fecha:d.fecha,paga:d.paga,obs:d.obs||''}); setSelectedDeliveryId(null) }}>✎ Editar</button>}
+                {!isSoloVista && <button className="btn" onClick={() => { setEditDelivery({id:d.id,persona:d.persona,fecha:d.fecha,paga:d.paga,obs:d.obs||'',receptor:d.receptor}); setSelectedDeliveryId(null) }}>✎ Editar</button>}
                 {!isSoloVista && <button className="btn btn-red" onClick={() => { setSelectedDeliveryId(null); askDeleteDelivery(d.id) }}>Eliminar entrega</button>}
               </div>
             </div>
@@ -2546,7 +2546,14 @@ export default function App() {
                 <input className="field-input" type="date" value={editDelivery.fecha}
                   onChange={e => setEditDelivery(p => ({...p, fecha:e.target.value}))} />
               </div>
-              {editDelivery.paga !== null && editDelivery.paga !== undefined && (
+              <div className="form-group">
+                <label className="field-label">Receptor</label>
+                <select className="field-input" value={editDelivery.receptor||''}
+                  onChange={e => setEditDelivery(p => ({...p, receptor:e.target.value, paga:e.target.value==='Protocolo'?(p.paga||'no'):null}))}>
+                  {RECEPTORES.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+              {editDelivery.receptor === 'Protocolo' && (
                 <div className="form-group">
                   <label className="field-label">Paga</label>
                   <div style={{display:'flex',gap:8}}>
