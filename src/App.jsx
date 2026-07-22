@@ -446,50 +446,49 @@ ${rowsHtml}
     if (nd.receptor === 'Deportes Anexos' && !nd.disciplina.trim()) { showToast('Ingresá la disciplina.'); return }
     if (nd.lines.length === 0) { showToast('Agregá al menos un artículo.'); return }
     const fecha = nd.fecha || today()
+    const persona = nd.persona.trim()
+    const lines = [...nd.lines]
     let newDbState = null
     setDb(s => {
-      const deliveries = [{
-        id: s.nextDel, fecha, persona: nd.persona.trim(), receptor: nd.receptor,
-        disciplina: nd.receptor==='Deportes Anexos' ? nd.disciplina.trim() : undefined,
-        paga: nd.receptor==='Protocolo' ? nd.paga : null, monto: null,
-        obs: nd.obs?.trim()||undefined, lines: [...nd.lines], toUser: null,
-        status: 'pendiente_separar', confirmedAt: null, creadoPor: currentUser?.displayName||session
-      }, ...s.deliveries]
-      const r = {...s, deliveries, nextDel: s.nextDel+1}
-      newDbState = r; return r
-    })
-    if (newDbState) saveToSupabase(newDbState)
-    closeModal()
-    showToast('Pedido guardado. Pendiente de separar.')
-    openPrintWindow(buildPedidoHtml(nd.lines, nd.persona.trim(), nd.receptor, nd.disciplina, fecha))
-  }
-
-  const confirmarSeparar = (delId) => {
-    let newDbState = null
-    setDb(s => {
-      const del = s.deliveries.find(d => d.id === delId)
-      if (!del || del.status !== 'pendiente_separar') return s
       const articles = s.articles.map(a => ({...a, sizes: a.sizes.map(z => ({...z}))}))
       const movimientos = [...s.movimientos]
       let mid = s.nextMov
-      const fecha = del.fecha || today()
-      del.lines.forEach(l => {
+      lines.forEach(l => {
         const a = l.ubic
           ? articles.find(x => x.code === l.code && x.ubic === l.ubic)
           : articles.find(x => x.code === l.code && x.sizes.some(sz => sz.talle === l.talle))
         const z = a && a.sizes.find(x => x.talle === l.talle)
         if (z) z.qty = Math.max(0, z.qty - l.qty)
         movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'salida', fecha, talle:l.talle, qty:l.qty,
-          detalle:'Entrega a '+del.persona+' ('+del.receptor+(del.disciplina?' - '+del.disciplina:'')+')', delId, creadoPor:currentUser?.displayName||session})
+          detalle:'Entrega a '+persona+' ('+nd.receptor+(nd.disciplina?' - '+nd.disciplina:'')+')', delId:s.nextDel, creadoPor:currentUser?.displayName||session})
       })
       const activeArticles = articles.filter(a => total(a) > 0)
+      const deliveries = [{
+        id: s.nextDel, fecha, persona, receptor: nd.receptor,
+        disciplina: nd.receptor==='Deportes Anexos' ? nd.disciplina.trim() : undefined,
+        paga: nd.receptor==='Protocolo' ? nd.paga : null, monto: null,
+        obs: nd.obs?.trim()||undefined, lines, toUser: null,
+        status: 'pendiente_separar', confirmedAt: null, creadoPor: currentUser?.displayName||session
+      }, ...s.deliveries]
+      const r = {...s, articles:activeArticles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid}
+      newDbState = r; return r
+    })
+    if (newDbState) saveToSupabase(newDbState)
+    closeModal()
+    showToast('Pedido guardado. Stock reservado.')
+    openPrintWindow(buildPedidoHtml(lines, persona, nd.receptor, nd.disciplina, fecha))
+  }
+
+  const confirmarSeparar = (delId) => {
+    let newDbState = null
+    setDb(s => {
       const deliveries = s.deliveries.map(d => d.id === delId ? {...d, status:'aceptado', confirmedAt:today()} : d)
-      const r = {...s, articles:activeArticles, movimientos, deliveries, nextMov:mid}
+      const r = {...s, deliveries}
       newDbState = r; return r
     })
     if (newDbState) saveToSupabase(newDbState)
     setSelectedDeliveryId(null)
-    showToast('Entrega confirmada. Stock descontado.')
+    showToast('Entrega confirmada.')
   }
 
   const ndConfirm = () => {
