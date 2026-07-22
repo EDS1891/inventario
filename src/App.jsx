@@ -2252,12 +2252,12 @@ export default function App() {
                                   style={{display:'flex',flexDirection:'column',alignItems:'center',flex:1,minWidth:40,height:'100%',justifyContent:'flex-end',cursor:'pointer'}}
                                   title={`Ver entregas de ${r.name}`}
                                 >
-                                  <div style={{fontSize:10,fontWeight:700,color,marginBottom:2,whiteSpace:'nowrap',textAlign:'center'}}>
+                                  <div style={{fontSize:12,fontWeight:800,color,marginBottom:1,whiteSpace:'nowrap',textAlign:'center',background:'rgba(255,255,255,0.85)',borderRadius:4,padding:'1px 4px',lineHeight:1.3}}>
                                     {isMonto
                                       ? (val>0 ? '$ '+val.toLocaleString('es-UY',{minimumFractionDigits:0,maximumFractionDigits:0}) : '—')
                                       : (r.pct.toFixed(1)+'%')}
                                   </div>
-                                  <div style={{fontSize:9,fontWeight:700,color:'#1a1a1a',marginBottom:3,whiteSpace:'nowrap',textAlign:'center'}}>
+                                  <div style={{fontSize:11,fontWeight:600,color:'#444',marginBottom:3,whiteSpace:'nowrap',textAlign:'center',background:'rgba(255,255,255,0.85)',borderRadius:4,padding:'0px 3px',lineHeight:1.3}}>
                                     {isMonto ? (r.unidades>0 ? r.unidades.toLocaleString('es-UY')+' uds.' : '') : (r.unidades.toLocaleString('es-UY')+' uds.')}
                                   </div>
                                   <div style={{
