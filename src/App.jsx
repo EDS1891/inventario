@@ -6,7 +6,7 @@ import ExcelJS from 'exceljs'
 const TALLE_ORDER = ['2','4','6','8','10','12','14','Único','S','M','L','XL','XXL','XXXL']
 const TALLES_ADULTO = ['S','M','L','XL','XXL','XXXL','Único']
 const TALLES_NINO   = ['2','4','6','8','10','12','14']
-const RECEPTORES = ['1° División','3° División','Juveniles','Captación','Femenino','Juveniles Femenino','Fútbol Sala Masculino','Fútbol Sala Femenino','Basket','Deportes Anexos','Funcionarios','Protocolo']
+const RECEPTORES = ['1° División','3° División','Juveniles','Captación','Femenino','Juveniles Femenino','Fútbol Sala Masculino','Fútbol Sala Femenino','Basket','Deportes Anexos','Funcionarios','Protocolo','Sponsors']
 const DISCIPLINAS_DEPORTES_ANEXOS = ['Atletismo','Bowling','Esports','Fútbol Inclusivo','Fútbol Playa Masculino','Fútbol Sala Femenino','Handball','Volley','Teqball','Cricket','Footgolf','Ciclismo','Paracaidismo','Maxi Basket','Automovilismo','Motociclismo','Hockey Patín','Esgrima']
 const CATEGORIAS = ['Entrenamiento','Juego','Casual']
 const OCUPACIONES = ['3° División','Juveniles','Juveniles Femenino','Captacion']
