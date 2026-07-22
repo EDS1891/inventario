@@ -991,6 +991,7 @@ ${rowsHtml}
   const filteredRepRows = repRows.filter(r => !delFilterPersona || r.persona.toLowerCase().includes(delFilterPersona.toLowerCase()))
   const recentDeliveries = deliveries.slice(0,4).map(delEnrich)
   const pendingApprovals = db.users.filter(u => u.status === 'pendiente')
+  const pendingSeparar = deliveries.filter(d => d.status === 'pendiente_separar')
   const pendingDeliveries = deliveries
     .filter(d => d.status === 'pendiente' && d.toUser)
     .map(d => {
@@ -1707,6 +1708,29 @@ ${rowsHtml}
                     </div>
                   ))}
                 </div>
+                {!isSoloVista && pendingSeparar.length > 0 && (
+                  <div className="card" style={{border:'2px solid #F59E0B',marginBottom:16}}>
+                    <div className="card-header">
+                      <div className="card-title" style={{color:'#B45309'}}>⚠ Pedidos pendientes de separar</div>
+                      <div className="card-spacer"/>
+                      <span className="badge" style={{background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B'}}>{pendingSeparar.length}</span>
+                      <button className="back-link" style={{color:'#B45309',margin:0}} onClick={() => goView('entregas')}>Ver todas →</button>
+                    </div>
+                    {pendingSeparar.map(d => (
+                      <div key={d.id} className="table-row" style={{gridTemplateColumns:'34px 1fr auto'}}>
+                        <div className="avatar" style={{background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B',fontSize:13,fontWeight:800}}>!</div>
+                        <div style={{minWidth:0}}>
+                          <div style={{fontWeight:600,fontSize:13.5,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.persona}</div>
+                          <div style={{fontSize:11.5,color:'#8a8a82'}}>{d.receptor}{d.disciplina?' · '+d.disciplina:''} · {d.lines.reduce((s,l)=>s+l.qty,0)} unidades</div>
+                        </div>
+                        <div style={{textAlign:'right',flexShrink:0}}>
+                          <span style={{background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B',borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700}}>Pend. separar</span>
+                          <div style={{fontSize:11,color:'#8a8a82',marginTop:3}}>{d.fecha}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="card">
                   <div className="card-header">
                     <div className="card-title">Entregas pendientes de respuesta</div>
