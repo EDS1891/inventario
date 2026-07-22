@@ -375,9 +375,9 @@ export default function App() {
     setNd(p => ({...p, lines:[...p.lines,{code:nd.cCode,talle:nd.cTalle,qty,ubic:ubicToUse,name:artName}], cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:''}))
   }
 
-  const printPedido = () => {
+  const buildPedidoHtml = (lines, persona, receptor, disciplina, fecha) => {
     const grouped = []
-    nd.lines.forEach(l => {
+    lines.forEach(l => {
       let g = grouped.find(g => g.code === l.code)
       if (!g) {
         const arts = db.articles.filter(a => a.code === l.code)
@@ -388,10 +388,9 @@ export default function App() {
       }
       g.lines.push(l)
     })
-    const fecha = nd.fecha || today()
     const [y,m,d] = fecha.split('-')
     const fechaStr = `${d}/${m}/${y}`
-    const totalUnidades = nd.lines.reduce((s,l)=>s+l.qty,0)
+    const totalUnidades = lines.reduce((s,l)=>s+l.qty,0)
     const rowsHtml = grouped.map(g => {
       const photoHtml = g.photo
         ? `<img src="${g.photo}" style="width:88px;height:88px;object-fit:cover;border-radius:6px;border:1px solid #ddd;">`
@@ -415,8 +414,8 @@ export default function App() {
         </div>
       </div>`
     }).join('')
-    const receptorExtra = nd.receptor==='Deportes Anexos'&&nd.disciplina ? ` &nbsp;·&nbsp; <b>Disciplina:</b> ${nd.disciplina}` : ''
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Pedido de Entrega</title>
+    const receptorExtra = receptor==='Deportes Anexos'&&disciplina ? ` &nbsp;·&nbsp; <b>Disciplina:</b> ${disciplina}` : ''
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Pedido de Entrega</title>
 <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;font-size:13px;}@media print{body{padding:12px;}}</style>
 </head><body>
 <div style="border-bottom:3px solid #FFD200;padding-bottom:12px;margin-bottom:14px;">
@@ -425,17 +424,72 @@ export default function App() {
 </div>
 <div style="display:flex;gap:28px;margin-bottom:18px;font-size:13px;flex-wrap:wrap;">
   <span><b>Fecha:</b> ${fechaStr}</span>
-  <span><b>Para:</b> ${nd.persona||'—'}</span>
-  <span><b>Receptor:</b> ${nd.receptor||'—'}${receptorExtra}</span>
+  <span><b>Para:</b> ${persona||'—'}</span>
+  <span><b>Receptor:</b> ${receptor||'—'}${receptorExtra}</span>
   <span><b>Total:</b> ${totalUnidades} unidades</span>
 </div>
 ${rowsHtml}
 </body></html>`
+  }
+
+  const openPrintWindow = (html) => {
     const w = window.open('', '_blank', 'width=860,height=720')
     if (!w) { showToast('Permitir ventanas emergentes para imprimir.'); return }
     w.document.write(html)
     w.document.close()
     setTimeout(() => { w.focus(); w.print() }, 500)
+  }
+
+  const printPedido = () => {
+    if (!nd.persona.trim()) { showToast('Ingresá el nombre del integrante.'); return }
+    if (!nd.receptor) { showToast('Elegí un grupo / plantel.'); return }
+    if (nd.receptor === 'Deportes Anexos' && !nd.disciplina.trim()) { showToast('Ingresá la disciplina.'); return }
+    if (nd.lines.length === 0) { showToast('Agregá al menos un artículo.'); return }
+    const fecha = nd.fecha || today()
+    let newDbState = null
+    setDb(s => {
+      const deliveries = [{
+        id: s.nextDel, fecha, persona: nd.persona.trim(), receptor: nd.receptor,
+        disciplina: nd.receptor==='Deportes Anexos' ? nd.disciplina.trim() : undefined,
+        paga: nd.receptor==='Protocolo' ? nd.paga : null, monto: null,
+        obs: nd.obs?.trim()||undefined, lines: [...nd.lines], toUser: null,
+        status: 'pendiente_separar', confirmedAt: null, creadoPor: currentUser?.displayName||session
+      }, ...s.deliveries]
+      const r = {...s, deliveries, nextDel: s.nextDel+1}
+      newDbState = r; return r
+    })
+    if (newDbState) saveToSupabase(newDbState)
+    closeModal()
+    showToast('Pedido guardado. Pendiente de separar.')
+    openPrintWindow(buildPedidoHtml(nd.lines, nd.persona.trim(), nd.receptor, nd.disciplina, fecha))
+  }
+
+  const confirmarSeparar = (delId) => {
+    let newDbState = null
+    setDb(s => {
+      const del = s.deliveries.find(d => d.id === delId)
+      if (!del || del.status !== 'pendiente_separar') return s
+      const articles = s.articles.map(a => ({...a, sizes: a.sizes.map(z => ({...z}))}))
+      const movimientos = [...s.movimientos]
+      let mid = s.nextMov
+      const fecha = del.fecha || today()
+      del.lines.forEach(l => {
+        const a = l.ubic
+          ? articles.find(x => x.code === l.code && x.ubic === l.ubic)
+          : articles.find(x => x.code === l.code && x.sizes.some(sz => sz.talle === l.talle))
+        const z = a && a.sizes.find(x => x.talle === l.talle)
+        if (z) z.qty = Math.max(0, z.qty - l.qty)
+        movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'salida', fecha, talle:l.talle, qty:l.qty,
+          detalle:'Entrega a '+del.persona+' ('+del.receptor+(del.disciplina?' - '+del.disciplina:'')+')', delId, creadoPor:currentUser?.displayName||session})
+      })
+      const activeArticles = articles.filter(a => total(a) > 0)
+      const deliveries = s.deliveries.map(d => d.id === delId ? {...d, status:'aceptado', confirmedAt:today()} : d)
+      const r = {...s, articles:activeArticles, movimientos, deliveries, nextMov:mid}
+      newDbState = r; return r
+    })
+    if (newDbState) saveToSupabase(newDbState)
+    setSelectedDeliveryId(null)
+    showToast('Entrega confirmada. Stock descontado.')
   }
 
   const ndConfirm = () => {
@@ -1447,9 +1501,9 @@ ${rowsHtml}
             )}
             {historial.map(d => {
               const st = d.status || 'aceptado'
-              const stColor = st === 'aceptado' ? '#2e9b5e' : '#C2473D'
-              const stBg    = st === 'aceptado' ? '#EDF7F2' : '#FBEAE8'
-              const stLabel = st === 'aceptado' ? 'Aceptado' : 'Rechazado'
+              const stColor = st==='aceptado'?'#2e9b5e':st==='pendiente_separar'?'#B45309':'#C2473D'
+              const stBg    = st==='aceptado'?'#EDF7F2':st==='pendiente_separar'?'#FFF3E0':'#FBEAE8'
+              const stLabel = st==='aceptado'?'Aceptado':st==='pendiente_separar'?'Pend. separar':'Rechazado'
               return (
                 <div key={d.id} style={{background:'#fff',borderRadius:12,border:'1px solid #E7E7E3',marginBottom:12,overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,.06)'}}>
                   <div style={{padding:'14px 18px',borderBottom:'1px solid #F0F0EC',display:'flex',alignItems:'center',gap:12}}>
@@ -2010,7 +2064,7 @@ ${rowsHtml}
                       <div style={{textAlign:'center',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{d.totalUd}</div>
                       <div className="del-col-por" style={{fontSize:12.5,color:'#8a8a82',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.creadoPor || '—'}</div>
                       <div style={{textAlign:'right'}}>
-                        {(() => { const st=d.status||'aceptado'; return st==='pendiente'?<span style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Pendiente</span>:st==='rechazado'?<span style={{background:'#FBEAE8',color:'#C2473D',border:'1px solid #C2473D',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Rechazado</span>:<span style={{background:'#EDF7F2',color:'#2e9b5e',border:'1px solid #2e9b5e',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Aceptado</span> })()}
+                        {(() => { const st=d.status||'aceptado'; const bSt={borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}; return st==='pendiente'?<span style={{...bSt,background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200'}}>Pendiente</span>:st==='rechazado'?<span style={{...bSt,background:'#FBEAE8',color:'#C2473D',border:'1px solid #C2473D'}}>Rechazado</span>:st==='pendiente_separar'?<span style={{...bSt,background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B'}}>Pend. separar</span>:<span style={{...bSt,background:'#EDF7F2',color:'#2e9b5e',border:'1px solid #2e9b5e'}}>Aceptado</span> })()}
                       </div>
                       <div style={{display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
                         {!isSoloVista && <button className="btn-del" onClick={e => { e.stopPropagation(); askDeleteDelivery(d.id) }}>✕</button>}
@@ -2512,8 +2566,10 @@ ${rowsHtml}
           ? {background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200'}
           : st==='rechazado'
           ? {background:'#FBEAE8',color:'#C2473D',border:'1px solid #C2473D'}
+          : st==='pendiente_separar'
+          ? {background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B'}
           : {background:'#EDF7F2',color:'#2e9b5e',border:'1px solid #2e9b5e'}
-        const stLabel = st==='pendiente'?'Pendiente':st==='rechazado'?'Rechazado':'Aceptado'
+        const stLabel = st==='pendiente'?'Pendiente':st==='rechazado'?'Rechazado':st==='pendiente_separar'?'Pend. separar':'Aceptado'
         return (
           <div className="modal-backdrop" onClick={() => setSelectedDeliveryId(null)}>
             <div className="modal modal-md" onClick={e => e.stopPropagation()}>
@@ -2581,7 +2637,14 @@ ${rowsHtml}
               </div>
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={() => setSelectedDeliveryId(null)}>Cerrar</button>
-                {!isSoloVista && <button className="btn" onClick={() => { setEditDelivery({id:d.id,persona:d.persona,fecha:d.fecha,paga:d.paga,obs:d.obs||'',receptor:d.receptor}); setSelectedDeliveryId(null) }}>✎ Editar</button>}
+                {!isSoloVista && st === 'pendiente_separar' && (
+                  <button className="btn" style={{background:'#FFD200',color:'#121212',fontWeight:700}}
+                    onClick={() => confirmarSeparar(d.id)}>✓ Confirmar separación</button>
+                )}
+                {!isSoloVista && st === 'pendiente_separar' && (
+                  <button className="btn btn-ghost" onClick={() => openPrintWindow(buildPedidoHtml(d.lines, d.persona, d.receptor, d.disciplina, d.fecha))}>🖨 Reimprimir</button>
+                )}
+                {!isSoloVista && st !== 'pendiente_separar' && <button className="btn" onClick={() => { setEditDelivery({id:d.id,persona:d.persona,fecha:d.fecha,paga:d.paga,obs:d.obs||'',receptor:d.receptor}); setSelectedDeliveryId(null) }}>✎ Editar</button>}
                 {!isSoloVista && <button className="btn btn-red" onClick={() => { setSelectedDeliveryId(null); askDeleteDelivery(d.id) }}>Eliminar entrega</button>}
               </div>
             </div>
@@ -3122,8 +3185,10 @@ ${rowsHtml}
                         ? {background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200'}
                         : st==='rechazado'
                         ? {background:'#FBEAE8',color:'#C2473D',border:'1px solid #C2473D'}
+                        : st==='pendiente_separar'
+                        ? {background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B'}
                         : {background:'#EDF7F2',color:'#2e9b5e',border:'1px solid #2e9b5e'}
-                      const stLabel = st==='pendiente'?'Pendiente':st==='rechazado'?'Rechazado':'Aceptado'
+                      const stLabel = st==='pendiente'?'Pendiente':st==='rechazado'?'Rechazado':st==='pendiente_separar'?'Pend. separar':'Aceptado'
                       return (
                         <div key={d.id} className="clickable"
                           style={{display:'flex',alignItems:'center',gap:10,padding:'12px 20px',borderBottom:'1px solid #F0F0EC'}}
