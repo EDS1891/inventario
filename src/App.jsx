@@ -3048,8 +3048,8 @@ ${rowsHtml}
                   }))
                   const jugsMes = Object.values(jugMapMes).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0))
 
-                  const getCam = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);return acc+(j?Number(j.cantCamiseta)||0:0)},0)
-                  const getSht = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);return acc+(j?Number(j.cantShort)||0:0)},0)
+                  const getCam = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const dc=j.descuentoCamiseta!==undefined?j.descuentoCamiseta!==false:j.descuento!==false;return acc+(dc?Number(j.cantCamiseta)||0:0)},0)
+                  const getSht = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const ds=j.descuentoShort!==undefined?j.descuentoShort!==false:j.descuento!==false;return acc+(ds?Number(j.cantShort)||0:0)},0)
 
                   const filas = jugsMes.map(j=>({...j,cam:getCam(j.nombre),sht:getSht(j.nombre)})).filter(f=>f.cam+f.sht>0)
                   const totCam = filas.reduce((s,f)=>s+f.cam,0)
