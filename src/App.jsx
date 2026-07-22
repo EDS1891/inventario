@@ -375,6 +375,69 @@ export default function App() {
     setNd(p => ({...p, lines:[...p.lines,{code:nd.cCode,talle:nd.cTalle,qty,ubic:ubicToUse,name:artName}], cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:''}))
   }
 
+  const printPedido = () => {
+    const grouped = []
+    nd.lines.forEach(l => {
+      let g = grouped.find(g => g.code === l.code)
+      if (!g) {
+        const arts = db.articles.filter(a => a.code === l.code)
+        const artWithPhoto = arts.find(a => a.photos?.length || a.photo)
+        const photo = artWithPhoto ? (artWithPhoto.photos?.length ? artWithPhoto.photos[0] : artWithPhoto.photo) : null
+        g = { code: l.code, name: l.name, photo, lines: [] }
+        grouped.push(g)
+      }
+      g.lines.push(l)
+    })
+    const fecha = nd.fecha || today()
+    const [y,m,d] = fecha.split('-')
+    const fechaStr = `${d}/${m}/${y}`
+    const totalUnidades = nd.lines.reduce((s,l)=>s+l.qty,0)
+    const rowsHtml = grouped.map(g => {
+      const photoHtml = g.photo
+        ? `<img src="${g.photo}" style="width:88px;height:88px;object-fit:cover;border-radius:6px;border:1px solid #ddd;">`
+        : `<div style="width:88px;height:88px;border-radius:6px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:11px;text-align:center;">Sin foto</div>`
+      const tallesHtml = g.lines.map(l =>
+        `<tr><td style="padding:4px 14px 4px 0;font-size:13px;">${l.talle}</td><td style="padding:4px 14px 4px 0;font-size:13px;font-weight:700;">${l.qty}</td><td style="padding:4px 0;font-size:12px;color:#666;">${l.ubic||'—'}</td></tr>`
+      ).join('')
+      return `<div style="display:flex;gap:16px;border:1px solid #E4E4DE;border-radius:8px;padding:14px;margin-bottom:12px;break-inside:avoid;page-break-inside:avoid;">
+        <div style="flex-shrink:0;">${photoHtml}</div>
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:700;margin-bottom:2px;">${g.name}</div>
+          <div style="font-size:11px;color:#999;margin-bottom:10px;">${g.code}</div>
+          <table style="border-collapse:collapse;">
+            <thead><tr>
+              <th style="padding:0 14px 6px 0;font-size:11px;color:#888;text-align:left;font-weight:600;text-transform:uppercase;">Talle</th>
+              <th style="padding:0 14px 6px 0;font-size:11px;color:#888;text-align:left;font-weight:600;text-transform:uppercase;">Cant.</th>
+              <th style="padding:0 0 6px 0;font-size:11px;color:#888;text-align:left;font-weight:600;text-transform:uppercase;">Ubic.</th>
+            </tr></thead>
+            <tbody>${tallesHtml}</tbody>
+          </table>
+        </div>
+      </div>`
+    }).join('')
+    const receptorExtra = nd.receptor==='Deportes Anexos'&&nd.disciplina ? ` &nbsp;·&nbsp; <b>Disciplina:</b> ${nd.disciplina}` : ''
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Pedido de Entrega</title>
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;font-size:13px;}@media print{body{padding:12px;}}</style>
+</head><body>
+<div style="border-bottom:3px solid #FFD200;padding-bottom:12px;margin-bottom:14px;">
+  <div style="font-size:20px;font-weight:800;letter-spacing:-0.5px;">Pedido de Entrega</div>
+  <div style="font-size:11px;color:#666;margin-top:2px;">Depósito Indumentaria — Club Atlético Peñarol</div>
+</div>
+<div style="display:flex;gap:28px;margin-bottom:18px;font-size:13px;flex-wrap:wrap;">
+  <span><b>Fecha:</b> ${fechaStr}</span>
+  <span><b>Para:</b> ${nd.persona||'—'}</span>
+  <span><b>Receptor:</b> ${nd.receptor||'—'}${receptorExtra}</span>
+  <span><b>Total:</b> ${totalUnidades} unidades</span>
+</div>
+${rowsHtml}
+</body></html>`
+    const w = window.open('', '_blank', 'width=860,height=720')
+    if (!w) { showToast('Permitir ventanas emergentes para imprimir.'); return }
+    w.document.write(html)
+    w.document.close()
+    setTimeout(() => { w.focus(); w.print() }, 500)
+  }
+
   const ndConfirm = () => {
     const esDev = nd.mode === 'devolucion'
     if(!nd.persona.trim()) { showToast('Ingresá el nombre del integrante.'); return }
@@ -3246,6 +3309,9 @@ export default function App() {
             <div className="modal-footer">
               <span style={{fontSize:13,color:'#8a8a82'}}>Total: <b style={{color:'#1a1a1a'}}>{ndTotal}</b> unidades</span>
               <div style={{flex:1}}/>
+              {!ndIsDev && nd.lines.length > 0 && (
+                <button className="btn btn-ghost" onClick={printPedido} title="Imprimir pedido en PDF">🖨 Imprimir Pedido</button>
+              )}
               <button className="btn btn-ghost" onClick={closeModal}>Cancelar</button>
               <button className="btn" style={{background:ndOk?'#FFD200':'#EDE9D2',color:ndOk?'#121212':'#a89e6a',cursor:ndOk?'pointer':'not-allowed'}} onClick={ndConfirm}>
                 {ndIsDev ? 'Confirmar devolución' : 'Confirmar entrega'}
