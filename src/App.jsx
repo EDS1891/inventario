@@ -491,6 +491,37 @@ ${rowsHtml}
     showToast('Entrega confirmada.')
   }
 
+  const migrarStockPendientes = () => {
+    let newDbState = null
+    setDb(s => {
+      const sinMovimiento = s.deliveries.filter(d =>
+        d.status === 'pendiente_separar' &&
+        !s.movimientos.some(m => m.delId === d.id)
+      )
+      if (sinMovimiento.length === 0) return s
+      const articles = s.articles.map(a => ({...a, sizes: a.sizes.map(z => ({...z}))}))
+      const movimientos = [...s.movimientos]
+      let mid = s.nextMov
+      sinMovimiento.forEach(del => {
+        const fecha = del.fecha || today()
+        del.lines.forEach(l => {
+          const a = l.ubic
+            ? articles.find(x => x.code === l.code && x.ubic === l.ubic)
+            : articles.find(x => x.code === l.code && x.sizes.some(sz => sz.talle === l.talle))
+          const z = a && a.sizes.find(x => x.talle === l.talle)
+          if (z) z.qty = Math.max(0, z.qty - l.qty)
+          movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'salida', fecha, talle:l.talle, qty:l.qty,
+            detalle:'Entrega a '+del.persona+' ('+del.receptor+(del.disciplina?' - '+del.disciplina:'')+')', delId:del.id, creadoPor:del.creadoPor||session})
+        })
+      })
+      const activeArticles = articles.filter(a => total(a) > 0)
+      const r = {...s, articles:activeArticles, movimientos, nextMov:mid}
+      newDbState = r; return r
+    })
+    if (newDbState) saveToSupabase(newDbState)
+    showToast('Stock actualizado para pedidos pendientes.')
+  }
+
   const ndConfirm = () => {
     const esDev = nd.mode === 'devolucion'
     if(!nd.persona.trim()) { showToast('Ingresá el nombre del integrante.'); return }
@@ -1713,6 +1744,9 @@ ${rowsHtml}
                       <div className="card-title" style={{color:'#B45309'}}>⚠ Pedidos pendientes de separar</div>
                       <div className="card-spacer"/>
                       <span className="badge" style={{background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B'}}>{pendingSeparar.length}</span>
+                      {!isSoloVista && pendingSeparar.some(d => !db.movimientos.some(m => m.delId === d.id)) && (
+                        <button className="btn btn-ghost" style={{fontSize:11,padding:'3px 8px',color:'#B45309',border:'1px solid #F59E0B'}} onClick={migrarStockPendientes}>Descontar stock</button>
+                      )}
                       <button className="back-link" style={{color:'#B45309',margin:0}} onClick={() => goView('entregas')}>Ver todas →</button>
                     </div>
                     {pendingSeparar.map(d => (
