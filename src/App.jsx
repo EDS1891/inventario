@@ -372,7 +372,7 @@ export default function App() {
       if(avail === 0 || qty + already > avail) { showToast('Stock insuficiente ('+(avail-already)+' disp.).'); return }
     }
     const artName = db.articles.find(a => a.code === nd.cCode)?.name || nd.cCode
-    setNd(p => ({...p, lines:[...p.lines,{code:nd.cCode,talle:nd.cTalle,qty,ubic:ubicToUse,name:artName}], cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:''}))
+    setNd(p => ({...p, lines:[...p.lines,{code:nd.cCode,talle:nd.cTalle,qty,ubic:ubicToUse,name:artName}], cTalle:'', cQty:''}))
   }
 
   const buildPedidoHtml = (lines, persona, receptor, disciplina, fecha) => {
