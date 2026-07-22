@@ -1270,7 +1270,7 @@ ${rowsHtml}
   )
 
   const receptorCards = RECEPTORES.map(name => {
-    const ds = deliveries.filter(d => d.receptor===name)
+    const ds = deliveries.filter(d => d.receptor===name && d.status !== 'pendiente_separar')
     const unidades = ds.reduce((s,d) => s+d.lines.reduce((x,l)=>x+l.qty,0),0)
     const monto = ds.reduce((s,d) => s+d.lines.reduce((x,l)=>{
       const art = articles.find(a=>a.code===l.code)
