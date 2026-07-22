@@ -467,7 +467,7 @@ ${rowsHtml}
         id: s.nextDel, fecha, persona, receptor: nd.receptor,
         disciplina: nd.receptor==='Deportes Anexos' ? nd.disciplina.trim() : undefined,
         paga: nd.receptor==='Protocolo' ? nd.paga : null, monto: null,
-        obs: nd.obs?.trim()||undefined, lines, toUser: null,
+        obs: nd.obs?.trim()||undefined, lines, toUser: nd.toUser||null,
         status: 'pendiente_separar', confirmedAt: null, creadoPor: currentUser?.displayName||session
       }, ...s.deliveries]
       const r = {...s, articles:activeArticles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid}
@@ -481,12 +481,38 @@ ${rowsHtml}
 
   const confirmarSeparar = (delId) => {
     let newDbState = null
+    let delSnapshot = null
     setDb(s => {
-      const deliveries = s.deliveries.map(d => d.id === delId ? {...d, status:'aceptado', confirmedAt:today()} : d)
+      const del = s.deliveries.find(d => d.id === delId)
+      if (!del) return s
+      delSnapshot = del
+      const hasUser = !!del.toUser
+      const newStatus = hasUser ? 'pendiente' : 'aceptado'
+      const confirmedAt = hasUser ? null : today()
+      const deliveries = s.deliveries.map(d => d.id === delId ? {...d, status:newStatus, confirmedAt} : d)
       const r = {...s, deliveries}
       newDbState = r; return r
     })
     if (newDbState) saveToSupabase(newDbState)
+    if (delSnapshot?.toUser) {
+      const recipient = db.users.find(u => u.username === delSnapshot.toUser)
+      const recipientEmail = recipient?.email || (recipient?.username?.includes('@') ? recipient?.username : null)
+      if (recipientEmail) {
+        fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: recipientEmail,
+            displayName: recipient.displayName || recipient.username,
+            lines: delSnapshot.lines,
+            delId,
+          })
+        })
+        .then(r => r.json())
+        .then(d => { if (d.ok) showToast('Email enviado a ' + recipientEmail); else showToast('Error al enviar email.') })
+        .catch(() => showToast('No se pudo conectar con el servidor de email.'))
+      }
+    }
     setSelectedDeliveryId(null)
     showToast('Entrega confirmada.')
   }
