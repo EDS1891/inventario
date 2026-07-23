@@ -69,6 +69,7 @@ nav.sidebar-nav {
   flex-shrink: 0;
 }
 .nav-item.active .nav-dot { background: #121212; }
+.nav-item-sub { padding-left: 30px; font-size: 12.5px; }
 
 .sidebar-user {
   padding: 16px 18px;
@@ -237,9 +238,10 @@ nav.sidebar-nav {
 .table-row.clickable { cursor: pointer; }
 
 /* Inventory table columns */
-.inv-cols { grid-template-columns: 1.1fr 1.85fr .7fr 1.25fr .8fr .65fr .85fr .75fr; }
-.del-cols { grid-template-columns: 1fr 1.6fr 2.3fr .7fr 44px; }
-.mov-cols { grid-template-columns: 0.95fr 2.4fr 1fr .7fr .7fr 44px; }
+.inv-cols { grid-template-columns: 1.1fr 1.85fr .7fr 1.25fr .8fr .65fr .6fr .85fr .75fr; }
+.del-cols { grid-template-columns: 1fr 1.6fr 1.8fr 55px 1.1fr .7fr 44px; }
+.del-cols-disc { grid-template-columns: 1fr 1.6fr 1fr 1.8fr 55px 1.1fr .7fr 44px; }
+.mov-cols { grid-template-columns: 0.95fr 2.4fr 1fr .7fr 1.1fr .7fr 44px; }
 
 /* ---- Badge ---- */
 .badge {
@@ -449,8 +451,13 @@ select.field-input { cursor: pointer; }
   padding: 4px;
   flex-direction: column;
   gap: 5px;
+  flex-shrink: 0;
 }
 .hamburger span { display: block; width: 22px; height: 2px; background: #1a1a1a; border-radius: 2px; }
+
+/* ---- Responsive form grids ---- */
+.form-cols-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.nd-tallerow { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; }
 
 .mobile-overlay {
   display: none;
@@ -507,10 +514,12 @@ select.field-input { cursor: pointer; }
   .hamburger { display: flex; }
 
   .topbar { padding: 0 16px; gap: 8px; }
-  .topbar-title { font-size: 15px; }
-  .search-box { width: 0; flex: 1; min-width: 0; }
-  .topbar .btn span { display: none; }
-  .topbar .btn { padding: 0 10px; }
+  .topbar-title { font-size: 15px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .topbar-spacer { display: none; }
+  .topbar img { flex-shrink: 0; }
+  .search-box { flex: 1; min-width: 0; width: auto; }
+  .topbar .btn-label { display: none; }
+  .topbar .btn { padding: 0 10px; flex-shrink: 0; }
 
   .content { padding: 16px; }
 
@@ -527,10 +536,10 @@ select.field-input { cursor: pointer; }
   .inv-col-ubic, .inv-col-cat, .inv-col-sizes, .inv-col-precio { display: none; }
 
   .del-cols { grid-template-columns: 80px 1fr 50px 34px; }
-  .del-col-detail { display: none; }
+  .del-col-detail, .del-col-por { display: none; }
 
   .mov-cols { grid-template-columns: 80px 1fr 60px 44px; }
-  .mov-col-talle, .mov-col-tipo { display: none; }
+  .mov-col-talle, .mov-col-tipo, .mov-col-por { display: none; }
 
   /* Detail: stack */
   .detail-grid { grid-template-columns: 1fr; }
@@ -552,4 +561,7 @@ select.field-input { cursor: pointer; }
 @media (max-width: 480px) {
   .kpi-grid { grid-template-columns: 1fr; }
   .receptor-grid { grid-template-columns: 1fr; }
+  .form-cols-2 { grid-template-columns: 1fr; }
+  .nd-tallerow { grid-template-columns: 1fr auto; gap: 8px; }
+  .nd-tallerow > :first-child { grid-column: 1 / -1; }
 }
