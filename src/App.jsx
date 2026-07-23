@@ -1050,6 +1050,11 @@ ${rowsHtml}
   const deliveryRows = deliveries.map(delEnrich)
   const deliveryReceptores = [...new Set(deliveries.map(d => d.receptor).filter(Boolean))]
   const REP_FILTER = 'Reposiciones 1° División'
+  const deliveryReceptoresOrdenados = [
+    ...(deliveryReceptores.includes('1° División') ? ['1° División'] : []),
+    REP_FILTER,
+    ...deliveryReceptores.filter(r => r !== '1° División'),
+  ]
   const deportesAnexosDisciplinas = [...new Set(deliveries.filter(d => d.receptor==='Deportes Anexos' && d.disciplina).map(d => d.disciplina))].sort()
   const filteredDeliveryRows = deliveryRows
     .filter(d => !delFilterReceptor || delFilterReceptor === REP_FILTER || d.receptor === delFilterReceptor)
@@ -2409,10 +2414,9 @@ ${rowsHtml}
               <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginBottom:delFilterReceptor==='Deportes Anexos'?6:12}}>
                 <div style={{display:'flex',gap:6,flexWrap:'wrap',flex:1}}>
                   <button className={`chip${delFilterReceptor===''?' active':''}`} onClick={() => { setDelFilterReceptor(''); setDelFilterDisciplina(''); setDelFilterPaga('') }}>Todos</button>
-                  {deliveryReceptores.map(r => (
+                  {deliveryReceptoresOrdenados.map(r => (
                     <button key={r} className={`chip${delFilterReceptor===r?' active':''}`} onClick={() => { setDelFilterReceptor(r); setDelFilterDisciplina(''); setDelFilterPaga('') }}>{r}</button>
                   ))}
-                  <button className={`chip${delFilterReceptor===REP_FILTER?' active':''}`} onClick={() => { setDelFilterReceptor(REP_FILTER); setDelFilterDisciplina(''); setDelFilterPaga('') }}>Reposiciones 1° División</button>
                 </div>
                 <input className="field-input" style={{width:200,flexShrink:0}} placeholder="Buscar integrante…" value={delFilterPersona} onChange={e => setDelFilterPersona(e.target.value)} />
               </div>
