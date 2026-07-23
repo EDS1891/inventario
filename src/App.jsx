@@ -3114,6 +3114,73 @@ ${rowsHtml}
           return ya!==yb ? ya-yb : ma-mb
         })
 
+        const datosPorMes = mesesOrdenados.map(mesKey => {
+          const [mm, yyyy] = mesKey.split('/')
+          const mesNombre = `${MESES_ES[Number(mm)]||mm} ${yyyy}`
+          const repsDelMes = mesesMap[mesKey]
+
+          const jugMapMes = {}
+          repsDelMes.forEach(r => (r.jugadores||[]).forEach(j => {
+            if (!jugMapMes[j.nombre]) jugMapMes[j.nombre] = {numero:j.numero||'—', nombre:j.nombre}
+          }))
+          const jugsMes = Object.values(jugMapMes).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0))
+
+          const getCam = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const dc=j.descuentoCamiseta!==undefined?j.descuentoCamiseta!==false:j.descuento!==false;return acc+(dc?Number(j.cantCamiseta)||0:0)},0)
+          const getSht = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const ds=j.descuentoShort!==undefined?j.descuentoShort!==false:j.descuento!==false;return acc+(ds?Number(j.cantShort)||0:0)},0)
+
+          const filas = jugsMes.map(j=>({...j,cam:getCam(j.nombre),sht:getSht(j.nombre)})).filter(f=>f.cam+f.sht>0)
+          const totCam = filas.reduce((s,f)=>s+f.cam,0)
+          const totSht = filas.reduce((s,f)=>s+f.sht,0)
+          return {mesKey, mesNombre, filas, totCam, totSht}
+        })
+
+        const exportResumenExcel = async () => {
+          const wb = new ExcelJS.Workbook()
+          const YELLOW   = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
+          const FILL_SUB = {type:'pattern',pattern:'solid',fgColor:{argb:'FFF5F2E8'}}
+          const FILL_WHT = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFFFF'}}
+          const F_BOLD   = {name:'Arial',size:12,bold:true}
+          const F_NORM   = {name:'Arial',size:12}
+          const CENTER   = {horizontal:'center',vertical:'middle'}
+          const BORDER   = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
+          const style = (cell,fill,font) => { cell.fill=fill; cell.font=font; cell.alignment=CENTER; cell.border=BORDER }
+
+          datosPorMes.forEach(({mesNombre, filas, totCam, totSht}) => {
+            const nombreHoja = mesNombre.replace(/[\\/:*?"<>|[\]]/g,'-').slice(0,31) || 'Mes'
+            const ws = wb.addWorksheet(nombreHoja)
+            ws.columns = [{width:8.5},{width:24},{width:13},{width:10},{width:10}]
+
+            ws.mergeCells('A1:E1')
+            style(ws.getCell('A1'), YELLOW, F_BOLD); ws.getCell('A1').value = mesNombre.toUpperCase(); ws.getRow(1).height = 20
+
+            ;['Nº','JUGADOR','CAMISETAS','SHORTS','TOTAL'].forEach((h,i) => {
+              const c = ws.getRow(2).getCell(i+1); style(c, YELLOW, F_BOLD); c.value = h
+            })
+            ws.getRow(2).height = 20
+
+            filas.forEach((f,idx) => {
+              const r = ws.getRow(idx+3)
+              r.height = 18
+              ;[f.numero||'—', f.nombre, f.cam||0, f.sht||0, f.cam+f.sht].forEach((v,i) => {
+                const c = r.getCell(i+1); style(c, FILL_WHT, F_NORM); c.value = v
+              })
+            })
+
+            const totN = filas.length + 3
+            ws.mergeCells(`A${totN}:B${totN}`)
+            ws.getRow(totN).height = 20
+            ;[[1,'SUBTOTAL'],[3,totCam],[4,totSht],[5,totCam+totSht]].forEach(([col,val]) => {
+              const c = ws.getRow(totN).getCell(col); style(c, FILL_SUB, F_BOLD); c.value = val
+            })
+          })
+
+          const buf = await wb.xlsx.writeBuffer()
+          const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a'); a.href=url; a.download='descuentos-mensuales-peniarol.xlsx'; a.click()
+          URL.revokeObjectURL(url)
+        }
+
         return (
           <div className="modal-backdrop" onClick={()=>setRepResumen(null)}>
             <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:580,width:'96%'}}>
@@ -3125,24 +3192,7 @@ ${rowsHtml}
                 {mesesOrdenados.length === 0 && (
                   <div style={{padding:32,textAlign:'center',color:'#888',fontSize:14}}>Sin datos</div>
                 )}
-                {mesesOrdenados.map(mesKey => {
-                  const [mm, yyyy] = mesKey.split('/')
-                  const mesNombre = `${MESES_ES[Number(mm)]||mm} ${yyyy}`
-                  const repsDelMes = mesesMap[mesKey]
-
-                  const jugMapMes = {}
-                  repsDelMes.forEach(r => (r.jugadores||[]).forEach(j => {
-                    if (!jugMapMes[j.nombre]) jugMapMes[j.nombre] = {numero:j.numero||'—', nombre:j.nombre}
-                  }))
-                  const jugsMes = Object.values(jugMapMes).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0))
-
-                  const getCam = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const dc=j.descuentoCamiseta!==undefined?j.descuentoCamiseta!==false:j.descuento!==false;return acc+(dc?Number(j.cantCamiseta)||0:0)},0)
-                  const getSht = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const ds=j.descuentoShort!==undefined?j.descuentoShort!==false:j.descuento!==false;return acc+(ds?Number(j.cantShort)||0:0)},0)
-
-                  const filas = jugsMes.map(j=>({...j,cam:getCam(j.nombre),sht:getSht(j.nombre)})).filter(f=>f.cam+f.sht>0)
-                  const totCam = filas.reduce((s,f)=>s+f.cam,0)
-                  const totSht = filas.reduce((s,f)=>s+f.sht,0)
-
+                {datosPorMes.map(({mesKey, mesNombre, filas, totCam, totSht}) => {
                   return (
                     <div key={mesKey}>
                       <div style={{background:'#121212',color:'#FFD200',fontWeight:700,fontSize:12,letterSpacing:'.06em',padding:'9px 14px',position:'sticky',top:0,zIndex:2}}>
@@ -3183,6 +3233,7 @@ ${rowsHtml}
               </div>
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={()=>setRepResumen(null)}>Cerrar</button>
+                <button className="btn btn-ghost" style={{border:'1px solid #2d6a4f',color:'#2d6a4f'}} disabled={mesesOrdenados.length===0} onClick={exportResumenExcel}>↓ Excel</button>
               </div>
             </div>
           </div>
