@@ -1040,7 +1040,7 @@ ${rowsHtml}
       .filter(([, ubics]) => ubics.length > 1)
       .map(([talle, ubics]) => ({ talle, ubics }))
     return { code, name: entries[0].name, tallesDup }
-  }).filter(d => d.tallesDup.length > 0 && !['camperón','camperon'].includes(d.name.trim().toLowerCase()))
+  }).filter(d => d.tallesDup.length > 0 && !/camper[oó]n/i.test(d.name))
 
   const delEnrich = d => {
     const totalUd = d.lines.reduce((s,l) => s+l.qty, 0)
