@@ -3137,7 +3137,6 @@ ${rowsHtml}
         const exportResumenExcel = async () => {
           const wb = new ExcelJS.Workbook()
           const YELLOW   = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
-          const FILL_SUB = {type:'pattern',pattern:'solid',fgColor:{argb:'FFF5F2E8'}}
           const FILL_WHT = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFFFF'}}
           const F_BOLD   = {name:'Arial',size:12,bold:true}
           const F_NORM   = {name:'Arial',size:12}
@@ -3145,15 +3144,15 @@ ${rowsHtml}
           const BORDER   = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
           const style = (cell,fill,font) => { cell.fill=fill; cell.font=font; cell.alignment=CENTER; cell.border=BORDER }
 
-          datosPorMes.forEach(({mesNombre, filas, totCam, totSht}) => {
+          datosPorMes.forEach(({mesNombre, filas}) => {
             const nombreHoja = mesNombre.replace(/[\\/:*?"<>|[\]]/g,'-').slice(0,31) || 'Mes'
             const ws = wb.addWorksheet(nombreHoja)
-            ws.columns = [{width:8.5},{width:24},{width:13},{width:10},{width:10}]
+            ws.columns = [{width:8.5},{width:24},{width:13},{width:10}]
 
-            ws.mergeCells('A1:E1')
+            ws.mergeCells('A1:D1')
             style(ws.getCell('A1'), YELLOW, F_BOLD); ws.getCell('A1').value = mesNombre.toUpperCase(); ws.getRow(1).height = 20
 
-            ;['Nº','JUGADOR','CAMISETAS','SHORTS','TOTAL'].forEach((h,i) => {
+            ;['Nº','JUGADOR','CAMISETAS','SHORTS'].forEach((h,i) => {
               const c = ws.getRow(2).getCell(i+1); style(c, YELLOW, F_BOLD); c.value = h
             })
             ws.getRow(2).height = 20
@@ -3161,16 +3160,9 @@ ${rowsHtml}
             filas.forEach((f,idx) => {
               const r = ws.getRow(idx+3)
               r.height = 18
-              ;[f.numero||'—', f.nombre, f.cam||0, f.sht||0, f.cam+f.sht].forEach((v,i) => {
+              ;[f.numero||'—', f.nombre, f.cam||0, f.sht||0].forEach((v,i) => {
                 const c = r.getCell(i+1); style(c, FILL_WHT, F_NORM); c.value = v
               })
-            })
-
-            const totN = filas.length + 3
-            ws.mergeCells(`A${totN}:B${totN}`)
-            ws.getRow(totN).height = 20
-            ;[[1,'SUBTOTAL'],[3,totCam],[4,totSht],[5,totCam+totSht]].forEach(([col,val]) => {
-              const c = ws.getRow(totN).getCell(col); style(c, FILL_SUB, F_BOLD); c.value = val
             })
           })
 
