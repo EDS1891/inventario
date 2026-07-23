@@ -21,6 +21,8 @@ const SHORT_TIPOS = ['Titular','Alternativa']
 const REP_TIPOS_JUGADOR = ['TRADICIONAL','AMARILLA','VERDE']
 const REP_TIPOS_GOLERO  = ['NEGRO','NARANJA','CREMA']
 const getRepTipos = (posicion) => posicion === 'Golero' ? REP_TIPOS_GOLERO : REP_TIPOS_JUGADOR
+const ROLE_LABELS = { admin:'Admin', 'solo-vista':'Solo Vista', receptor:'Receptor', receptor_reposiciones:'Receptor + Repos.' }
+const ROLE_OPTIONS = [['admin','Administrador'],['solo-vista','Solo Vista'],['receptor','Receptor'],['receptor_reposiciones','Receptor + Reposiciones']]
 const PRECIO_DESC_CAMISETA = 1930
 const PRECIO_DESC_SHORT = 1030
 
@@ -178,6 +180,7 @@ export default function App() {
   const [plantelForm, setPlantelForm] = useState({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',talleShort:'L'})
   const [plantelModal, setPlantelModal] = useState(false)
   const [rechazarModal, setRechazarModal] = useState({ delId: null, motivo: '' })
+  const [receptorTab, setReceptorTab] = useState('entregas')
   const [toast, setToast] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [depositosOpen, setDepositosOpen] = useState(true)
@@ -912,7 +915,8 @@ ${rowsHtml}
   // Current user role
   const allUsers = db.users
   const currentUser = allUsers.find(u => u.username === session) || null
-  const isReceptor  = currentUser?.role === 'receptor'
+  const isReceptor  = currentUser?.role === 'receptor' || currentUser?.role === 'receptor_reposiciones'
+  const isReceptorReposiciones = currentUser?.role === 'receptor_reposiciones'
   const isSoloVista = currentUser?.role === 'solo-vista'
 
   // Receptor users list (for the delivery modal selector)
@@ -1520,6 +1524,77 @@ ${rowsHtml}
           <button onClick={doLogout} style={{background:'#2a2a2a',border:'1px solid #3a3a3a',color:'#ccc',borderRadius:8,padding:'8px 14px',cursor:'pointer',fontSize:13}}>Cerrar sesión</button>
         </div>
 
+        {isReceptorReposiciones && (
+          <div style={{maxWidth:680,margin:'0 auto',padding:'16px 16px 0'}}>
+            <div style={{display:'flex',gap:6,borderBottom:'2px solid #ECECE8'}}>
+              {[['entregas','Mis entregas'],['reposiciones','Reposiciones']].map(([k,l]) => (
+                <button key={k} onClick={() => setReceptorTab(k)} style={{padding:'7px 18px',border:'none',background:'none',fontWeight:700,fontSize:13,cursor:'pointer',borderBottom:receptorTab===k?'2px solid #FFD200':'2px solid transparent',marginBottom:-2,color:receptorTab===k?'#121212':'#8a8a82'}}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {receptorTab === 'reposiciones' && isReceptorReposiciones && (
+          <div style={{maxWidth:680,margin:'0 auto',padding:'20px 16px',display:'flex',flexDirection:'column',gap:12}}>
+            <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed',alignSelf:'flex-start'}}>+ Nueva reposición</button>
+            {!(db.plantel||[]).length && (
+              <div style={{fontSize:13,color:'#7a5800',background:'#FFF8D6',border:'1px solid #FFD200',borderRadius:8,padding:'10px 14px'}}>
+                Todavía no hay plantel cargado, no se pueden registrar reposiciones.
+              </div>
+            )}
+            {(db.reposiciones||[]).length === 0
+              ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay reposiciones registradas aún.</div>
+              : (() => {
+                const torneos = [...new Set((db.reposiciones||[]).map(r=>r.torneo).filter(Boolean))]
+                const filtered = (db.reposiciones||[]).filter(r => !repFilterTorneo || r.torneo === repFilterTorneo)
+                return (
+                  <>
+                    {torneos.length > 0 && (
+                      <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                        <button className={`chip${repFilterTorneo===''?' active':''}`} onClick={() => setRepFilterTorneo('')}>Todos</button>
+                        {torneos.map(t => (
+                          <button key={t} className={`chip${repFilterTorneo===t?' active':''}`} onClick={() => setRepFilterTorneo(t)}>{t}</button>
+                        ))}
+                      </div>
+                    )}
+                    <div className="card" style={{padding:0,overflow:'hidden'}}>
+                      <div className="table-header" style={{gridTemplateColumns:'100px 1fr 120px 80px 80px 36px'}}>
+                        <div>FECHA</div><div>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'right'}}>CAMISETAS</div><div style={{textAlign:'right'}}>SHORTS</div><div/>
+                      </div>
+                      {filtered.length === 0
+                        ? <div style={{color:'#8a8a82',fontSize:13,textAlign:'center',padding:'24px 0'}}>Sin reposiciones para este torneo.</div>
+                        : filtered.map(r => {
+                          const totCam = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
+                          const totSht = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
+                          return (
+                          <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 1fr 120px 80px 80px 36px',cursor:'pointer'}} onClick={() => setRepDetail(r)}>
+                            <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#6a6a62'}}>{r.fecha}</div>
+                            <div>
+                              <div style={{fontWeight:600}}>{r.concepto}</div>
+                              {r.creadoPor && <div style={{fontSize:11.5,color:'#8a8a82'}}>{r.creadoPor}</div>}
+                            </div>
+                            <div style={{fontSize:12}}>
+                              {r.torneo && <div style={{fontWeight:600}}>{r.torneo}</div>}
+                              {r.fechaTorneo != null && r.fechaTorneo !== '' && <div style={{fontSize:11,color:'#8a8a82'}}>Fecha {r.fechaTorneo}</div>}
+                            </div>
+                            <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totCam>0?'#1a1a1a':'#ccc'}}>{totCam>0?totCam:'—'}</div>
+                            <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totSht>0?'#1a1a1a':'#ccc'}}>{totSht>0?totSht:'—'}</div>
+                            <div style={{textAlign:'right',color:'#8a8a82',fontSize:18,lineHeight:1}}>›</div>
+                          </div>
+                          )
+                        })
+                      }
+                    </div>
+                  </>
+                )
+              })()
+            }
+          </div>
+        )}
+
+        {receptorTab === 'entregas' && (
         <div style={{maxWidth:680,margin:'0 auto',padding:'28px 16px',display:'flex',flexDirection:'column',gap:28}}>
 
           {/* Pendientes */}
@@ -1589,6 +1664,7 @@ ${rowsHtml}
             })}
           </div>
         </div>
+        )}
 
         {/* Rechazar modal */}
         {rechazarModal.delId !== null && (
@@ -1621,6 +1697,226 @@ ${rowsHtml}
                     onClick={() => { if(rechazarModal.motivo.trim()) receptorRechazar(rechazarModal.delId, rechazarModal.motivo.trim()) }}
                   >✕ Rechazar entrega</button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: Nueva/Editar reposición (rol Receptor + Reposiciones) */}
+        {repModal && (
+          <div className="modal-backdrop" onClick={() => setRepModal(false)}>
+            <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:600,width:'96%'}}>
+              <div className="modal-header">
+                <div className="modal-title">{repForm.editId ? 'Editar reposición' : 'Nueva reposición'}</div>
+                <button className="modal-close" onClick={() => setRepModal(false)}>×</button>
+              </div>
+              <div className="modal-body" style={{maxHeight:'70vh',overflowY:'auto'}}>
+                <div className="form-group">
+                  <label className="field-label">Concepto</label>
+                  <input className="field-input" value={repForm.concepto} onChange={e => setRepForm(p=>({...p,concepto:e.target.value}))} placeholder="Ej. Reposición vs Nacional" autoFocus />
+                </div>
+                {/* Torneo y Fecha */}
+                <div style={{display:'flex',gap:12,marginTop:4,alignItems:'flex-end'}}>
+                  <div className="form-group" style={{flex:1,marginBottom:0}}>
+                    <label className="field-label">Torneo</label>
+                    <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                      {['APERTURA','CLAUSURA','INTERMEDIO','COPA AUF','LIBERTADORES','SUDAMERICANA'].map(t=>(
+                        <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,torneo:t}))}
+                          style={{padding:'6px 10px',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:11,cursor:'pointer',
+                            borderColor:repForm.torneo===t?'#FFD200':'#ECECE8',
+                            background:repForm.torneo===t?'#FFF8D6':'#fff',
+                            color:repForm.torneo===t?'#7a5800':'#8a8a82'}}>
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {TORNEOS_CON_FECHA.includes(repForm.torneo) ? (
+                    <div className="form-group" style={{width:80,marginBottom:0}}>
+                      <label className="field-label">Fecha</label>
+                      <select className="field-input" value={repForm.fechaTorneo} onChange={e=>setRepForm(p=>({...p,fechaTorneo:e.target.value}))}>
+                        {Array.from({length:15},(_,i)=>i+1).map(n=>(
+                          <option key={n} value={n}>{n}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="form-group" style={{width:140,marginBottom:0}}>
+                      <label className="field-label">Fecha</label>
+                      <input className="field-input" value={repForm.fechaTorneo||''} onChange={e=>setRepForm(p=>({...p,fechaTorneo:e.target.value}))} placeholder="Ej. Ida / Final" />
+                    </div>
+                  )}
+                </div>
+                {/* Selector de tipo de camiseta — uno por posición */}
+                <div style={{display:'flex',gap:16,marginTop:14}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',marginBottom:6}}>EQUIPO JUGADORES</div>
+                    <div style={{display:'flex',gap:6}}>
+                      {REP_TIPOS_JUGADOR.map(t=>(
+                        <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,tipoCamisetaJugador:t}))}
+                          style={{flex:1,padding:'6px 4px',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:11,cursor:'pointer',
+                            borderColor:repForm.tipoCamisetaJugador===t?'#FFD200':'#ECECE8',
+                            background:repForm.tipoCamisetaJugador===t?'#FFF8D6':'#fff',
+                            color:repForm.tipoCamisetaJugador===t?'#7a5800':'#8a8a82'}}>
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',marginBottom:6}}>EQUIPO GOLEROS</div>
+                    <div style={{display:'flex',gap:6}}>
+                      {REP_TIPOS_GOLERO.map(t=>(
+                        <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,tipoCamisetaGolero:t}))}
+                          style={{flex:1,padding:'6px 4px',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:11,cursor:'pointer',
+                            borderColor:repForm.tipoCamisetaGolero===t?'#FFD200':'#ECECE8',
+                            background:repForm.tipoCamisetaGolero===t?'#FFF8D6':'#fff',
+                            color:repForm.tipoCamisetaGolero===t?'#7a5800':'#8a8a82'}}>
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{marginTop:16}}>
+                  <div style={{display:'grid',gridTemplateColumns:'40px 1fr 62px 38px 62px 38px',gap:4,marginBottom:4,fontSize:10,fontWeight:700,color:'#8a8a82',padding:'4px 6px',background:'#F5F5F0',borderRadius:6}}>
+                    <div>Nº</div><div>NOMBRE</div><div style={{textAlign:'center'}}>CAM.</div><div style={{textAlign:'center'}}>DC</div><div style={{textAlign:'center'}}>SHT.</div><div style={{textAlign:'center'}}>DS</div>
+                  </div>
+                  {repForm.rows.map((r, i) => {
+                    const hasQty = Number(r.cantCamiseta)>0 || Number(r.cantShort)>0
+                    const isLibre = r.nombre.trim().toLowerCase()==='libre'
+                    const dcam = r.descuentoCamiseta !== false
+                    const dsht = r.descuentoShort !== false
+                    const toggle = (field) => setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,[field]:!x[field]}:x)}))
+                    return (
+                      <div key={i} style={{display:'grid',gridTemplateColumns:'40px 1fr 62px 38px 62px 38px',gap:4,marginBottom:3,alignItems:'center',padding:'5px 6px',borderRadius:6,
+                        background:isLibre?'#3a3a3a':hasQty?'#FFFDF0':'transparent',border:hasQty?'1px solid #FFD200':'1px solid transparent'}}>
+                        <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,color:isLibre?'#888':undefined}}>{r.numero||'—'}</div>
+                        <div>
+                          <span style={{fontWeight:600,fontSize:13,color:isLibre?'#888':undefined,fontStyle:isLibre?'italic':undefined}}>{r.nombre}</span>
+                          {!isLibre && <span style={{fontSize:10,color:'#aaa',marginLeft:6}}>{r.posicion||'Jugador'}</span>}
+                        </div>
+                        <input className="field-input mono" type="number" min="0" value={r.cantCamiseta}
+                          onChange={e=>setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,cantCamiseta:e.target.value}:x)}))}
+                          placeholder="0" style={{textAlign:'center',padding:'5px 2px'}} />
+                        {!isLibre
+                          ? <button type="button" onClick={()=>toggle('descuentoCamiseta')}
+                              style={{padding:'4px 2px',borderRadius:5,border:'2px solid',fontWeight:700,fontSize:10,cursor:'pointer',width:'100%',
+                                borderColor:dcam?'#2d6a4f':'#ccc',background:dcam?'#d8f3dc':'#f5f5f5',color:dcam?'#1b4332':'#999'}}>
+                              {dcam?'SÍ':'NO'}
+                            </button>
+                          : <div/>}
+                        <input className="field-input mono" type="number" min="0" value={r.cantShort}
+                          onChange={e=>setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,cantShort:e.target.value}:x)}))}
+                          placeholder="0" style={{textAlign:'center',padding:'5px 2px'}} />
+                        {!isLibre
+                          ? <button type="button" onClick={()=>toggle('descuentoShort')}
+                              style={{padding:'4px 2px',borderRadius:5,border:'2px solid',fontWeight:700,fontSize:10,cursor:'pointer',width:'100%',
+                                borderColor:dsht?'#2d6a4f':'#ccc',background:dsht?'#d8f3dc':'#f5f5f5',color:dsht?'#1b4332':'#999'}}>
+                              {dsht?'SÍ':'NO'}
+                            </button>
+                          : <div/>}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={() => setRepModal(false)}>Cancelar</button>
+                <button className="btn btn-dark" onClick={saveReposicion}>{repForm.editId ? 'Guardar cambios' : 'Guardar reposición'}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: Detalle Reposición (rol Receptor + Reposiciones) */}
+        {repDetail && (
+          <div className="modal-backdrop" onClick={() => setRepDetail(null)}>
+            <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:580,width:'96%'}}>
+              <div className="modal-header">
+                <div style={{flex:1,minWidth:0}}>
+                  {repConceptoEdit !== null ? (
+                    <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                      <input className="field-input" value={repConceptoEdit} onChange={e=>setRepConceptoEdit(e.target.value)}
+                        onKeyDown={e=>{if(e.key==='Enter')saveRepConcepto();if(e.key==='Escape')setRepConceptoEdit(null)}}
+                        autoFocus style={{fontWeight:700,fontSize:16,flex:1}} />
+                      <button className="btn btn-dark" style={{padding:'6px 12px',fontSize:13}} onClick={saveRepConcepto}>✓</button>
+                      <button className="btn btn-ghost" style={{padding:'6px 10px',fontSize:13}} onClick={()=>setRepConceptoEdit(null)}>✕</button>
+                    </div>
+                  ) : (
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <div className="modal-title">{repDetail.concepto}</div>
+                      <button onClick={()=>setRepConceptoEdit(repDetail.concepto)} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px',lineHeight:1}}>✎</button>
+                    </div>
+                  )}
+                  <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>
+                    {repDetail.fecha}{repDetail.creadoPor ? ' · '+repDetail.creadoPor : ''}
+                    {repDetail.torneo && <span style={{marginLeft:8,fontWeight:700,color:'#7a5800',background:'#FFF8D6',border:'1px solid #FFD200',borderRadius:4,padding:'1px 7px',fontSize:11}}>
+                      {repDetail.torneo}{repDetail.fechaTorneo ? ' · Fecha '+repDetail.fechaTorneo : ''}
+                    </span>}
+                  </div>
+                </div>
+                <button className="modal-close" onClick={() => { setRepConceptoEdit(null); setRepDetail(null) }}>×</button>
+              </div>
+              <div className="modal-body" style={{maxHeight:'60vh',overflowY:'auto'}}>
+                {/* Tipos de camiseta usados en esta reposición */}
+                {(repDetail.tipoCamisetaJugador||repDetail.tipoCamisetaGolero) && (
+                  <div style={{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap'}}>
+                    {repDetail.tipoCamisetaJugador && (
+                      <span style={{fontSize:12,fontWeight:700,background:'#FFF8D6',border:'1px solid #FFD200',borderRadius:5,padding:'3px 10px'}}>
+                        Jugadores: {repDetail.tipoCamisetaJugador}
+                      </span>
+                    )}
+                    {repDetail.tipoCamisetaGolero && (
+                      <span style={{fontSize:12,fontWeight:700,background:'#F0F0EC',border:'1px solid #ccc',borderRadius:5,padding:'3px 10px'}}>
+                        Goleros: {repDetail.tipoCamisetaGolero}
+                      </span>
+                    )}
+                  </div>
+                )}
+                <div style={{display:'grid',gridTemplateColumns:'40px 1fr 80px 80px',gap:6,marginBottom:4,fontSize:10,fontWeight:700,color:'#8a8a82',background:'#F5F5F0',borderRadius:6,padding:'5px 6px'}}>
+                  <div>Nº</div><div>NOMBRE</div><div style={{textAlign:'center'}}>CAMISETA</div><div style={{textAlign:'center'}}>SHORT</div>
+                </div>
+                {(repDetail.jugadores||[]).map((j,i) => {
+                  const goleroRowBg = j.posicion==='Golero'
+                    ? j.tipoCamiseta==='NEGRO'   ? {background:'#d0d0d0',borderBottom:'1px solid #bbb'}
+                    : j.tipoCamiseta==='NARANJA'  ? {background:'#FFE5CC',borderBottom:'1px solid #FFB870'}
+                    : j.tipoCamiseta==='CREMA'    ? {background:'#FFF8E8',borderBottom:'1px solid #EDE0C0'}
+                    : {borderBottom:'1px solid #F5F5F0'}
+                    : {borderBottom:'1px solid #F5F5F0'}
+                  return (
+                    <div key={i} style={{display:'grid',gridTemplateColumns:'40px 1fr 80px 80px',gap:6,padding:'6px 6px',fontSize:13,alignItems:'center',...goleroRowBg}}>
+                      <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#6a6a62'}}>{j.numero||'—'}</div>
+                      <div>
+                        <div style={{fontWeight:500}}>{j.nombre||'—'}</div>
+                        {j.talleCamiseta && <div style={{fontSize:10,color:'#8a8a82',marginTop:1}}>CAM {j.talleCamiseta} · SHORT {j.talleShort}</div>}
+                      </div>
+                      <div style={{textAlign:'center',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:j.cantCamiseta>0?'#1a1a1a':'#ccc'}}>
+                        {j.cantCamiseta>0?j.cantCamiseta:'—'}
+                      </div>
+                      <div style={{textAlign:'center',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:j.cantShort>0?'#1a1a1a':'#ccc'}}>
+                        {j.cantShort>0?j.cantShort:'—'}
+                      </div>
+                    </div>
+                  )
+                })}
+                {(() => {
+                  const totCam = (repDetail.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
+                  const totSht = (repDetail.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
+                  return <div style={{marginTop:10,fontSize:12,color:'#8a8a82',textAlign:'right'}}>
+                    {totCam > 0 && <span>{totCam} camiseta{totCam!==1?'s':''}</span>}
+                    {totCam > 0 && totSht > 0 && <span style={{margin:'0 6px'}}>·</span>}
+                    {totSht > 0 && <span>{totSht} short{totSht!==1?'s':''}</span>}
+                  </div>
+                })()}
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={() => setRepDetail(null)}>Cerrar</button>
+                <button className="btn btn-ghost" style={{border:'1px solid #2d6a4f',color:'#2d6a4f'}} onClick={() => exportRepToExcel(repDetail)}>↓ Excel</button>
+                <button className="btn btn-dark" onClick={() => openRepEdit(repDetail)}>Editar</button>
+                <button style={{padding:'8px 16px',borderRadius:7,border:'1px solid #C2473D',background:'#FBEAE8',color:'#C2473D',fontWeight:700,cursor:'pointer'}}
+                  onClick={() => { if(window.confirm('¿Eliminar esta reposición?')) deleteReposicion(repDetail.id) }}>Eliminar</button>
               </div>
             </div>
           </div>
@@ -2236,7 +2532,7 @@ ${rowsHtml}
                     )}
                   </div>
                   <span style={{background:u.role==='admin'?'#121212':u.role==='solo-vista'?'#FFF4E6':'#EDF7F2',color:u.role==='admin'?'#FFD200':u.role==='solo-vista'?'#c2560a':'#2e9b5e',border:'1px solid '+(u.role==='admin'?'#3a3a3a':u.role==='solo-vista'?'#e8834a':'#2e9b5e'),borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700,flexShrink:0}}>
-                    {u.role==='admin'?'Admin':u.role==='solo-vista'?'Solo Vista':'Receptor'}
+                    {ROLE_LABELS[u.role]||'Receptor'}
                   </span>
                 </div>
               ))}
@@ -3984,13 +4280,13 @@ ${rowsHtml}
                         )}
                         {u.telefono && <div style={{fontSize:11.5,color:'#8a8a82'}}>{u.telefono}</div>}
                       </div>
-                      <span style={{background:u.role==='admin'?'#121212':u.role==='solo-vista'?'#FFF4E6':'#EDF7F2',color:u.role==='admin'?'#FFD200':u.role==='solo-vista'?'#c2560a':'#2e9b5e',border:'1px solid '+(u.role==='admin'?'#3a3a3a':u.role==='solo-vista'?'#e8834a':'#2e9b5e'),borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700,flexShrink:0}}>{u.role==='admin'?'Admin':u.role==='solo-vista'?'Solo Vista':'Receptor'}</span>
+                      <span style={{background:u.role==='admin'?'#121212':u.role==='solo-vista'?'#FFF4E6':'#EDF7F2',color:u.role==='admin'?'#FFD200':u.role==='solo-vista'?'#c2560a':'#2e9b5e',border:'1px solid '+(u.role==='admin'?'#3a3a3a':u.role==='solo-vista'?'#e8834a':'#2e9b5e'),borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700,flexShrink:0}}>{ROLE_LABELS[u.role]||'Receptor'}</span>
                       {u.username === session && <span className="badge gray">Vos</span>}
                       {currentUser?.role === 'admin' && u.username !== session && <button className="btn-del" onClick={()=>deleteUser(u.username)}>✕</button>}
                     </div>
                     {currentUser?.role === 'admin' && u.username !== session && (
-                      <div style={{display:'flex',gap:6,marginTop:8,paddingLeft:42}}>
-                        {[['admin','Administrador'],['solo-vista','Solo Vista'],['receptor','Receptor']].map(([v,label]) => (
+                      <div style={{display:'flex',gap:6,marginTop:8,paddingLeft:42,flexWrap:'wrap'}}>
+                        {ROLE_OPTIONS.map(([v,label]) => (
                           <button key={v} onClick={()=>{
                             const list = userMgmt.list.map(x => x.username===u.username?{...x,role:v}:x)
                             saveUsers(list)
@@ -4024,9 +4320,9 @@ ${rowsHtml}
                   {currentUser?.role === 'admin' && (
                   <div className="form-group">
                     <label className="field-label">Rol</label>
-                    <div style={{display:'flex',gap:8}}>
-                      {[['admin','Administrador'],['solo-vista','Solo Vista'],['receptor','Receptor']].map(([v,label]) => (
-                        <button key={v} style={{flex:1,padding:'8px 0',borderRadius:6,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:13,
+                    <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                      {ROLE_OPTIONS.map(([v,label]) => (
+                        <button key={v} style={{flex:'1 1 auto',minWidth:110,padding:'8px 0',borderRadius:6,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:13,
                           background:(userMgmt.newRole||'receptor')===v?'#FFD200':'#F5F5F0',
                           borderColor:(userMgmt.newRole||'receptor')===v?'#e6be00':'#E0E0DA',
                           color:(userMgmt.newRole||'receptor')===v?'#121212':'#8a8a82'}}
