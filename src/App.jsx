@@ -3150,7 +3150,7 @@ ${rowsHtml}
                       </div>
                       <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
                         <thead>
-                          <tr style={{background:'#2a2a2a',color:'#ccc'}}>
+                          <tr style={{background:'#2a2a2a',color:'#FFD200'}}>
                             <th style={{padding:'6px 12px',textAlign:'left',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>JUGADOR</th>
                             <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>CAMISETAS</th>
                             <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>SHORTS</th>
