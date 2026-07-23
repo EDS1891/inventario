@@ -33,7 +33,7 @@ const DEFAULT_USERS = [
   { username:'rferrari@capenarol.com.uy', password:'Temporal2026', role:'receptor', displayName:'Rodrigo Ferrari', status:'aprobado' },
   { username:'clauria@capenarol.com.uy', password:'Temporal2026', role:'receptor', displayName:'Camilo Lauria', status:'aprobado' },
 ]
-const EMPTY_DB = { articles:[], deliveries:[], movimientos:[], nextId:1, nextDel:1, nextMov:1, nextRep:1, users: DEFAULT_USERS, camisetasUtileria:[], reposiciones:[], plantel:[] }
+const EMPTY_DB = { articles:[], deliveries:[], movimientos:[], nextId:1, nextDel:1, nextMov:1, nextRep:1, users: DEFAULT_USERS, camisetasUtileria:[], reposiciones:[], plantel:[], repoAlertas:[] }
 const COMPETICIONES = ['CAMPEONATO URUGUAYO','CONMEBOL','COPA LIBERTADORES FEMENINA','COPA LIBERTADORES FÚTBOL SALA','COPA INTERCONTINENTAL SUB 20']
 const MODELOS_JUGADOR = ['TRADICIONAL','GRIS','AMARILLA','DORADA','NEGRA Y DORADA','NEGRA Y AMARILLA','AMARILLA FLÚO']
 const MODELOS_GOLERO  = ['VERDE','NARANJA','NEGRO','GRIS','ROSADO','CREMA','AMARILLO FLÚO','AMARILLO']
@@ -43,10 +43,11 @@ const SESSION_KEY = 'dep_session'
 
 
 async function loadFromSupabase() {
-  const [{ data, error }, { data: usersRow }, { data: utiRow }] = await Promise.all([
+  const [{ data, error }, { data: usersRow }, { data: utiRow }, { data: alertasRow }] = await Promise.all([
     supabase.from('deposito_state').select('*').eq('id', 1).single(),
     supabase.from('deposito_state').select('deliveries').eq('id', 2).single(),
     supabase.from('deposito_state').select('articles,deliveries,movimientos,next_del').eq('id', 3).single(),
+    supabase.from('deposito_state').select('deliveries').eq('id', 4).single(),
   ])
   if (error || !data) return null
   let users = (usersRow?.deliveries?.length > 0 && usersRow.deliveries[0]?.username)
@@ -89,12 +90,13 @@ async function loadFromSupabase() {
     reposiciones: utiRow?.deliveries || [],
     nextRep: utiRow?.next_del || 1,
     plantel: utiRow?.movimientos || [],
+    repoAlertas: alertasRow?.deliveries || [],
   }
 }
 
 async function saveToSupabase(db) {
   // Row id=2 (users) is managed exclusively by saveUsers() to avoid session-collision overwrites
-  const [r1, r3] = await Promise.all([
+  const [r1, r3, r4] = await Promise.all([
     supabase.from('deposito_state').upsert({
       id: 1,
       articles: db.articles,
@@ -115,8 +117,13 @@ async function saveToSupabase(db) {
       next_mov: 0,
       updated_at: new Date().toISOString(),
     }),
+    supabase.from('deposito_state').upsert({
+      id: 4,
+      deliveries: db.repoAlertas || [],
+      updated_at: new Date().toISOString(),
+    }),
   ])
-  return !r1.error && !r3.error
+  return !r1.error && !r3.error && !r4.error
 }
 
 function fmt(n) { return Number(n).toLocaleString('es-UY') }
@@ -919,6 +926,13 @@ ${rowsHtml}
   const isReceptorReposiciones = currentUser?.role === 'receptor_reposiciones'
   const isSoloVista = currentUser?.role === 'solo-vista'
 
+  // Marcar como vistos los cambios de Reposiciones (rol Receptor + Reposiciones) apenas el admin entra a esa sección
+  useEffect(() => {
+    if (view === 'reposiciones' && currentUser?.role === 'admin' && (db.repoAlertas||[]).length > 0) {
+      setDb(s => ({...s, repoAlertas:[]}))
+    }
+  }, [view, currentUser?.role])
+
   // Receptor users list (for the delivery modal selector)
   const receptorUsers = allUsers.filter(u => u.status === 'aprobado')
 
@@ -1140,26 +1154,36 @@ ${rowsHtml}
       })
     if (!jugadores.length) { showToast('Ingresá al menos una cantidad.'); return }
     const tieneFecha = TORNEOS_CON_FECHA.includes(repForm.torneo)
+    const notifica = currentUser?.role === 'receptor_reposiciones'
+    const pushAlerta = (s, tipo, concepto) => notifica
+      ? [{id:Date.now(), tipo, concepto, por:currentUser?.displayName||session, fecha:today()}, ...(s.repoAlertas||[])]
+      : (s.repoAlertas||[])
     if (repForm.editId) {
       setDb(s => ({...s, reposiciones:(s.reposiciones||[]).map(r => r.id===repForm.editId
         ? {...r, concepto:repForm.concepto.trim(), torneo:repForm.torneo, descuento:repForm.descuento,
             fechaTorneo: tieneFecha ? Number(repForm.fechaTorneo) : null,
             tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores}
-        : r)}))
+        : r), repoAlertas: pushAlerta(s, 'editar', repForm.concepto.trim())}))
       showToast('Reposición actualizada.')
     } else {
       setDb(s => {
         const rep = { id:s.nextRep, fecha:today(), concepto:repForm.concepto.trim(), creadoPor:currentUser?.displayName||session,
           torneo:repForm.torneo, fechaTorneo: tieneFecha ? Number(repForm.fechaTorneo) : null, descuento:repForm.descuento,
           tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores }
-        return { ...s, reposiciones:[rep,...(s.reposiciones||[])], nextRep:s.nextRep+1 }
+        return { ...s, reposiciones:[rep,...(s.reposiciones||[])], nextRep:s.nextRep+1, repoAlertas: pushAlerta(s, 'crear', rep.concepto) }
       })
       showToast('Reposición registrada.')
     }
     setRepModal(false)
   }
   const deleteReposicion = (id) => {
-    setDb(s => ({...s, reposiciones:(s.reposiciones||[]).filter(r=>r.id!==id)}))
+    setDb(s => {
+      const rep = (s.reposiciones||[]).find(r=>r.id===id)
+      const repoAlertas = currentUser?.role === 'receptor_reposiciones' && rep
+        ? [{id:Date.now(), tipo:'eliminar', concepto:rep.concepto, por:currentUser?.displayName||session, fecha:today()}, ...(s.repoAlertas||[])]
+        : (s.repoAlertas||[])
+      return {...s, reposiciones:(s.reposiciones||[]).filter(r=>r.id!==id), repoAlertas}
+    })
     setRepDetail(null)
     showToast('Reposición eliminada.')
   }
@@ -2084,6 +2108,26 @@ ${rowsHtml}
                           <span style={{background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B',borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700}}>Pend. separar</span>
                           <div style={{fontSize:11,color:'#8a8a82',marginTop:3}}>{d.fecha}</div>
                         </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {currentUser?.role === 'admin' && (db.repoAlertas||[]).length > 0 && (
+                  <div className="card" style={{border:'2px solid #F59E0B',marginBottom:16}}>
+                    <div className="card-header">
+                      <div className="card-title" style={{color:'#B45309'}}>⚠ Cambios en Reposiciones</div>
+                      <div className="card-spacer"/>
+                      <span className="badge" style={{background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B'}}>{(db.repoAlertas||[]).length}</span>
+                      <button className="back-link" style={{color:'#B45309',margin:0}} onClick={() => goView('reposiciones')}>Ver →</button>
+                    </div>
+                    {(db.repoAlertas||[]).map(a => (
+                      <div key={a.id} className="table-row" style={{gridTemplateColumns:'34px 1fr auto'}}>
+                        <div className="avatar" style={{background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B',fontSize:13,fontWeight:800}}>!</div>
+                        <div style={{minWidth:0}}>
+                          <div style={{fontWeight:600,fontSize:13.5,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.concepto}</div>
+                          <div style={{fontSize:11.5,color:'#8a8a82'}}>{a.por} · {a.tipo==='crear'?'Creó':a.tipo==='editar'?'Editó':'Eliminó'}</div>
+                        </div>
+                        <div style={{textAlign:'right',flexShrink:0,fontSize:11,color:'#8a8a82'}}>{a.fecha}</div>
                       </div>
                     ))}
                   </div>
