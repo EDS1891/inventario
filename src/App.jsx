@@ -21,6 +21,8 @@ const SHORT_TIPOS = ['Titular','Alternativa']
 const REP_TIPOS_JUGADOR = ['TRADICIONAL','AMARILLA','VERDE']
 const REP_TIPOS_GOLERO  = ['NEGRO','NARANJA','CREMA']
 const getRepTipos = (posicion) => posicion === 'Golero' ? REP_TIPOS_GOLERO : REP_TIPOS_JUGADOR
+const PRECIO_DESC_CAMISETA = 1930
+const PRECIO_DESC_SHORT = 1030
 
 const DEFAULT_USERS = [
   { username:'compras', password:'peniarol1891', role:'admin', displayName:'Compras Peñarol', status:'aprobado' },
@@ -3129,30 +3131,34 @@ ${rowsHtml}
           const getSht = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const ds=j.descuentoShort!==undefined?j.descuentoShort!==false:j.descuento!==false;return acc+(ds?Number(j.cantShort)||0:0)},0)
 
           const filas = jugsMes.map(j=>({...j,cam:getCam(j.nombre),sht:getSht(j.nombre)})).filter(f=>f.cam+f.sht>0)
+            .map(f=>({...f,desc:f.cam*PRECIO_DESC_CAMISETA+f.sht*PRECIO_DESC_SHORT}))
           const totCam = filas.reduce((s,f)=>s+f.cam,0)
           const totSht = filas.reduce((s,f)=>s+f.sht,0)
-          return {mesKey, mesNombre, filas, totCam, totSht}
+          const totDesc = filas.reduce((s,f)=>s+f.desc,0)
+          return {mesKey, mesNombre, filas, totCam, totSht, totDesc}
         })
 
         const exportResumenExcel = async () => {
           const wb = new ExcelJS.Workbook()
           const YELLOW   = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
+          const FILL_SUB = {type:'pattern',pattern:'solid',fgColor:{argb:'FFF5F2E8'}}
           const FILL_WHT = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFFFF'}}
           const F_BOLD   = {name:'Arial',size:12,bold:true}
           const F_NORM   = {name:'Arial',size:12}
           const CENTER   = {horizontal:'center',vertical:'middle'}
           const BORDER   = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
+          const MONEY_FMT = '"$" #,##0'
           const style = (cell,fill,font) => { cell.fill=fill; cell.font=font; cell.alignment=CENTER; cell.border=BORDER }
 
-          datosPorMes.forEach(({mesNombre, filas}) => {
+          datosPorMes.forEach(({mesNombre, filas, totDesc}) => {
             const nombreHoja = mesNombre.replace(/[\\/:*?"<>|[\]]/g,'-').slice(0,31) || 'Mes'
             const ws = wb.addWorksheet(nombreHoja)
-            ws.columns = [{width:8.5},{width:24},{width:13},{width:10}]
+            ws.columns = [{width:8.5},{width:24},{width:13},{width:10},{width:13}]
 
-            ws.mergeCells('A1:D1')
+            ws.mergeCells('A1:E1')
             style(ws.getCell('A1'), YELLOW, F_BOLD); ws.getCell('A1').value = mesNombre.toUpperCase(); ws.getRow(1).height = 20
 
-            ;['Nº','JUGADOR','CAMISETAS','SHORTS'].forEach((h,i) => {
+            ;['Nº','JUGADOR','CAMISETAS','SHORTS','DESCUENTO'].forEach((h,i) => {
               const c = ws.getRow(2).getCell(i+1); style(c, YELLOW, F_BOLD); c.value = h
             })
             ws.getRow(2).height = 20
@@ -3160,10 +3166,18 @@ ${rowsHtml}
             filas.forEach((f,idx) => {
               const r = ws.getRow(idx+3)
               r.height = 18
-              ;[f.numero||'—', f.nombre, f.cam||0, f.sht||0].forEach((v,i) => {
+              ;[f.numero||'—', f.nombre, f.cam||0, f.sht||0, f.desc||0].forEach((v,i) => {
                 const c = r.getCell(i+1); style(c, FILL_WHT, F_NORM); c.value = v
+                if (i===4) c.numFmt = MONEY_FMT
               })
             })
+
+            const totN = filas.length + 3
+            ws.mergeCells(`A${totN}:D${totN}`)
+            ws.getRow(totN).height = 20
+            style(ws.getRow(totN).getCell(1), FILL_SUB, F_BOLD); ws.getRow(totN).getCell(1).value = 'TOTAL DESCUENTOS'
+            const totCell = ws.getRow(totN).getCell(5)
+            style(totCell, FILL_SUB, F_BOLD); totCell.value = totDesc; totCell.numFmt = MONEY_FMT
           })
 
           const buf = await wb.xlsx.writeBuffer()
@@ -3184,7 +3198,7 @@ ${rowsHtml}
                 {mesesOrdenados.length === 0 && (
                   <div style={{padding:32,textAlign:'center',color:'#888',fontSize:14}}>Sin datos</div>
                 )}
-                {datosPorMes.map(({mesKey, mesNombre, filas, totCam, totSht}) => {
+                {datosPorMes.map(({mesKey, mesNombre, filas, totCam, totSht, totDesc}) => {
                   return (
                     <div key={mesKey}>
                       <div style={{background:'#121212',color:'#FFD200',fontWeight:700,fontSize:12,letterSpacing:'.06em',padding:'9px 14px',position:'sticky',top:0,zIndex:2}}>
@@ -3196,7 +3210,7 @@ ${rowsHtml}
                             <th style={{padding:'6px 12px',textAlign:'left',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>JUGADOR</th>
                             <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>CAMISETAS</th>
                             <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>SHORTS</th>
-                            <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>TOTAL</th>
+                            <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>DESCUENTO</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -3208,14 +3222,14 @@ ${rowsHtml}
                               </td>
                               <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:f.cam>0?700:400,color:f.cam>0?'#1a1a1a':'#ccc'}}>{f.cam>0?f.cam:'—'}</td>
                               <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:f.sht>0?700:400,color:f.sht>0?'#1a1a1a':'#ccc'}}>{f.sht>0?f.sht:'—'}</td>
-                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,background:'#FFF8D6'}}>{f.cam+f.sht}</td>
+                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,background:'#FFF8D6'}}>$ {f.desc.toLocaleString('es-UY')}</td>
                             </tr>
                           ))}
                           <tr style={{background:'#F5F2E8',borderTop:'2px solid #E8E4D8'}}>
                             <td style={{padding:'6px 12px',fontSize:11,fontWeight:700,letterSpacing:'.04em',color:'#555'}}>SUBTOTAL</td>
                             <td style={{padding:'6px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#333'}}>{totCam||'—'}</td>
                             <td style={{padding:'6px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#333'}}>{totSht||'—'}</td>
-                            <td style={{padding:'6px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{totCam+totSht}</td>
+                            <td style={{padding:'6px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>$ {totDesc.toLocaleString('es-UY')}</td>
                           </tr>
                         </tbody>
                       </table>
