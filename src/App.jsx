@@ -2861,7 +2861,7 @@ ${rowsHtml}
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               {/* Tabs */}
               <div style={{display:'flex',gap:6,borderBottom:'2px solid #ECECE8',paddingBottom:0}}>
-                {[['reposiciones','Reposiciones'],['plantel','Plantel']].map(([k,l]) => (
+                {[['reposiciones','REPOSICIONES'],['plantel','PLANTEL']].map(([k,l]) => (
                   <button key={k} onClick={() => setRepTab(k)} style={{padding:'7px 18px',border:'none',background:'none',fontWeight:700,fontSize:13,cursor:'pointer',borderBottom:repTab===k?'2px solid #FFD200':'2px solid transparent',marginBottom:-2,color:repTab===k?'#121212':'#8a8a82'}}>
                     {l}{k==='plantel'&&(db.plantel||[]).length>0?` (${(db.plantel||[]).length})`:''}
                   </button>
