@@ -183,6 +183,7 @@ export default function App() {
   const [repDesglose, setRepDesglose] = useState(null)
   const [showUnidadesDesglose, setShowUnidadesDesglose] = useState(false)
   const [talleDetalle, setTalleDetalle] = useState(null)
+  const [repararRanking, setRepararRanking] = useState(null)
   const [repFilterTorneo, setRepFilterTorneo] = useState('')
   const [repConceptoEdit, setRepConceptoEdit] = useState(null)
   const [disciplinaEdit, setDisciplinaEdit] = useState(null)
@@ -3063,7 +3064,8 @@ ${rowsHtml}
                               return (
                                 <div key={nombre} style={{display:'flex',alignItems:'center',gap:10,padding:'7px 0',borderBottom:'1px solid #ECECE8'}}>
                                   <span style={{width:28,fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,textAlign:'right',flexShrink:0,color:'#121212'}}>{jug?.numero||'—'}</span>
-                                  <span style={{flex:1,fontWeight:600,fontSize:13,textTransform:'uppercase',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{nombre}</span>
+                                  <span style={{flex:1,fontWeight:600,fontSize:13,textTransform:'uppercase',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:jug?'inherit':'#999'}}>{nombre}</span>
+                                  {!jug && <button onClick={()=>setRepararRanking(nombre)} style={{background:'#EA580C',color:'#fff',border:'none',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:700,cursor:'pointer',flexShrink:0}}>Reparar</button>}
                                   <span style={{background:'#FFD200',borderRadius:20,padding:'2px 10px',fontWeight:700,fontSize:13,flexShrink:0}}>{total}</span>
                                 </div>
                               )
@@ -3598,6 +3600,44 @@ ${rowsHtml}
           </div>
         </div>
       )}
+
+      {/* Modal: Reparar nombre en ranking */}
+      {repararRanking && (() => {
+        const nombreViejo = repararRanking
+        return (
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setRepararRanking(null)}>
+            <div style={{background:'#fff',borderRadius:12,padding:28,minWidth:340,maxWidth:440,boxShadow:'0 8px 32px rgba(0,0,0,0.18)'}} onClick={e=>e.stopPropagation()}>
+              <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>Reparar nombre en ranking</div>
+              <div style={{fontSize:13,color:'#666',marginBottom:16}}>
+                El nombre <strong style={{color:'#EA580C',textTransform:'uppercase'}}>{nombreViejo}</strong> no existe en el plantel actual. Seleccioná el jugador correcto para actualizar todas las reposiciones.
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:6,maxHeight:300,overflowY:'auto'}}>
+                {(db.plantel||[]).filter(j=>j.nombre?.trim().toLowerCase()!=='libre').sort((a,b)=>(a.numero||0)-(b.numero||0)).map(j=>(
+                  <button key={j.id} onClick={()=>{
+                    const newNombre = j.nombre.trim()
+                    setDb(s=>({
+                      ...s,
+                      reposiciones:(s.reposiciones||[]).map(r=>({
+                        ...r,
+                        jugadores:(r.jugadores||[]).map(jug=>
+                          jug.nombre?.trim().toLowerCase()===nombreViejo.toLowerCase() ? {...jug, nombre:newNombre} : jug
+                        )
+                      }))
+                    }))
+                    setRepararRanking(null)
+                    showToast(`Nombre actualizado a "${newNombre}" en todas las reposiciones.`)
+                  }} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',border:'1px solid #ECECE8',borderRadius:8,background:'#fff',cursor:'pointer',textAlign:'left',fontSize:13}}>
+                    <span style={{width:28,fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212',textAlign:'right',flexShrink:0}}>{j.numero||'—'}</span>
+                    <span style={{fontWeight:600,textTransform:'uppercase'}}>{j.nombre}</span>
+                    <span style={{marginLeft:'auto',fontSize:11,color:'#999',textTransform:'uppercase'}}>{j.posicion}</span>
+                  </button>
+                ))}
+              </div>
+              <button onClick={()=>setRepararRanking(null)} style={{marginTop:16,width:'100%',padding:'9px 0',border:'1px solid #D0D0CC',borderRadius:8,background:'#fff',cursor:'pointer',fontSize:13,color:'#666'}}>Cancelar</button>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Modal: Jugadores por talle */}
       {talleDetalle && (() => {
