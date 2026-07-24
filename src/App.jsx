@@ -194,6 +194,7 @@ export default function App() {
   const [plantelForm, setPlantelForm] = useState({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',talleShort:'L'})
   const [plantelModal, setPlantelModal] = useState(false)
   const [selectedPlantelId, setSelectedPlantelId] = useState(null)
+  const [plantelHoverRow, setPlantelHoverRow] = useState(null)
   const [rechazarModal, setRechazarModal] = useState({ delId: null, motivo: '' })
   const [receptorTab, setReceptorTab] = useState('entregas')
   const [toast, setToast] = useState('')
@@ -2988,23 +2989,34 @@ ${rowsHtml}
                       ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay jugadores en el plantel.</div>
                       : (
                         <div className="card" style={{padding:0,overflow:'hidden',width:'max-content'}}>
-                          <div className="table-header" style={{gridTemplateColumns:'50px max-content 80px 90px 90px 72px'}}>
-                            <div>Nº</div><div>NOMBRE</div><div>POSICIÓN</div><div>CAMISETA</div><div>SHORT</div><div/>
+                          <div style={{display:'grid',gridTemplateColumns:'50px max-content 80px 90px 90px 72px'}}>
+                            {['Nº','NOMBRE','POSICIÓN','CAMISETA','SHORT',''].map((h,i)=>(
+                              <div key={i} style={{padding:'11px 20px',background:'#121212',color:'#FFD200',fontWeight:700,fontSize:11,letterSpacing:'.04em',whiteSpace:'nowrap'}}>{h}</div>
+                            ))}
+                            {(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => {
+                              const isLibre = j.nombre.trim().toLowerCase()==='libre'
+                              const isGolero = j.posicion==='Golero'
+                              const hovered = plantelHoverRow===j.id
+                              const baseBg = isLibre?'#3a3a3a':isGolero?'#A5D6A7':'#fff'
+                              const bg = hovered?(isLibre?'#4a4a4a':isGolero?'#B5E6B7':'#FCFBF4'):baseBg
+                              const textColor = isLibre?'#888':'#1a1a1a'
+                              const cell = {background:bg,padding:'13px 20px',borderBottom:'1px solid #F0F0EC',fontSize:13.5,color:textColor,cursor:'pointer',transition:'background 0.12s',display:'flex',alignItems:'center'}
+                              const rowEvents = {onMouseEnter:()=>setPlantelHoverRow(j.id),onMouseLeave:()=>setPlantelHoverRow(null),onClick:()=>setSelectedPlantelId(j.id)}
+                              return (
+                                <React.Fragment key={j.id}>
+                                  <div style={{...cell,fontWeight:800,fontSize:15}} {...rowEvents}>{j.numero||'—'}</div>
+                                  <div style={{...cell,fontWeight:700,fontStyle:isLibre?'italic':undefined,textTransform:isLibre?undefined:'uppercase',whiteSpace:'nowrap'}} {...rowEvents}>{j.nombre}</div>
+                                  <div style={{...cell,fontSize:12}} {...rowEvents}>{j.posicion||'Jugador'}</div>
+                                  <div style={cell} {...rowEvents}>{j.talleCamiseta}</div>
+                                  <div style={cell} {...rowEvents}>{j.talleShort}</div>
+                                  <div style={{...cell,gap:6,justifyContent:'flex-end',cursor:'default'}} onMouseEnter={rowEvents.onMouseEnter} onMouseLeave={rowEvents.onMouseLeave}>
+                                    <button onClick={e=>{e.stopPropagation();setPlantelForm({...j});setPlantelModal(true)}} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button>
+                                    <button onClick={e=>{e.stopPropagation();deletePlantelJugador(j.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'#C2473D',fontSize:16,fontWeight:700,padding:'2px 4px'}}>×</button>
+                                  </div>
+                                </React.Fragment>
+                              )
+                            })}
                           </div>
-                          {(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => (
-                            <div key={j.id} className="table-row" onClick={() => setSelectedPlantelId(j.id)} style={{gridTemplateColumns:'50px max-content 80px 90px 90px 72px',cursor:'pointer',
-                              background: j.nombre.trim().toLowerCase()==='libre' ? '#3a3a3a' : j.posicion==='Golero' ? '#A5D6A7' : undefined}}>
-                              <div style={{fontWeight:800,fontSize:15,color:j.nombre.trim().toLowerCase()==='libre'?'#888':'#1a1a1a'}}>{j.numero||'—'}</div>
-                              <div style={{fontWeight:700,color:j.nombre.trim().toLowerCase()==='libre'?'#888':'#1a1a1a',fontStyle:j.nombre.trim().toLowerCase()==='libre'?'italic':undefined,textTransform:j.nombre.trim().toLowerCase()==='libre'?undefined:'uppercase',whiteSpace:'nowrap'}}>{j.nombre}</div>
-                              <div style={{color:'#1a1a1a',fontSize:12}}>{j.posicion||'Jugador'}</div>
-                              <div style={{color:'#1a1a1a'}}>{j.talleCamiseta}</div>
-                              <div style={{color:'#1a1a1a'}}>{j.talleShort}</div>
-                              <div style={{display:'flex',gap:6,justifyContent:'flex-end'}}>
-                                <button onClick={e => { e.stopPropagation(); setPlantelForm({...j}); setPlantelModal(true) }} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button>
-                                <button onClick={e => { e.stopPropagation(); deletePlantelJugador(j.id) }} style={{background:'none',border:'none',cursor:'pointer',color:'#C2473D',fontSize:16,fontWeight:700,padding:'2px 4px'}}>×</button>
-                              </div>
-                            </div>
-                          ))}
                         </div>
                       )
                     }
