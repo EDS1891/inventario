@@ -2884,7 +2884,7 @@ ${rowsHtml}
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#FFD200'}} onClick={()=>setRepResumen('ambos')}>
                         <div className="kpi-label" style={{color:'#FFD200'}}>TOTAL DESCUENTOS</div>
                         <div className="kpi-value" style={{color:'#FFD200',fontSize:22}}>$ {totalDinero.toLocaleString('es-UY')}</div>
-                        <div className="kpi-sub" style={{color:'#FFD200'}}>{totalEquipos} cam + {totalShorts} sht →</div>
+                        <div className="kpi-sub" style={{color:'#FFD200'}}>ver detalle →</div>
                       </div>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
                         <div className="kpi-label">CAMISETAS ENVIADAS</div>
