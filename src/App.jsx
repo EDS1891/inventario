@@ -2867,9 +2867,14 @@ ${rowsHtml}
                   return (
                     <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
-                        <div className="kpi-label">ENTREGAS</div>
-                        <div className="kpi-value">{(db.reposiciones||[]).length}</div>
-                        <div className="kpi-sub">registradas</div>
+                        <div className="kpi-label">CAMISETAS ENVIADAS</div>
+                        <div className="kpi-value">{totalCamTodas}</div>
+                        <div className="kpi-sub">en todas las entregas</div>
+                      </div>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
+                        <div className="kpi-label">SHORTS ENVIADOS</div>
+                        <div className="kpi-value">{totalShtTodas}</div>
+                        <div className="kpi-sub">en todas las entregas</div>
                       </div>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepResumen('ambos')}>
                         <div className="kpi-label">CAMISETAS PARA DESCONTAR</div>
@@ -2885,16 +2890,6 @@ ${rowsHtml}
                         <div className="kpi-label" style={{color:'#FFD200'}}>TOTAL DESCUENTOS</div>
                         <div className="kpi-value" style={{color:'#FFD200',fontSize:22}}>$ {totalDinero.toLocaleString('es-UY')}</div>
                         <div className="kpi-sub" style={{color:'#FFD200'}}>ver detalle →</div>
-                      </div>
-                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
-                        <div className="kpi-label">CAMISETAS ENVIADAS</div>
-                        <div className="kpi-value">{totalCamTodas}</div>
-                        <div className="kpi-sub">en todas las entregas</div>
-                      </div>
-                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
-                        <div className="kpi-label">SHORTS ENVIADOS</div>
-                        <div className="kpi-value">{totalShtTodas}</div>
-                        <div className="kpi-sub">en todas las entregas</div>
                       </div>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepTab('plantel')}>
                         <div className="kpi-label">PLANTEL</div>
