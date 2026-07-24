@@ -3017,12 +3017,14 @@ ${rowsHtml}
                         <div style={{width:20,fontWeight:700,fontSize:13,flexShrink:0}}>{qty}</div>
                       </div>
                     )
+                    const plantelNombres = new Set(jugadores.map(j => j.nombre.trim().toLowerCase()))
                     const ranking = (() => {
                       const counts = {}
                       ;(db.deliveries||[]).forEach(d => {
                         if (!d.persona) return
+                        if (!plantelNombres.has(d.persona.trim().toLowerCase())) return
                         const total = (d.lines||[]).reduce((s,l) => s + (Number(l.qty)||0), 0)
-                        if (total > 0) counts[d.persona] = (counts[d.persona]||0) + total
+                        if (total > 0) counts[d.persona.trim()] = (counts[d.persona.trim()]||0) + total
                       })
                       return Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,15)
                     })()
