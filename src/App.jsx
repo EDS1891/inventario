@@ -181,6 +181,7 @@ export default function App() {
   const [repDetail, setRepDetail] = useState(null)
   const [repResumen, setRepResumen] = useState(null)
   const [repDesglose, setRepDesglose] = useState(null)
+  const [showUnidadesDesglose, setShowUnidadesDesglose] = useState(false)
   const [repFilterTorneo, setRepFilterTorneo] = useState('')
   const [repConceptoEdit, setRepConceptoEdit] = useState(null)
   const [disciplinaEdit, setDisciplinaEdit] = useState(null)
@@ -2066,12 +2067,9 @@ ${rowsHtml}
               <div className="kpi-grid">
                 <div className="kpi-card"><div className="kpi-label">ARTÍCULOS</div><div className="kpi-value">{kpis.articulos}</div><div className="kpi-sub">referencias activas</div></div>
 
-                <div className="kpi-card"><div className="kpi-label">UNIDADES EN STOCK</div><div className="kpi-value">{kpis.unidades}</div><div className="kpi-sub">suma de todos los talles</div></div>
+                <div className="kpi-card" style={{cursor:'pointer'}} onClick={()=>setShowUnidadesDesglose(true)}><div className="kpi-label">UNIDADES EN STOCK</div><div className="kpi-value">{kpis.unidades}</div><div className="kpi-sub">suma de todos los talles →</div></div>
 
                 <div className="kpi-card"><div className="kpi-label">MONTO TOTAL EN ARTÍCULOS</div><div className="kpi-value" style={{fontSize:24}}>$ {kpis.valorStock.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</div></div>
-                <div className="kpi-card" style={{cursor:'pointer'}} onClick={() => { setCat('Entrenamiento'); setView('inventario') }}><div className="kpi-label">PRENDAS DE ENTRENAMIENTO</div><div className="kpi-value">{kpis.entrenamiento}</div><div className="kpi-sub">unidades en stock →</div></div>
-                <div className="kpi-card" style={{cursor:'pointer'}} onClick={() => { setCat('Juego'); setView('inventario') }}><div className="kpi-label">PRENDAS DE JUEGO</div><div className="kpi-value">{kpis.juego}</div><div className="kpi-sub">unidades en stock →</div></div>
-                <div className="kpi-card" style={{cursor:'pointer'}} onClick={() => { setCat('Casual'); setView('inventario') }}><div className="kpi-label">PRENDAS CASUAL</div><div className="kpi-value">{kpis.casual}</div><div className="kpi-sub">unidades en stock →</div></div>
 
               </div>
               <div className="panel-grid">
@@ -3512,6 +3510,31 @@ ${rowsHtml}
               <button className="btn btn-dark" onClick={() => openRepEdit(repDetail)}>Editar</button>
               <button style={{padding:'8px 16px',borderRadius:7,border:'1px solid #C2473D',background:'#FBEAE8',color:'#C2473D',fontWeight:700,cursor:'pointer'}}
                 onClick={() => { if(window.confirm('¿Eliminar esta reposición?')) deleteReposicion(repDetail.id) }}>Eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Desglose unidades en stock por categoría */}
+      {showUnidadesDesglose && (
+        <div className="modal-backdrop" onClick={()=>setShowUnidadesDesglose(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:380,width:'96%'}}>
+            <div className="modal-header">
+              <div className="modal-title">Unidades en stock por categoría</div>
+              <button className="modal-close" onClick={()=>setShowUnidadesDesglose(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              {[['Entrenamiento', kpis.entrenamiento], ['Juego', kpis.juego], ['Casual', kpis.casual]].map(([cat, qty]) => (
+                <div key={cat} style={{display:'flex',justifyContent:'space-between',alignItems:'center',
+                  padding:'12px 16px',borderRadius:8,marginBottom:8,background:'#FFD200',cursor:'pointer'}}
+                  onClick={()=>{ setCat(cat); setView('inventario'); setShowUnidadesDesglose(false) }}>
+                  <span style={{fontWeight:700,fontSize:14}}>PRENDAS DE {cat.toUpperCase()}</span>
+                  <span style={{fontFamily:'Archivo Black,sans-serif',fontSize:26}}>{qty}</span>
+                </div>
+              ))}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={()=>setShowUnidadesDesglose(false)}>Cerrar</button>
             </div>
           </div>
         </div>
