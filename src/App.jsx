@@ -8,6 +8,8 @@ const TALLES_ADULTO = ['S','M','L','XL','XXL','XXXL','Único']
 const TALLES_NINO   = ['2','4','6','8','10','12','14']
 const RECEPTORES = ['1° División','3° División','Juveniles','Captación','Femenino','Juveniles Femenino','Fútbol Sala Masculino','Fútbol Sala Femenino','Basket','Deportes Anexos','Funcionarios','Protocolo','Sponsors']
 const DISCIPLINAS_DEPORTES_ANEXOS = ['Atletismo','Bowling','Esports','Fisicoculturismo','Fútbol Inclusivo','Fútbol Playa Masculino','Fútbol Sala Femenino','Handball','Volley','Teqball','Cricket','Footgolf','Ciclismo','Paracaidismo','Maxi Basket','Automovilismo','Motociclismo','Hockey Patín','Esgrima']
+const PRECIO_CAMISETA = 1930
+const PRECIO_SHORT = 1030
 const CATEGORIAS = ['Entrenamiento','Juego','Casual']
 const OCUPACIONES = ['3° División','Juveniles','Juveniles Femenino','Captacion']
 const DIVISIONES            = ['Sub 19','Sub 17','Sub 16','Sub 15','Sub 14']
@@ -2859,6 +2861,7 @@ ${rowsHtml}
                   const descSht = j => j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
                   const totalEquipos = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
                   const totalShorts  = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
+                  const totalDinero  = totalEquipos * PRECIO_CAMISETA + totalShorts * PRECIO_SHORT
                   const totalCamTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
                   const totalShtTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
                   return (
@@ -2880,8 +2883,8 @@ ${rowsHtml}
                       </div>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#FFD200'}} onClick={()=>setRepResumen('ambos')}>
                         <div className="kpi-label" style={{color:'#FFD200'}}>TOTAL DESCUENTOS</div>
-                        <div className="kpi-value" style={{color:'#FFD200'}}>{totalEquipos + totalShorts}</div>
-                        <div className="kpi-sub" style={{color:'#FFD200'}}>camisetas + shorts →</div>
+                        <div className="kpi-value" style={{color:'#FFD200',fontSize:22}}>$ {totalDinero.toLocaleString('es-UY')}</div>
+                        <div className="kpi-sub" style={{color:'#FFD200'}}>{totalEquipos} cam + {totalShorts} sht →</div>
                       </div>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
                         <div className="kpi-label">CAMISETAS ENVIADAS</div>
