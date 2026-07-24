@@ -175,7 +175,7 @@ export default function App() {
   const [utiFilterModelo, setUtiFilterModelo] = useState('')
   const [utiForm, setUtiForm] = useState({ tipo:'', competicion:'', numero:'', jugador:'', talle:'S', modelo:'', estampado:'', parches:'', detalle:'', temporada:'', id:null })
   const [utiModal, setUtiModal] = useState(false)
-  const [repForm, setRepForm] = useState({ editId:null, concepto:'', descuento:true, rows:[] })
+  const [repForm, setRepForm] = useState({ editId:null, concepto:'', descuento:true, rows:[], fechaPartido:'' })
   const [repModal, setRepModal] = useState(false)
   const [repDetail, setRepDetail] = useState(null)
   const [repResumen, setRepResumen] = useState(null)
@@ -1146,6 +1146,7 @@ ${rowsHtml}
       descuento:true,
       torneo:'APERTURA',
       fechaTorneo:'1',
+      fechaPartido:'',
       tipoCamisetaJugador: REP_TIPOS_JUGADOR[0],
       tipoCamisetaGolero: REP_TIPOS_GOLERO[0],
       rows:(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j=>({...j,cantCamiseta:'',cantShort:'',descuentoCamiseta:true,descuentoShort:true}))
@@ -1166,6 +1167,7 @@ ${rowsHtml}
       descuento: rep.descuento !== false,
       torneo: rep.torneo || 'APERTURA',
       fechaTorneo: rep.fechaTorneo != null ? String(rep.fechaTorneo) : '1',
+      fechaPartido: rep.fechaPartido || '',
       tipoCamisetaJugador: rep.tipoCamisetaJugador || REP_TIPOS_JUGADOR[0],
       tipoCamisetaGolero: rep.tipoCamisetaGolero || REP_TIPOS_GOLERO[0],
       rows: plantelRows
@@ -1194,6 +1196,7 @@ ${rowsHtml}
       setDb(s => ({...s, reposiciones:(s.reposiciones||[]).map(r => r.id===repForm.editId
         ? {...r, concepto:repForm.concepto.trim(), torneo:repForm.torneo, descuento:repForm.descuento,
             fechaTorneo: tieneFecha ? Number(repForm.fechaTorneo) : null,
+            fechaPartido: repForm.fechaPartido||null,
             tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores}
         : r), repoAlertas: pushAlerta(s, 'editar', repForm.concepto.trim())}))
       showToast('Reposición actualizada.')
@@ -1201,6 +1204,7 @@ ${rowsHtml}
       setDb(s => {
         const rep = { id:s.nextRep, fecha:today(), concepto:repForm.concepto.trim(), creadoPor:currentUser?.displayName||session,
           torneo:repForm.torneo, fechaTorneo: tieneFecha ? Number(repForm.fechaTorneo) : null, descuento:repForm.descuento,
+          fechaPartido: repForm.fechaPartido||null,
           tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores }
         return { ...s, reposiciones:[rep,...(s.reposiciones||[])], nextRep:s.nextRep+1, repoAlertas: pushAlerta(s, 'crear', rep.concepto) }
       })
@@ -1628,8 +1632,8 @@ ${rowsHtml}
                       </div>
                     )}
                     <div className="card" style={{padding:0,overflow:'hidden'}}>
-                      <div className="table-header" style={{gridTemplateColumns:'100px 260px 160px 80px 80px 36px'}}>
-                        <div>FECHA</div><div>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'right'}}>CAMISETAS</div><div style={{textAlign:'right'}}>SHORTS</div><div/>
+                      <div className="table-header" style={{gridTemplateColumns:'100px 260px 160px 80px 80px 100px 36px'}}>
+                        <div>FECHA</div><div>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'right'}}>CAMISETAS</div><div style={{textAlign:'right'}}>SHORTS</div><div style={{textAlign:'center'}}>F. PARTIDO</div><div/>
                       </div>
                       {filtered.length === 0
                         ? <div style={{color:'#8a8a82',fontSize:13,textAlign:'center',padding:'24px 0'}}>Sin reposiciones para este torneo.</div>
@@ -1637,7 +1641,7 @@ ${rowsHtml}
                           const totCam = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
                           const totSht = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
                           return (
-                          <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 260px 160px 80px 80px 36px',cursor:'pointer',padding:'8px 20px'}} onClick={() => setRepDetail(r)}>
+                          <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 260px 160px 80px 80px 100px 36px',cursor:'pointer',padding:'8px 20px'}} onClick={() => setRepDetail(r)}>
                             <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#6a6a62',whiteSpace:'nowrap'}}>{r.fecha}</div>
                             <div style={{fontWeight:600,fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
                               {r.concepto}
@@ -1649,6 +1653,7 @@ ${rowsHtml}
                             </div>
                             <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totCam>0?'#1a1a1a':'#ccc'}}>{totCam>0?totCam:'—'}</div>
                             <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totSht>0?'#1a1a1a':'#ccc'}}>{totSht>0?totSht:'—'}</div>
+                            <div style={{textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:r.fechaPartido?'#1a1a1a':'#ccc'}}>{r.fechaPartido||'—'}</div>
                             <div style={{textAlign:'right',color:'#8a8a82',fontSize:18,lineHeight:1}}>›</div>
                           </div>
                           )
@@ -1814,6 +1819,11 @@ ${rowsHtml}
                       <input className="field-input" value={repForm.fechaTorneo||''} onChange={e=>setRepForm(p=>({...p,fechaTorneo:e.target.value}))} placeholder="Ej. Ida / Final" />
                     </div>
                   )}
+                </div>
+                {/* Fecha Partido */}
+                <div className="form-group" style={{marginTop:10}}>
+                  <label className="field-label">Fecha Partido <span style={{fontWeight:400,color:'#8a8a82'}}>(DD/MM/YYYY — opcional, define el mes para descuentos)</span></label>
+                  <input className="field-input" value={repForm.fechaPartido||''} onChange={e=>setRepForm(p=>({...p,fechaPartido:e.target.value}))} placeholder="Ej. 31/07/2025" style={{maxWidth:160}} />
                 </div>
                 {/* Selector de tipo de camiseta — uno por posición */}
                 <div style={{display:'flex',gap:16,marginTop:14}}>
@@ -2958,8 +2968,8 @@ ${rowsHtml}
                           </div>
                         )}
                         <div className="card" style={{padding:0,overflow:'hidden'}}>
-                          <div className="table-header" style={{gridTemplateColumns:'100px 260px 160px 80px 80px 36px'}}>
-                            <div>FECHA</div><div>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'right'}}>CAMISETAS</div><div style={{textAlign:'right'}}>SHORTS</div><div/>
+                          <div className="table-header" style={{gridTemplateColumns:'100px 260px 160px 80px 80px 100px 36px'}}>
+                            <div>FECHA</div><div>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'right'}}>CAMISETAS</div><div style={{textAlign:'right'}}>SHORTS</div><div style={{textAlign:'center'}}>F. PARTIDO</div><div/>
                           </div>
                           {filtered.length === 0
                             ? <div style={{color:'#8a8a82',fontSize:13,textAlign:'center',padding:'24px 0'}}>Sin reposiciones para este torneo.</div>
@@ -2967,7 +2977,7 @@ ${rowsHtml}
                               const totCam = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
                               const totSht = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
                               return (
-                              <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 260px 160px 80px 80px 36px',cursor:'pointer',padding:'8px 20px'}} onClick={() => setRepDetail(r)}>
+                              <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 260px 160px 80px 80px 100px 36px',cursor:'pointer',padding:'8px 20px'}} onClick={() => setRepDetail(r)}>
                                 <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#6a6a62'}}>{r.fecha}</div>
                                 <div>
                                   <div style={{fontWeight:600}}>{r.concepto}</div>
@@ -2979,6 +2989,7 @@ ${rowsHtml}
                                 </div>
                                 <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totCam>0?'#1a1a1a':'#ccc'}}>{totCam>0?totCam:'—'}</div>
                                 <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totSht>0?'#1a1a1a':'#ccc'}}>{totSht>0?totSht:'—'}</div>
+                                <div style={{textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:r.fechaPartido?'#1a1a1a':'#ccc'}}>{r.fechaPartido||'—'}</div>
                                 <div style={{textAlign:'right',color:'#8a8a82',fontSize:18,lineHeight:1}}>›</div>
                               </div>
                               )
@@ -3470,6 +3481,11 @@ ${rowsHtml}
                   </div>
                 )}
               </div>
+              {/* Fecha Partido */}
+              <div className="form-group" style={{marginTop:10}}>
+                <label className="field-label">Fecha Partido <span style={{fontWeight:400,color:'#8a8a82'}}>(DD/MM/YYYY — opcional, define el mes para descuentos)</span></label>
+                <input className="field-input" value={repForm.fechaPartido||''} onChange={e=>setRepForm(p=>({...p,fechaPartido:e.target.value}))} placeholder="Ej. 31/07/2025" style={{maxWidth:160}} />
+              </div>
               {/* Selector de tipo de camiseta — uno por posición */}
               <div style={{display:'flex',gap:16,marginTop:14}}>
                 <div style={{flex:1}}>
@@ -3884,8 +3900,8 @@ ${rowsHtml}
         // Agrupar por mes (clave MM/YYYY)
         const mesesMap = {}
         repsValidas.forEach(r => {
-          const p = (r.fecha||'').split('/')
-          const key = p.length===3 ? p[1]+'/'+p[2] : r.fecha||'?'
+          const p = (r.fechaPartido||r.fecha||'').split('/')
+          const key = p.length===3 ? p[1]+'/'+p[2] : (r.fechaPartido||r.fecha)||'?'
           if (!mesesMap[key]) mesesMap[key] = []
           mesesMap[key].push(r)
         })
