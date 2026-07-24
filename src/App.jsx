@@ -184,6 +184,7 @@ export default function App() {
   const [showUnidadesDesglose, setShowUnidadesDesglose] = useState(false)
   const [talleDetalle, setTalleDetalle] = useState(null)
   const [repararRanking, setRepararRanking] = useState(null)
+  const [rankingDetalle, setRankingDetalle] = useState(null)
   const [repFilterTorneo, setRepFilterTorneo] = useState('')
   const [repConceptoEdit, setRepConceptoEdit] = useState(null)
   const [disciplinaEdit, setDisciplinaEdit] = useState(null)
@@ -3074,11 +3075,13 @@ ${rowsHtml}
                             {ranking.map(([nombre, {total, monto}]) => {
                               const jug = jugadores.find(j => j.nombre.trim().toLowerCase() === nombre.toLowerCase())
                               return (
-                                <div key={nombre} style={{display:'grid',gridTemplateColumns:'28px 1fr 44px auto',gap:'0 8px',alignItems:'center',padding:'6px 0',borderBottom:'1px solid #ECECE8'}}>
+                                <div key={nombre} onClick={()=>setRankingDetalle(nombre)} style={{display:'grid',gridTemplateColumns:'28px 1fr 44px auto',gap:'0 8px',alignItems:'center',padding:'6px 0',borderBottom:'1px solid #ECECE8',cursor:'pointer',borderRadius:4,transition:'background .1s'}}
+                                  onMouseEnter={e=>e.currentTarget.style.background='#F8F8F4'}
+                                  onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
                                   <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,textAlign:'right',color:'#121212'}}>{jug?.numero||'—'}</span>
                                   <span style={{fontWeight:600,fontSize:12,textTransform:'uppercase',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:jug?'inherit':'#999'}}>
                                     {nombre}
-                                    {!jug && <button onClick={()=>setRepararRanking(nombre)} style={{background:'#EA580C',color:'#fff',border:'none',borderRadius:4,padding:'1px 5px',fontSize:10,fontWeight:700,cursor:'pointer',marginLeft:4}}>!</button>}
+                                    {!jug && <button onClick={e=>{e.stopPropagation();setRepararRanking(nombre)}} style={{background:'#EA580C',color:'#fff',border:'none',borderRadius:4,padding:'1px 5px',fontSize:10,fontWeight:700,cursor:'pointer',marginLeft:4}}>!</button>}
                                   </span>
                                   <span style={{background:'#FFD200',borderRadius:20,padding:'2px 6px',fontWeight:700,fontSize:12,textAlign:'center'}}>{total}</span>
                                   <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:12,textAlign:'right',whiteSpace:'nowrap'}}>$ {monto.toLocaleString('es-UY')}</span>
@@ -3615,6 +3618,65 @@ ${rowsHtml}
           </div>
         </div>
       )}
+
+      {/* Modal: Detalle de descuentos por jugador */}
+      {rankingDetalle && (() => {
+        const nombre = rankingDetalle
+        const jug = (db.plantel||[]).find(j => j.nombre?.trim().toLowerCase() === nombre.toLowerCase())
+        const filas = (db.reposiciones||[]).flatMap(r => {
+          const j = (r.jugadores||[]).find(jj => jj.nombre?.trim().toLowerCase() === nombre.toLowerCase())
+          if (!j) return []
+          const dc = j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
+          const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
+          const cam = dc ? Number(j.cantCamiseta)||0 : 0
+          const sht = ds ? Number(j.cantShort)||0 : 0
+          if (cam === 0 && sht === 0) return []
+          return [{label: r.concepto||'Sin nombre', fecha: r.fecha||'', torneo: r.torneo||'', cam, sht, monto: cam*PRECIO_CAMISETA + sht*PRECIO_SHORT}]
+        })
+        const totCam = filas.reduce((s,f)=>s+f.cam,0)
+        const totSht = filas.reduce((s,f)=>s+f.sht,0)
+        const totMonto = filas.reduce((s,f)=>s+f.monto,0)
+        return (
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setRankingDetalle(null)}>
+            <div style={{background:'#fff',borderRadius:12,padding:28,minWidth:360,maxWidth:500,boxShadow:'0 8px 32px rgba(0,0,0,0.18)',maxHeight:'80vh',display:'flex',flexDirection:'column'}} onClick={e=>e.stopPropagation()}>
+              <div style={{display:'flex',alignItems:'baseline',gap:10,marginBottom:4}}>
+                {jug?.numero && <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:22,color:'#121212'}}>{jug.numero}</span>}
+                <span style={{fontWeight:700,fontSize:16,textTransform:'uppercase'}}>{nombre}</span>
+              </div>
+              <div style={{fontSize:12,color:'#999',marginBottom:16}}>{jug?.posicion||''}</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 60px 60px auto',gap:'0 10px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',paddingBottom:6,borderBottom:'2px solid #ECECE8',marginBottom:4}}>
+                <span>REPOSICIÓN</span>
+                <span style={{textAlign:'center'}}>CAM</span>
+                <span style={{textAlign:'center'}}>SHO</span>
+                <span style={{textAlign:'right'}}>MONTO</span>
+              </div>
+              <div style={{overflowY:'auto',flex:1}}>
+                {filas.length === 0
+                  ? <div style={{color:'#999',fontSize:13,padding:'20px 0',textAlign:'center'}}>Sin registros</div>
+                  : filas.map((f,i) => (
+                    <div key={i} style={{display:'grid',gridTemplateColumns:'1fr 60px 60px auto',gap:'0 10px',alignItems:'center',padding:'7px 0',borderBottom:'1px solid #ECECE8'}}>
+                      <div>
+                        <div style={{fontWeight:600,fontSize:12,textTransform:'uppercase',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.label}</div>
+                        {(f.fecha||f.torneo) && <div style={{fontSize:10,color:'#999'}}>{[f.torneo,f.fecha].filter(Boolean).join(' · ')}</div>}
+                      </div>
+                      <span style={{textAlign:'center',fontWeight:700,fontSize:13}}>{f.cam||'—'}</span>
+                      <span style={{textAlign:'center',fontWeight:700,fontSize:13}}>{f.sht||'—'}</span>
+                      <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,fontWeight:600,textAlign:'right',whiteSpace:'nowrap'}}>$ {f.monto.toLocaleString('es-UY')}</span>
+                    </div>
+                  ))
+                }
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 60px 60px auto',gap:'0 10px',alignItems:'center',padding:'10px 0 0',borderTop:'2px solid #121212',marginTop:8}}>
+                <span style={{fontWeight:700,fontSize:12}}>TOTAL</span>
+                <span style={{textAlign:'center',fontWeight:700,fontSize:14,background:'#FFD200',borderRadius:20,padding:'2px 6px'}}>{totCam}</span>
+                <span style={{textAlign:'center',fontWeight:700,fontSize:14,background:'#FFD200',borderRadius:20,padding:'2px 6px'}}>{totSht}</span>
+                <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,textAlign:'right',whiteSpace:'nowrap'}}>$ {totMonto.toLocaleString('es-UY')}</span>
+              </div>
+              <button onClick={()=>setRankingDetalle(null)} style={{marginTop:16,width:'100%',padding:'9px 0',border:'1px solid #D0D0CC',borderRadius:8,background:'#fff',cursor:'pointer',fontSize:13,color:'#666'}}>Cerrar</button>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Modal: Reparar nombre en ranking */}
       {repararRanking && (() => {
