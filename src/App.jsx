@@ -3969,11 +3969,11 @@ ${rowsHtml}
                           {filas.map((f,i)=>(
                             <tr key={i} style={{borderBottom:'1px solid #F0F0EC',background:i%2===0?'#fff':'#FAFAF8'}}>
                               <td style={{padding:'7px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
-                                <span style={{fontFamily:'IBM Plex Mono,monospace',color:'#8a8a82',marginRight:8,fontSize:11}}>{f.numero}</span>
+                                <span style={{fontFamily:'IBM Plex Mono,monospace',color:'#121212',marginRight:8,fontSize:11}}>{f.numero}</span>
                                 {f.nombre}
                               </td>
-                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:f.cam>0?700:400,color:f.cam>0?'#1a1a1a':'#ccc'}}>{f.cam}</td>
-                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:f.sht>0?700:400,color:f.sht>0?'#1a1a1a':'#ccc'}}>{f.sht}</td>
+                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.cam}</td>
+                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.sht}</td>
                               <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,background:'#FFF8D6'}}>$ {f.desc.toLocaleString('es-UY')}</td>
                             </tr>
                           ))}
