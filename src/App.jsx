@@ -3052,16 +3052,14 @@ ${rowsHtml}
                       return Object.entries(counts).sort((a,b) => b[1].total-a[1].total).slice(0,15)
                     })()
                     return (
-                      <div style={{display:'flex',flexDirection:'column',gap:20,paddingTop:36}}>
-                        <div style={{display:'flex',gap:20,flexWrap:'wrap',alignItems:'flex-start'}}>
-                          <div className="card" style={{padding:'16px 20px',minWidth:200}}>
-                            <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:12,textAlign:'center'}}>TALLES CAMISETA</div>
-                            {tallesCam.map(([t,q]) => <BarFila key={t} talle={t} qty={q} max={maxCam} campo="talleCamiseta"/>)}
-                          </div>
-                          <div className="card" style={{padding:'16px 20px',minWidth:200}}>
-                            <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:12,textAlign:'center'}}>TALLES SHORT</div>
-                            {tallesSht.map(([t,q]) => <BarFila key={t} talle={t} qty={q} max={maxSht} campo="talleShort"/>)}
-                          </div>
+                      <div style={{display:'flex',gap:20,flexWrap:'wrap',alignItems:'flex-start',paddingTop:36}}>
+                        <div className="card" style={{padding:'16px 20px',minWidth:200}}>
+                          <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:12,textAlign:'center'}}>TALLES CAMISETA</div>
+                          {tallesCam.map(([t,q]) => <BarFila key={t} talle={t} qty={q} max={maxCam} campo="talleCamiseta"/>)}
+                        </div>
+                        <div className="card" style={{padding:'16px 20px',minWidth:200}}>
+                          <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:12,textAlign:'center'}}>TALLES SHORT</div>
+                          {tallesSht.map(([t,q]) => <BarFila key={t} talle={t} qty={q} max={maxSht} campo="talleShort"/>)}
                         </div>
                         {ranking.length > 0 && (
                           <div className="card" style={{padding:'16px 20px',minWidth:300,maxWidth:460}}>
