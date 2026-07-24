@@ -3537,7 +3537,7 @@ ${rowsHtml}
         const filasGol = filas.filter(([t])=>golTipos.includes(t))
         const filasOtros = filas.filter(([t])=>!jugTipos.includes(t)&&!golTipos.includes(t))
         const TIPO_COLORS = {
-          'TRADICIONAL': {bg:'repeating-linear-gradient(45deg,#FFD200,#FFD200 14px,#121212 14px,#121212 28px)', color:'#fff'},
+          'TRADICIONAL': {bg:'repeating-linear-gradient(45deg,#FFD200,#FFD200 14px,#121212 14px,#121212 28px)', color:'#fff', badge:true},
           'AMARILLA':    {bg:'#FFD200', color:'#121212'},
           'VERDE':       {bg:'#2d6a4f', color:'#fff'},
           'NEGRO':       {bg:'#2a2a2a', color:'#fff'},
@@ -3548,7 +3548,10 @@ ${rowsHtml}
           const c = TIPO_COLORS[tipo] || {bg:'#F5F5F0', color:'#121212'}
           return (
             <div key={tipo} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 16px',borderRadius:8,marginBottom:6,background:c.bg}}>
-              <span style={{fontWeight:700,fontSize:14,color:c.color}}>{tipo}</span>
+              {c.badge
+                ? <span style={{fontWeight:700,fontSize:13,color:'#fff',background:'#121212',padding:'3px 10px',borderRadius:20}}>{tipo}</span>
+                : <span style={{fontWeight:700,fontSize:14,color:c.color}}>{tipo}</span>
+              }
               <span style={{fontFamily:'Archivo Black,sans-serif',fontSize:22,color:c.color}}>{qty}</span>
             </div>
           )
