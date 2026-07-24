@@ -3065,7 +3065,7 @@ ${rowsHtml}
                         </div>
                         {ranking.length > 0 && (
                           <div className="card" style={{padding:'16px 20px',minWidth:300,maxWidth:460}}>
-                            <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:8,textAlign:'center'}}>TOP CAMISETAS ENTREGADAS POR JUGADOR</div>
+                            <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:8,textAlign:'center'}}>TOP PRENDAS ENTREGADAS POR JUGADOR</div>
                             <div style={{display:'grid',gridTemplateColumns:'28px 1fr 44px',gap:'0 8px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',padding:'0 0 6px',borderBottom:'2px solid #ECECE8',marginBottom:2}}>
                               <span style={{textAlign:'right'}}>#</span>
                               <span>NOMBRE</span>
