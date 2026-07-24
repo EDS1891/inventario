@@ -3038,11 +3038,17 @@ ${rowsHtml}
                           if (!nombre) return
                           const dc = j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
                           const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
-                          const total = (dc ? Number(j.cantCamiseta)||0 : 0) + (ds ? Number(j.cantShort)||0 : 0)
-                          if (total > 0) counts[nombre] = (counts[nombre]||0) + total
+                          const cam = dc ? Number(j.cantCamiseta)||0 : 0
+                          const sht = ds ? Number(j.cantShort)||0 : 0
+                          const total = cam + sht
+                          if (total > 0) {
+                            if (!counts[nombre]) counts[nombre] = {total:0, monto:0}
+                            counts[nombre].total += total
+                            counts[nombre].monto += cam * PRECIO_CAMISETA + sht * PRECIO_SHORT
+                          }
                         })
                       })
-                      return Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,15)
+                      return Object.entries(counts).sort((a,b) => b[1].total-a[1].total).slice(0,15)
                     })()
                     return (
                       <div style={{display:'flex',flexDirection:'column',gap:20,paddingTop:36}}>
@@ -3058,15 +3064,24 @@ ${rowsHtml}
                         </div>
                         {ranking.length > 0 && (
                           <div className="card" style={{padding:'16px 20px',minWidth:300,maxWidth:460}}>
-                            <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:12,textAlign:'center'}}>TOP PRENDAS POR INTEGRANTE</div>
-                            {ranking.map(([nombre, total]) => {
+                            <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:8,textAlign:'center'}}>RANKING DE DESCUENTOS POR JUGADOR</div>
+                            <div style={{display:'grid',gridTemplateColumns:'28px 1fr 44px auto',gap:'0 8px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',padding:'0 0 6px',borderBottom:'2px solid #ECECE8',marginBottom:2}}>
+                              <span style={{textAlign:'right'}}>#</span>
+                              <span>NOMBRE</span>
+                              <span style={{textAlign:'center'}}>PRENDAS</span>
+                              <span style={{textAlign:'right'}}>MONTO</span>
+                            </div>
+                            {ranking.map(([nombre, {total, monto}]) => {
                               const jug = jugadores.find(j => j.nombre.trim().toLowerCase() === nombre.toLowerCase())
                               return (
-                                <div key={nombre} style={{display:'flex',alignItems:'center',gap:10,padding:'7px 0',borderBottom:'1px solid #ECECE8'}}>
-                                  <span style={{width:28,fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,textAlign:'right',flexShrink:0,color:'#121212'}}>{jug?.numero||'—'}</span>
-                                  <span style={{flex:1,fontWeight:600,fontSize:13,textTransform:'uppercase',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:jug?'inherit':'#999'}}>{nombre}</span>
-                                  {!jug && <button onClick={()=>setRepararRanking(nombre)} style={{background:'#EA580C',color:'#fff',border:'none',borderRadius:4,padding:'2px 7px',fontSize:11,fontWeight:700,cursor:'pointer',flexShrink:0}}>Reparar</button>}
-                                  <span style={{background:'#FFD200',borderRadius:20,padding:'2px 10px',fontWeight:700,fontSize:13,flexShrink:0}}>{total}</span>
+                                <div key={nombre} style={{display:'grid',gridTemplateColumns:'28px 1fr 44px auto',gap:'0 8px',alignItems:'center',padding:'6px 0',borderBottom:'1px solid #ECECE8'}}>
+                                  <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,textAlign:'right',color:'#121212'}}>{jug?.numero||'—'}</span>
+                                  <span style={{fontWeight:600,fontSize:12,textTransform:'uppercase',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:jug?'inherit':'#999'}}>
+                                    {nombre}
+                                    {!jug && <button onClick={()=>setRepararRanking(nombre)} style={{background:'#EA580C',color:'#fff',border:'none',borderRadius:4,padding:'1px 5px',fontSize:10,fontWeight:700,cursor:'pointer',marginLeft:4}}>!</button>}
+                                  </span>
+                                  <span style={{background:'#FFD200',borderRadius:20,padding:'2px 6px',fontWeight:700,fontSize:12,textAlign:'center'}}>{total}</span>
+                                  <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:12,textAlign:'right',whiteSpace:'nowrap'}}>$ {monto.toLocaleString('es-UY')}</span>
                                 </div>
                               )
                             })}
