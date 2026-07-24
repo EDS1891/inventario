@@ -3018,7 +3018,12 @@ ${rowsHtml}
                 {reps.length === 0
                   ? <div style={{padding:24,textAlign:'center',color:'#8a8a82',fontSize:13}}>Sin reposiciones registradas para este jugador.</div>
                   : <>
-                    <div style={{display:'grid',gridTemplateColumns:'95px 1fr 60px 60px',background:'#121212',padding:'8px 16px',gap:8}}>
+                    <div style={{display:'grid',gridTemplateColumns:'95px 1fr 60px 60px',background:'#121212',padding:'4px 16px 0',gap:8}}>
+                      <div/>
+                      <div/>
+                      <div style={{fontSize:9,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',textAlign:'center',gridColumn:'3 / span 2'}}>DESCUENTO</div>
+                    </div>
+                    <div style={{display:'grid',gridTemplateColumns:'95px 1fr 60px 60px',background:'#121212',padding:'2px 16px 8px',gap:8}}>
                       <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em'}}>FECHA</div>
                       <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em'}}>CONCEPTO</div>
                       <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em',textAlign:'center'}}>CAMISETA</div>
