@@ -3537,7 +3537,7 @@ ${rowsHtml}
         const filasGol = filas.filter(([t])=>golTipos.includes(t))
         const filasOtros = filas.filter(([t])=>!jugTipos.includes(t)&&!golTipos.includes(t))
         const TIPO_COLORS = {
-          'TRADICIONAL': {bg:'repeating-linear-gradient(90deg,#FFD200,#FFD200 28px,#121212 28px,#121212 56px)', color:'#fff'},
+          'TRADICIONAL': {bg:'repeating-linear-gradient(45deg,#FFD200,#FFD200 14px,#121212 14px,#121212 28px)', color:'#fff'},
           'AMARILLA':    {bg:'#FFD200', color:'#121212'},
           'VERDE':       {bg:'#2d6a4f', color:'#fff'},
           'NEGRO':       {bg:'#2a2a2a', color:'#fff'},
