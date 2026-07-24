@@ -3972,8 +3972,8 @@ ${rowsHtml}
                                 <span style={{fontFamily:'IBM Plex Mono,monospace',color:'#8a8a82',marginRight:8,fontSize:11}}>{f.numero}</span>
                                 {f.nombre}
                               </td>
-                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:f.cam>0?700:400,color:f.cam>0?'#1a1a1a':'#ccc'}}>{f.cam>0?f.cam:'—'}</td>
-                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:f.sht>0?700:400,color:f.sht>0?'#1a1a1a':'#ccc'}}>{f.sht>0?f.sht:'—'}</td>
+                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:f.cam>0?700:400,color:f.cam>0?'#1a1a1a':'#ccc'}}>{f.cam}</td>
+                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:f.sht>0?700:400,color:f.sht>0?'#1a1a1a':'#ccc'}}>{f.sht}</td>
                               <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,background:'#FFF8D6'}}>$ {f.desc.toLocaleString('es-UY')}</td>
                             </tr>
                           ))}
