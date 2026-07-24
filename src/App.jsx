@@ -2876,12 +2876,12 @@ ${rowsHtml}
                         <div className="kpi-value">{totalShtTodas}</div>
                         <div className="kpi-sub">en todas las entregas</div>
                       </div>
-                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#D6D6D0',border:'1px solid #B8B8B2'}} onClick={()=>setRepResumen('ambos')}>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#D6D6D0',border:'3px solid #B8B8B2'}} onClick={()=>setRepResumen('ambos')}>
                         <div className="kpi-label">CAMISETAS PARA DESCONTAR</div>
                         <div className="kpi-value">{totalEquipos}</div>
                         <div className="kpi-sub">camisetas en total →</div>
                       </div>
-                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#D6D6D0',border:'1px solid #B8B8B2'}} onClick={()=>setRepResumen('ambos')}>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#D6D6D0',border:'3px solid #B8B8B2'}} onClick={()=>setRepResumen('ambos')}>
                         <div className="kpi-label">SHORTS PARA DESCONTAR</div>
                         <div className="kpi-value">{totalShorts}</div>
                         <div className="kpi-sub">shorts en total →</div>
