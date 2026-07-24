@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef, Fragment } from 'react'
 import { supabase } from './supabase.js'
-import * as XLSX from 'xlsx'
 import ExcelJS from 'exceljs'
 
 const TALLE_ORDER = ['2','4','6','8','10','12','14','Único','S','M','L','XL','XXL','XXXL']
@@ -736,38 +735,57 @@ ${rowsHtml}
   // ---- Mover talle ----
   const openMover = () => { setMv({ qtys:{}, estante:'1', altura:'A' }); setModal('mover') }
 
-  const exportExcel = () => {
+  const exportExcel = async () => {
+    const YELLOW = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
+    const F_BOLD = {name:'Calibri',size:11,bold:true}
+    const F_NORM = {name:'Calibri',size:11}
+    const BORDER = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('Stock por Ubicación')
+    const headers = ['UBICACIÓN','CÓDIGO','ARTÍCULO','CATEGORÍA','PRECIO',...TALLE_ORDER,'TOTAL']
+    ws.columns = headers.map((h,i) => ({header:h, width: i===2?32 : i===4?10 : i<5?14 : 7}))
+    ws.getRow(1).eachCell(cell => { cell.fill=YELLOW; cell.font=F_BOLD; cell.border=BORDER; cell.alignment={horizontal:'center',vertical:'middle'} })
+    ws.getRow(1).height = 20
     const sorted = [...articles].sort((a, b) => {
       const pu = u => { if(!u||u==='—') return {n:Infinity,l:''}; const m=u.match(/^(\d+)(.*)/); return m?{n:parseInt(m[1],10),l:m[2]}:{n:Infinity,l:u} }
       const ua=pu(a.ubic), ub=pu(b.ubic)
       return ua.n!==ub.n ? ua.n-ub.n : ua.l.localeCompare(ub.l)
     })
-    const rows = sorted.map(a => {
-      const row = { UBICACIÓN: a.ubic||'—', CÓDIGO: a.code, ARTÍCULO: a.name, CATEGORÍA: a.cat, PRECIO: a.precio||0 }
-      TALLE_ORDER.forEach(t => { const sz=a.sizes.find(s=>s.talle===t); row[t]=sz?sz.qty:'' })
-      row['TOTAL'] = a.sizes.reduce((s,z)=>s+z.qty,0)
-      return row
+    sorted.forEach(a => {
+      const vals = [a.ubic||'—', a.code, a.name, a.cat, a.precio||0]
+      TALLE_ORDER.forEach(t => { const sz=a.sizes.find(s=>s.talle===t); vals.push(sz?sz.qty:'') })
+      vals.push(a.sizes.reduce((s,z)=>s+z.qty,0))
+      const row = ws.addRow(vals)
+      row.eachCell(cell => { cell.font=F_NORM; cell.border=BORDER })
     })
-    const headers = ['UBICACIÓN','CÓDIGO','ARTÍCULO','CATEGORÍA','PRECIO',...TALLE_ORDER,'TOTAL']
-    const ws = XLSX.utils.json_to_sheet(rows, { header: headers })
-    ws['!cols'] = headers.map((h,i) => ({ wch: i===2?32 : i===4?10 : i<5?14 : 7 }))
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Stock por Ubicación')
-    XLSX.writeFile(wb, 'stock-deposito-peniarol.xlsx')
+    const buf = await wb.xlsx.writeBuffer()
+    const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href=url; a.download='stock-deposito-peniarol.xlsx'; a.click()
+    URL.revokeObjectURL(url)
   }
-  const downloadPlantelExcel = () => {
-    const rows = (db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => ({
-      'Nº': j.numero || '',
-      'NOMBRE': j.nombre,
-      'POSICIÓN': j.posicion || 'Jugador',
-      'CAMISETA': j.talleCamiseta,
-      'SHORT': j.talleShort,
-    }))
-    const ws = XLSX.utils.json_to_sheet(rows, { header: ['Nº','NOMBRE','POSICIÓN','CAMISETA','SHORT'] })
-    ws['!cols'] = [{ wch: 6 }, { wch: 28 }, { wch: 12 }, { wch: 12 }, { wch: 10 }]
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Plantel')
-    XLSX.writeFile(wb, 'plantel-peniarol.xlsx')
+  const downloadPlantelExcel = async () => {
+    const YELLOW = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
+    const F_BOLD = {name:'Calibri',size:11,bold:true}
+    const F_NORM = {name:'Calibri',size:11}
+    const BORDER = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('Plantel')
+    ws.columns = [
+      {header:'Nº', width:6}, {header:'NOMBRE', width:28}, {header:'POSICIÓN', width:12},
+      {header:'CAMISETA', width:12}, {header:'SHORT', width:10},
+    ]
+    ws.getRow(1).eachCell(cell => { cell.fill=YELLOW; cell.font=F_BOLD; cell.border=BORDER; cell.alignment={horizontal:'center',vertical:'middle'} })
+    ws.getRow(1).height = 20
+    ;(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).forEach(j => {
+      const row = ws.addRow([j.numero||'', j.nombre, j.posicion||'Jugador', j.talleCamiseta, j.talleShort])
+      row.eachCell(cell => { cell.font=F_NORM; cell.border=BORDER })
+    })
+    const buf = await wb.xlsx.writeBuffer()
+    const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href=url; a.download='plantel-peniarol.xlsx'; a.click()
+    URL.revokeObjectURL(url)
   }
   const mvConfirm = () => {
     const toMove = Object.entries(mv.qtys).map(([t,q]) => [t, parseInt(q,10)||0]).filter(([,q]) => q > 0)
