@@ -2959,7 +2959,7 @@ ${rowsHtml}
 
               {/* Tab: Plantel */}
               {repTab === 'plantel' && (<>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',maxWidth:700}}>
                   <span style={{fontSize:12.5,color:'#8a8a82'}}>Jugadores con su talle de camiseta y short</span>
                   <div style={{display:'flex',gap:8}}>
                     {(db.plantel||[]).length > 0 && <button className="btn" onClick={downloadPlantelExcel} style={{fontSize:12.5}}>⬇ Excel</button>}
