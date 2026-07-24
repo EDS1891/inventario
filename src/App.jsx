@@ -3018,8 +3018,8 @@ ${rowsHtml}
                     <div style={{display:'grid',gridTemplateColumns:'95px 1fr 60px 60px',background:'#121212',padding:'8px 16px',gap:8}}>
                       <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em'}}>FECHA</div>
                       <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em'}}>CONCEPTO</div>
-                      <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em',textAlign:'center'}}>DC</div>
-                      <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em',textAlign:'center'}}>DS</div>
+                      <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em',textAlign:'center'}}>CAMISETA</div>
+                      <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em',textAlign:'center'}}>SHORT</div>
                     </div>
                     {reps.map(r => {
                       const jj = (r.jugadores||[]).find(x => x.nombre === j.nombre)
