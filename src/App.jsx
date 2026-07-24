@@ -3682,8 +3682,8 @@ ${rowsHtml}
                   : filas.map((f,i) => (
                     <div key={i} style={{display:'grid',gridTemplateColumns:'1fr 60px 60px auto',gap:'0 10px',alignItems:'center',padding:'7px 0',borderBottom:'1px solid #ECECE8'}}>
                       <div>
-                        <div style={{fontWeight:600,fontSize:12,textTransform:'uppercase',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{f.label}</div>
-                        {(f.fecha||f.torneo) && <div style={{fontSize:10,color:'#999'}}>{[f.torneo,f.fecha].filter(Boolean).join(' · ')}</div>}
+                        {f.fecha && <div style={{fontSize:11,fontWeight:700,color:'#121212',marginBottom:1}}>{f.fecha}</div>}
+                        <div style={{fontWeight:500,fontSize:12,textTransform:'uppercase',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'#555'}}>{f.label}{f.torneo ? ` · ${f.torneo}` : ''}</div>
                       </div>
                       <span style={{textAlign:'center',fontWeight:700,fontSize:13}}>{f.cam||'—'}</span>
                       <span style={{textAlign:'center',fontWeight:700,fontSize:13}}>{f.sht||'—'}</span>
