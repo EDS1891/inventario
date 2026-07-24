@@ -2959,37 +2959,76 @@ ${rowsHtml}
 
               {/* Tab: Plantel */}
               {repTab === 'plantel' && (<>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',maxWidth:700}}>
-                  <span style={{fontSize:12.5,color:'#8a8a82'}}>Jugadores con su talle de camiseta y short</span>
-                  <div style={{display:'flex',gap:8}}>
-                    {(db.plantel||[]).length > 0 && <button className="btn" onClick={downloadPlantelExcel} style={{fontSize:12.5}}>⬇ Excel</button>}
-                    <button className="btn btn-dark" onClick={() => { setPlantelForm({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',talleShort:'L'}); setPlantelModal(true) }}>+ Jugador</button>
-                  </div>
-                </div>
-                {(db.plantel||[]).length === 0
-                  ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay jugadores en el plantel.</div>
-                  : (
-                    <div className="card" style={{padding:0,overflow:'hidden',maxWidth:700}}>
-                      <div className="table-header" style={{gridTemplateColumns:'50px 1fr 80px 90px 90px 72px'}}>
-                        <div>Nº</div><div>NOMBRE</div><div>POSICIÓN</div><div>CAMISETA</div><div>SHORT</div><div/>
+                <div style={{display:'flex',alignItems:'flex-start',gap:24,flexWrap:'wrap'}}>
+                  {/* Tabla */}
+                  <div style={{flex:'0 0 auto',minWidth:0}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',maxWidth:700,marginBottom:8}}>
+                      <span style={{fontSize:12.5,color:'#8a8a82'}}>Jugadores con su talle de camiseta y short</span>
+                      <div style={{display:'flex',gap:8}}>
+                        {(db.plantel||[]).length > 0 && <button className="btn" onClick={downloadPlantelExcel} style={{fontSize:12.5}}>⬇ Excel</button>}
+                        <button className="btn btn-dark" onClick={() => { setPlantelForm({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',talleShort:'L'}); setPlantelModal(true) }}>+ Jugador</button>
                       </div>
-                      {(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => (
-                        <div key={j.id} className="table-row" onClick={() => setSelectedPlantelId(j.id)} style={{gridTemplateColumns:'50px 1fr 80px 90px 90px 72px',cursor:'pointer',
-                          background: j.nombre.trim().toLowerCase()==='libre' ? '#3a3a3a' : j.posicion==='Golero' ? '#A5D6A7' : undefined}}>
-                          <div style={{fontWeight:800,fontSize:15,color:j.nombre.trim().toLowerCase()==='libre'?'#888':'#1a1a1a'}}>{j.numero||'—'}</div>
-                          <div style={{fontWeight:700,color:j.nombre.trim().toLowerCase()==='libre'?'#888':'#1a1a1a',fontStyle:j.nombre.trim().toLowerCase()==='libre'?'italic':undefined,textTransform:j.nombre.trim().toLowerCase()==='libre'?undefined:'uppercase'}}>{j.nombre}</div>
-                          <div style={{color:'#1a1a1a',fontSize:12}}>{j.posicion||'Jugador'}</div>
-                          <div style={{color:'#1a1a1a'}}>{j.talleCamiseta}</div>
-                          <div style={{color:'#1a1a1a'}}>{j.talleShort}</div>
-                          <div style={{display:'flex',gap:6,justifyContent:'flex-end'}}>
-                            <button onClick={e => { e.stopPropagation(); setPlantelForm({...j}); setPlantelModal(true) }} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button>
-                            <button onClick={e => { e.stopPropagation(); deletePlantelJugador(j.id) }} style={{background:'none',border:'none',cursor:'pointer',color:'#C2473D',fontSize:16,fontWeight:700,padding:'2px 4px'}}>×</button>
-                          </div>
-                        </div>
-                      ))}
                     </div>
-                  )
-                }
+                    {(db.plantel||[]).length === 0
+                      ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay jugadores en el plantel.</div>
+                      : (
+                        <div className="card" style={{padding:0,overflow:'hidden',maxWidth:700}}>
+                          <div className="table-header" style={{gridTemplateColumns:'50px 1fr 80px 90px 90px 72px'}}>
+                            <div>Nº</div><div>NOMBRE</div><div>POSICIÓN</div><div>CAMISETA</div><div>SHORT</div><div/>
+                          </div>
+                          {(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => (
+                            <div key={j.id} className="table-row" onClick={() => setSelectedPlantelId(j.id)} style={{gridTemplateColumns:'50px 1fr 80px 90px 90px 72px',cursor:'pointer',
+                              background: j.nombre.trim().toLowerCase()==='libre' ? '#3a3a3a' : j.posicion==='Golero' ? '#A5D6A7' : undefined}}>
+                              <div style={{fontWeight:800,fontSize:15,color:j.nombre.trim().toLowerCase()==='libre'?'#888':'#1a1a1a'}}>{j.numero||'—'}</div>
+                              <div style={{fontWeight:700,color:j.nombre.trim().toLowerCase()==='libre'?'#888':'#1a1a1a',fontStyle:j.nombre.trim().toLowerCase()==='libre'?'italic':undefined,textTransform:j.nombre.trim().toLowerCase()==='libre'?undefined:'uppercase'}}>{j.nombre}</div>
+                              <div style={{color:'#1a1a1a',fontSize:12}}>{j.posicion||'Jugador'}</div>
+                              <div style={{color:'#1a1a1a'}}>{j.talleCamiseta}</div>
+                              <div style={{color:'#1a1a1a'}}>{j.talleShort}</div>
+                              <div style={{display:'flex',gap:6,justifyContent:'flex-end'}}>
+                                <button onClick={e => { e.stopPropagation(); setPlantelForm({...j}); setPlantelModal(true) }} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button>
+                                <button onClick={e => { e.stopPropagation(); deletePlantelJugador(j.id) }} style={{background:'none',border:'none',cursor:'pointer',color:'#C2473D',fontSize:16,fontWeight:700,padding:'2px 4px'}}>×</button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    }
+                  </div>
+                  {/* Resumen de talles */}
+                  {(db.plantel||[]).length > 0 && (() => {
+                    const jugadores = (db.plantel||[]).filter(j => j.nombre.trim().toLowerCase() !== 'libre')
+                    const contarTalles = campo => {
+                      const counts = {}
+                      jugadores.forEach(j => { const t = j[campo]; if(t) counts[t] = (counts[t]||0)+1 })
+                      return Object.entries(counts).sort((a,b) => TALLE_ORDER.indexOf(a[0]) - TALLE_ORDER.indexOf(b[0]))
+                    }
+                    const tallesCam = contarTalles('talleCamiseta')
+                    const tallesSht = contarTalles('talleShort')
+                    const maxCam = Math.max(...tallesCam.map(([,v])=>v), 1)
+                    const maxSht = Math.max(...tallesSht.map(([,v])=>v), 1)
+                    const BarFila = ({talle, qty, max}) => (
+                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                        <div style={{width:28,fontWeight:700,fontSize:13,textAlign:'right',flexShrink:0}}>{talle}</div>
+                        <div style={{flex:1,background:'#ECECE8',borderRadius:4,height:22,overflow:'hidden'}}>
+                          <div style={{width:`${(qty/max)*100}%`,background:'#FFD200',height:'100%',borderRadius:4,minWidth:4}}/>
+                        </div>
+                        <div style={{width:20,fontWeight:700,fontSize:13,flexShrink:0}}>{qty}</div>
+                      </div>
+                    )
+                    return (
+                      <div style={{display:'flex',flexDirection:'column',gap:20,minWidth:200,paddingTop:36}}>
+                        <div className="card" style={{padding:'16px 20px',minWidth:200}}>
+                          <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginBottom:12}}>TALLES CAMISETA</div>
+                          {tallesCam.map(([t,q]) => <BarFila key={t} talle={t} qty={q} max={maxCam}/>)}
+                        </div>
+                        <div className="card" style={{padding:'16px 20px',minWidth:200}}>
+                          <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginBottom:12}}>TALLES SHORT</div>
+                          {tallesSht.map(([t,q]) => <BarFila key={t} talle={t} qty={q} max={maxSht}/>)}
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </div>
               </>)}
             </div>
           )}
