@@ -3552,7 +3552,10 @@ ${rowsHtml}
                 ? <span style={{fontWeight:700,fontSize:13,color:'#fff',background:'#121212',padding:'3px 10px',borderRadius:20}}>{tipo}</span>
                 : <span style={{fontWeight:700,fontSize:14,color:c.color}}>{tipo}</span>
               }
-              <span style={{fontFamily:'Archivo Black,sans-serif',fontSize:22,color:c.color}}>{qty}</span>
+              {c.badge
+                ? <span style={{fontFamily:'Archivo Black,sans-serif',fontSize:22,color:'#121212',background:'#FFD200',padding:'2px 14px',borderRadius:20}}>{qty}</span>
+                : <span style={{fontFamily:'Archivo Black,sans-serif',fontSize:22,color:c.color}}>{qty}</span>
+              }
             </div>
           )
         }
