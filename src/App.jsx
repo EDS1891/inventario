@@ -1637,15 +1637,15 @@ ${rowsHtml}
                           const totCam = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
                           const totSht = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
                           return (
-                          <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 1fr 120px 80px 80px 36px',cursor:'pointer'}} onClick={() => setRepDetail(r)}>
-                            <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#6a6a62'}}>{r.fecha}</div>
-                            <div>
-                              <div style={{fontWeight:600}}>{r.concepto}</div>
-                              {r.creadoPor && <div style={{fontSize:11.5,color:'#8a8a82'}}>{r.creadoPor}</div>}
+                          <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 1fr 120px 80px 80px 36px',cursor:'pointer',padding:'8px 20px'}} onClick={() => setRepDetail(r)}>
+                            <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#6a6a62',whiteSpace:'nowrap'}}>{r.fecha}</div>
+                            <div style={{fontWeight:600,fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                              {r.concepto}
+                              {r.creadoPor && <span style={{fontWeight:400,fontSize:11,color:'#8a8a82',marginLeft:6}}>· {r.creadoPor}</span>}
                             </div>
-                            <div style={{fontSize:12}}>
-                              {r.torneo && <div style={{fontWeight:600}}>{r.torneo}</div>}
-                              {r.fechaTorneo != null && r.fechaTorneo !== '' && <div style={{fontSize:11,color:'#8a8a82'}}>Fecha {r.fechaTorneo}</div>}
+                            <div style={{fontSize:12,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                              {r.torneo && <span style={{fontWeight:600}}>{r.torneo}</span>}
+                              {r.fechaTorneo != null && r.fechaTorneo !== '' && <span style={{fontWeight:400,color:'#8a8a82'}}>{r.torneo ? ' · F' : 'F'}{r.fechaTorneo}</span>}
                             </div>
                             <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totCam>0?'#1a1a1a':'#ccc'}}>{totCam>0?totCam:'—'}</div>
                             <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totSht>0?'#1a1a1a':'#ccc'}}>{totSht>0?totSht:'—'}</div>
@@ -2967,7 +2967,7 @@ ${rowsHtml}
                               const totCam = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
                               const totSht = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
                               return (
-                              <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 1fr 120px 80px 80px 36px',cursor:'pointer'}} onClick={() => setRepDetail(r)}>
+                              <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 1fr 120px 80px 80px 36px',cursor:'pointer',padding:'8px 20px'}} onClick={() => setRepDetail(r)}>
                                 <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#6a6a62'}}>{r.fecha}</div>
                                 <div>
                                   <div style={{fontWeight:600}}>{r.concepto}</div>
