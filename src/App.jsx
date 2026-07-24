@@ -3023,7 +3023,9 @@ ${rowsHtml}
                         ;(r.jugadores||[]).forEach(j => {
                           const nombre = j.nombre?.trim()
                           if (!nombre) return
-                          const total = (Number(j.cantCamiseta)||0) + (Number(j.cantShort)||0)
+                          const dc = j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
+                          const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
+                          const total = (dc ? Number(j.cantCamiseta)||0 : 0) + (ds ? Number(j.cantShort)||0 : 0)
                           if (total > 0) counts[nombre] = (counts[nombre]||0) + total
                         })
                       })
