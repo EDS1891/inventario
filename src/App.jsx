@@ -1628,7 +1628,7 @@ ${rowsHtml}
                       </div>
                     )}
                     <div className="card" style={{padding:0,overflow:'hidden'}}>
-                      <div className="table-header" style={{gridTemplateColumns:'100px 1fr 120px 80px 80px 36px'}}>
+                      <div className="table-header" style={{gridTemplateColumns:'100px 260px 160px 80px 80px 36px'}}>
                         <div>FECHA</div><div>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'right'}}>CAMISETAS</div><div style={{textAlign:'right'}}>SHORTS</div><div/>
                       </div>
                       {filtered.length === 0
@@ -1637,7 +1637,7 @@ ${rowsHtml}
                           const totCam = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
                           const totSht = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
                           return (
-                          <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 1fr 120px 80px 80px 36px',cursor:'pointer',padding:'8px 20px'}} onClick={() => setRepDetail(r)}>
+                          <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 260px 160px 80px 80px 36px',cursor:'pointer',padding:'8px 20px'}} onClick={() => setRepDetail(r)}>
                             <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#6a6a62',whiteSpace:'nowrap'}}>{r.fecha}</div>
                             <div style={{fontWeight:600,fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
                               {r.concepto}
@@ -2958,7 +2958,7 @@ ${rowsHtml}
                           </div>
                         )}
                         <div className="card" style={{padding:0,overflow:'hidden'}}>
-                          <div className="table-header" style={{gridTemplateColumns:'100px 1fr 120px 80px 80px 36px'}}>
+                          <div className="table-header" style={{gridTemplateColumns:'100px 260px 160px 80px 80px 36px'}}>
                             <div>FECHA</div><div>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'right'}}>CAMISETAS</div><div style={{textAlign:'right'}}>SHORTS</div><div/>
                           </div>
                           {filtered.length === 0
@@ -2967,7 +2967,7 @@ ${rowsHtml}
                               const totCam = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
                               const totSht = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
                               return (
-                              <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 1fr 120px 80px 80px 36px',cursor:'pointer',padding:'8px 20px'}} onClick={() => setRepDetail(r)}>
+                              <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 260px 160px 80px 80px 36px',cursor:'pointer',padding:'8px 20px'}} onClick={() => setRepDetail(r)}>
                                 <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#6a6a62'}}>{r.fecha}</div>
                                 <div>
                                   <div style={{fontWeight:600}}>{r.concepto}</div>
