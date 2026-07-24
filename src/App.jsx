@@ -2970,11 +2970,11 @@ ${rowsHtml}
                   ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay jugadores en el plantel.</div>
                   : (
                     <div className="card" style={{padding:0,overflow:'hidden'}}>
-                      <div className="table-header" style={{gridTemplateColumns:'50px 1fr 80px 90px 90px 72px'}}>
+                      <div className="table-header" style={{gridTemplateColumns:'50px minmax(120px,300px) 80px 90px 90px 72px'}}>
                         <div>Nº</div><div>NOMBRE</div><div>POSICIÓN</div><div>CAMISETA</div><div>SHORT</div><div/>
                       </div>
                       {(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => (
-                        <div key={j.id} className="table-row" onClick={() => setSelectedPlantelId(j.id)} style={{gridTemplateColumns:'50px 1fr 80px 90px 90px 72px',cursor:'pointer',
+                        <div key={j.id} className="table-row" onClick={() => setSelectedPlantelId(j.id)} style={{gridTemplateColumns:'50px minmax(120px,300px) 80px 90px 90px 72px',cursor:'pointer',
                           background: j.nombre.trim().toLowerCase()==='libre' ? '#3a3a3a' : j.posicion==='Golero' ? '#A5D6A7' : undefined}}>
                           <div style={{fontWeight:800,fontSize:15,color:j.nombre.trim().toLowerCase()==='libre'?'#888':'#1a1a1a'}}>{j.numero||'—'}</div>
                           <div style={{fontWeight:700,color:j.nombre.trim().toLowerCase()==='libre'?'#888':'#1a1a1a',fontStyle:j.nombre.trim().toLowerCase()==='libre'?'italic':undefined,textTransform:j.nombre.trim().toLowerCase()==='libre'?undefined:'uppercase'}}>{j.nombre}</div>
