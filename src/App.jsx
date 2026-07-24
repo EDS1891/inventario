@@ -180,6 +180,7 @@ export default function App() {
   const [repModal, setRepModal] = useState(false)
   const [repDetail, setRepDetail] = useState(null)
   const [repResumen, setRepResumen] = useState(null)
+  const [repDesglose, setRepDesglose] = useState(null)
   const [repFilterTorneo, setRepFilterTorneo] = useState('')
   const [repConceptoEdit, setRepConceptoEdit] = useState(null)
   const [disciplinaEdit, setDisciplinaEdit] = useState(null)
@@ -2866,15 +2867,15 @@ ${rowsHtml}
                   const totalShtTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
                   return (
                     <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
-                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepDesglose('camisetas')}>
                         <div className="kpi-label">CAMISETAS ENVIADAS</div>
                         <div className="kpi-value">{totalCamTodas}</div>
-                        <div className="kpi-sub">en todas las entregas</div>
+                        <div className="kpi-sub">en todas las entregas →</div>
                       </div>
-                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepDesglose('shorts')}>
                         <div className="kpi-label">SHORTS ENVIADOS</div>
                         <div className="kpi-value">{totalShtTodas}</div>
-                        <div className="kpi-sub">en todas las entregas</div>
+                        <div className="kpi-sub">en todas las entregas →</div>
                       </div>
                       <div className="kpi-card" style={{alignSelf:'flex-start',cursor:'pointer',background:'#D6D6D0',border:'1px solid #121212'}} onClick={()=>setRepResumen('ambos')}>
                         <div className="kpi-label">INDUMENTARIA A DESCONTAR</div>
@@ -3515,6 +3516,65 @@ ${rowsHtml}
           </div>
         </div>
       )}
+
+      {/* Modal: Desglose camisetas/shorts enviados por tipo */}
+      {repDesglose && (() => {
+        const esCam = repDesglose === 'camisetas'
+        const titulo = esCam ? 'Camisetas enviadas por tipo' : 'Shorts enviados por tipo'
+        const desglose = {}
+        ;(db.reposiciones||[]).forEach(r => {
+          ;(r.jugadores||[]).forEach(j => {
+            const tipo = j.tipoCamiseta || '(sin tipo)'
+            const qty = esCam ? (Number(j.cantCamiseta)||0) : (Number(j.cantShort)||0)
+            if (qty > 0) desglose[tipo] = (desglose[tipo]||0) + qty
+          })
+        })
+        const filas = Object.entries(desglose).sort((a,b)=>b[1]-a[1])
+        const totalGeneral = filas.reduce((s,[,v])=>s+v,0)
+        const jugTipos = [...REP_TIPOS_JUGADOR]
+        const golTipos = [...REP_TIPOS_GOLERO]
+        const filasJug = filas.filter(([t])=>jugTipos.includes(t))
+        const filasGol = filas.filter(([t])=>golTipos.includes(t))
+        const filasOtros = filas.filter(([t])=>!jugTipos.includes(t)&&!golTipos.includes(t))
+        const renderFila = ([tipo, qty]) => (
+          <div key={tipo} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 0',borderBottom:'1px solid #ECECE8'}}>
+            <span style={{fontWeight:600,fontSize:14}}>{tipo}</span>
+            <span style={{fontFamily:'Archivo Black,sans-serif',fontSize:22}}>{qty}</span>
+          </div>
+        )
+        return (
+          <div className="modal-backdrop" onClick={()=>setRepDesglose(null)}>
+            <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:400,width:'96%'}}>
+              <div className="modal-header">
+                <div className="modal-title">{titulo}</div>
+                <button className="modal-close" onClick={()=>setRepDesglose(null)}>×</button>
+              </div>
+              <div className="modal-body">
+                {filasJug.length > 0 && <>
+                  <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginBottom:4}}>JUGADORES</div>
+                  {filasJug.map(renderFila)}
+                </>}
+                {filasGol.length > 0 && <>
+                  <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginTop:16,marginBottom:4}}>GOLEROS</div>
+                  {filasGol.map(renderFila)}
+                </>}
+                {filasOtros.length > 0 && <>
+                  <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginTop:16,marginBottom:4}}>OTROS</div>
+                  {filasOtros.map(renderFila)}
+                </>}
+                {filas.length === 0 && <div style={{textAlign:'center',color:'#8a8a82',padding:'24px 0'}}>Sin datos.</div>}
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:16,paddingTop:12,borderTop:'2px solid #121212'}}>
+                  <span style={{fontWeight:700,fontSize:13}}>TOTAL</span>
+                  <span style={{fontFamily:'Archivo Black,sans-serif',fontSize:26}}>{totalGeneral}</span>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={()=>setRepDesglose(null)}>Cerrar</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Modal: Resumen entregas por jugador por mes */}
       {repResumen && (() => {
