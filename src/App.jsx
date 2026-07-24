@@ -186,6 +186,7 @@ export default function App() {
   const [repTab, setRepTab] = useState('reposiciones')
   const [plantelForm, setPlantelForm] = useState({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',talleShort:'L'})
   const [plantelModal, setPlantelModal] = useState(false)
+  const [selectedPlantelId, setSelectedPlantelId] = useState(null)
   const [rechazarModal, setRechazarModal] = useState({ delId: null, motivo: '' })
   const [receptorTab, setReceptorTab] = useState('entregas')
   const [toast, setToast] = useState('')
@@ -2967,7 +2968,7 @@ ${rowsHtml}
                         <div>Nº</div><div>NOMBRE</div><div>POSICIÓN</div><div>CAMISETA</div><div>SHORT</div><div/>
                       </div>
                       {(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => (
-                        <div key={j.id} className="table-row" style={{gridTemplateColumns:'50px 1fr 80px 90px 90px 72px',
+                        <div key={j.id} className="table-row" onClick={() => setSelectedPlantelId(j.id)} style={{gridTemplateColumns:'50px 1fr 80px 90px 90px 72px',cursor:'pointer',
                           background: j.nombre.trim().toLowerCase()==='libre' ? '#3a3a3a' : j.posicion==='Golero' ? '#A5D6A7' : undefined}}>
                           <div style={{fontWeight:800,fontSize:15,color:j.nombre.trim().toLowerCase()==='libre'?'#888':'#1a1a1a'}}>{j.numero||'—'}</div>
                           <div style={{fontWeight:700,color:j.nombre.trim().toLowerCase()==='libre'?'#888':'#1a1a1a',fontStyle:j.nombre.trim().toLowerCase()==='libre'?'italic':undefined,textTransform:j.nombre.trim().toLowerCase()==='libre'?undefined:'uppercase'}}>{j.nombre}</div>
@@ -2975,8 +2976,8 @@ ${rowsHtml}
                           <div style={{color:'#1a1a1a'}}>{j.talleCamiseta}</div>
                           <div style={{color:'#1a1a1a'}}>{j.talleShort}</div>
                           <div style={{display:'flex',gap:6,justifyContent:'flex-end'}}>
-                            <button onClick={() => { setPlantelForm({...j}); setPlantelModal(true) }} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button>
-                            <button onClick={() => deletePlantelJugador(j.id)} style={{background:'none',border:'none',cursor:'pointer',color:'#C2473D',fontSize:16,fontWeight:700,padding:'2px 4px'}}>×</button>
+                            <button onClick={e => { e.stopPropagation(); setPlantelForm({...j}); setPlantelModal(true) }} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button>
+                            <button onClick={e => { e.stopPropagation(); deletePlantelJugador(j.id) }} style={{background:'none',border:'none',cursor:'pointer',color:'#C2473D',fontSize:16,fontWeight:700,padding:'2px 4px'}}>×</button>
                           </div>
                         </div>
                       ))}
@@ -2990,6 +2991,69 @@ ${rowsHtml}
       </div>
 
       {/* ===== MODALES ===== */}
+
+      {/* Modal: Descuentos de jugador */}
+      {selectedPlantelId && (() => {
+        const j = (db.plantel||[]).find(x => x.id === selectedPlantelId)
+        if (!j) return null
+        const reps = (db.reposiciones||[])
+          .filter(r => (r.jugadores||[]).some(jj => jj.nombre === j.nombre))
+          .sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''))
+        return (
+          <div className="modal-backdrop" onClick={() => setSelectedPlantelId(null)}>
+            <div className="modal modal-md" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <div>
+                  <div className="modal-title">{j.nombre}</div>
+                  <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>
+                    Nº {j.numero} · {j.posicion||'Jugador'} · Cam. {j.talleCamiseta} · Short {j.talleShort}
+                  </div>
+                </div>
+                <button className="modal-close" onClick={() => setSelectedPlantelId(null)}>×</button>
+              </div>
+              <div className="modal-body" style={{padding:0,maxHeight:'65vh',overflowY:'auto'}}>
+                {reps.length === 0
+                  ? <div style={{padding:24,textAlign:'center',color:'#8a8a82',fontSize:13}}>Sin reposiciones registradas para este jugador.</div>
+                  : <>
+                    <div style={{display:'grid',gridTemplateColumns:'95px 1fr 60px 60px',background:'#121212',padding:'8px 16px',gap:8}}>
+                      <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em'}}>FECHA</div>
+                      <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em'}}>CONCEPTO</div>
+                      <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em',textAlign:'center'}}>DC</div>
+                      <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em',textAlign:'center'}}>DS</div>
+                    </div>
+                    {reps.map(r => {
+                      const jj = (r.jugadores||[]).find(x => x.nombre === j.nombre)
+                      if (!jj) return null
+                      const dc = jj.descuentoCamiseta !== undefined ? jj.descuentoCamiseta !== false : jj.descuento !== false
+                      const ds = jj.descuentoShort !== undefined ? jj.descuentoShort !== false : jj.descuento !== false
+                      const badge = (active) => (
+                        <span style={{background:active?'#E8F5E9':'#FBEAE8',color:active?'#2e7d32':'#C2473D',
+                          border:'1px solid '+(active?'#A5D6A7':'#ef9a9a'),borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700}}>
+                          {active?'SÍ':'NO'}
+                        </span>
+                      )
+                      return (
+                        <div key={r.id} style={{display:'grid',gridTemplateColumns:'95px 1fr 60px 60px',padding:'10px 16px',borderBottom:'1px solid #F0F0EC',alignItems:'center',gap:8}}>
+                          <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11.5,color:'#6a6a62'}}>{r.fecha}</div>
+                          <div>
+                            <div style={{fontWeight:600,fontSize:13}}>{r.concepto}</div>
+                            {r.torneo && <div style={{fontSize:11,color:'#8a8a82'}}>{r.torneo}{r.fechaTorneo?` · Fecha ${r.fechaTorneo}`:''}</div>}
+                          </div>
+                          <div style={{textAlign:'center'}}>{badge(dc)}</div>
+                          <div style={{textAlign:'center'}}>{badge(ds)}</div>
+                        </div>
+                      )
+                    })}
+                  </>
+                }
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={() => setSelectedPlantelId(null)}>Cerrar</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Modal: Detalle de entrega */}
       {selectedDeliveryId && (() => {
