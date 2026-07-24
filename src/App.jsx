@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, Fragment } from 'react'
 import { supabase } from './supabase.js'
 import * as XLSX from 'xlsx'
 import ExcelJS from 'exceljs'
@@ -3003,7 +3003,7 @@ ${rowsHtml}
                               const cell = {background:bg,padding:'13px 20px',borderBottom:'1px solid #F0F0EC',fontSize:13.5,color:textColor,cursor:'pointer',transition:'background 0.12s',display:'flex',alignItems:'center'}
                               const rowEvents = {onMouseEnter:()=>setPlantelHoverRow(j.id),onMouseLeave:()=>setPlantelHoverRow(null),onClick:()=>setSelectedPlantelId(j.id)}
                               return (
-                                <React.Fragment key={j.id}>
+                                <Fragment key={j.id}>
                                   <div style={{...cell,fontWeight:800,fontSize:15}} {...rowEvents}>{j.numero||'—'}</div>
                                   <div style={{...cell,fontWeight:700,fontStyle:isLibre?'italic':undefined,textTransform:isLibre?undefined:'uppercase',whiteSpace:'nowrap'}} {...rowEvents}>{j.nombre}</div>
                                   <div style={{...cell,fontSize:12}} {...rowEvents}>{j.posicion||'Jugador'}</div>
@@ -3013,7 +3013,7 @@ ${rowsHtml}
                                     <button onClick={e=>{e.stopPropagation();setPlantelForm({...j});setPlantelModal(true)}} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button>
                                     <button onClick={e=>{e.stopPropagation();deletePlantelJugador(j.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'#C2473D',fontSize:16,fontWeight:700,padding:'2px 4px'}}>×</button>
                                   </div>
-                                </React.Fragment>
+                                </Fragment>
                               )
                             })}
                           </div>
