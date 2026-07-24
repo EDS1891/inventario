@@ -3541,7 +3541,7 @@ ${rowsHtml}
           'AMARILLA':    {bg:'#FFD200', color:'#121212'},
           'VERDE':       {bg:'#2d6a4f', color:'#fff'},
           'NEGRO':       {bg:'#2a2a2a', color:'#fff'},
-          'NARANJA':     {bg:'#EA580C', color:'#fff'},
+          'NARANJA':     {bg:'#EA580C', color:'#121212'},
           'CREMA':       {bg:'#F5ECD7', color:'#121212'},
         }
         const renderFila = ([tipo, qty]) => {
