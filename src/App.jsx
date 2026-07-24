@@ -2876,7 +2876,7 @@ ${rowsHtml}
                         <div className="kpi-value">{totalShtTodas}</div>
                         <div className="kpi-sub">en todas las entregas</div>
                       </div>
-                      <div className="kpi-card" style={{alignSelf:'flex-start',cursor:'pointer',background:'#D6D6D0',border:'3px solid #B8B8B2'}} onClick={()=>setRepResumen('ambos')}>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',cursor:'pointer',background:'#D6D6D0',border:'1px solid #121212'}} onClick={()=>setRepResumen('ambos')}>
                         <div className="kpi-label">INDUMENTARIA A DESCONTAR</div>
                         <div style={{display:'flex',alignItems:'flex-end',gap:24,marginTop:6}}>
                           <div>
