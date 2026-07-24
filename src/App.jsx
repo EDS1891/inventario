@@ -2876,17 +2876,18 @@ ${rowsHtml}
                         <div className="kpi-value">{totalShtTodas}</div>
                         <div className="kpi-sub">en todas las entregas</div>
                       </div>
-                      <div className="kpi-card" style={{alignSelf:'flex-start',cursor:'pointer',background:'#D6D6D0',border:'3px solid #B8B8B2',display:'flex',gap:32}} onClick={()=>setRepResumen('ambos')}>
-                        <div>
-                          <div className="kpi-label">CAMISETAS PARA DESCONTAR</div>
-                          <div className="kpi-value">{totalEquipos}</div>
-                          <div className="kpi-sub">camisetas en total →</div>
-                        </div>
-                        <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch'}}/>
-                        <div>
-                          <div className="kpi-label">SHORTS PARA DESCONTAR</div>
-                          <div className="kpi-value">{totalShorts}</div>
-                          <div className="kpi-sub">shorts en total →</div>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',cursor:'pointer',background:'#D6D6D0',border:'3px solid #B8B8B2'}} onClick={()=>setRepResumen('ambos')}>
+                        <div className="kpi-label">INDUMENTARIA A DESCONTAR</div>
+                        <div style={{display:'flex',alignItems:'flex-end',gap:24,marginTop:6}}>
+                          <div>
+                            <div className="kpi-value">{totalEquipos}</div>
+                            <div className="kpi-sub">camisetas →</div>
+                          </div>
+                          <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/>
+                          <div>
+                            <div className="kpi-value">{totalShorts}</div>
+                            <div className="kpi-sub">shorts →</div>
+                          </div>
                         </div>
                       </div>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#FFD200'}} onClick={()=>setRepResumen('ambos')}>
