@@ -3018,11 +3018,11 @@ ${rowsHtml}
                     return (
                       <div style={{display:'flex',flexDirection:'column',gap:20,minWidth:200,paddingTop:36}}>
                         <div className="card" style={{padding:'16px 20px',minWidth:200}}>
-                          <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginBottom:12}}>TALLES CAMISETA</div>
+                          <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:12,textAlign:'center'}}>TALLES CAMISETA</div>
                           {tallesCam.map(([t,q]) => <BarFila key={t} talle={t} qty={q} max={maxCam}/>)}
                         </div>
                         <div className="card" style={{padding:'16px 20px',minWidth:200}}>
-                          <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginBottom:12}}>TALLES SHORT</div>
+                          <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:12,textAlign:'center'}}>TALLES SHORT</div>
                           {tallesSht.map(([t,q]) => <BarFila key={t} talle={t} qty={q} max={maxSht}/>)}
                         </div>
                       </div>
