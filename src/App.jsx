@@ -2977,7 +2977,7 @@ ${rowsHtml}
                 <div style={{display:'flex',alignItems:'flex-start',gap:24,flexWrap:'wrap'}}>
                   {/* Tabla */}
                   <div style={{flex:'0 0 auto',minWidth:0}}>
-                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',maxWidth:700,marginBottom:8}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
                       <span style={{fontSize:12.5,color:'#8a8a82'}}>Jugadores con su talle de camiseta y short</span>
                       <div style={{display:'flex',gap:8}}>
                         {(db.plantel||[]).length > 0 && <button className="btn" onClick={downloadPlantelExcel} style={{fontSize:12.5}}>⬇ Excel</button>}
@@ -2987,7 +2987,7 @@ ${rowsHtml}
                     {(db.plantel||[]).length === 0
                       ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay jugadores en el plantel.</div>
                       : (
-                        <div className="card" style={{padding:0,overflow:'hidden',maxWidth:700}}>
+                        <div className="card" style={{padding:0,overflow:'hidden',width:'max-content'}}>
                           <div className="table-header" style={{gridTemplateColumns:'50px max-content 80px 90px 90px 72px'}}>
                             <div>Nº</div><div>NOMBRE</div><div>POSICIÓN</div><div>CAMISETA</div><div>SHORT</div><div/>
                           </div>
@@ -2995,7 +2995,7 @@ ${rowsHtml}
                             <div key={j.id} className="table-row" onClick={() => setSelectedPlantelId(j.id)} style={{gridTemplateColumns:'50px max-content 80px 90px 90px 72px',cursor:'pointer',
                               background: j.nombre.trim().toLowerCase()==='libre' ? '#3a3a3a' : j.posicion==='Golero' ? '#A5D6A7' : undefined}}>
                               <div style={{fontWeight:800,fontSize:15,color:j.nombre.trim().toLowerCase()==='libre'?'#888':'#1a1a1a'}}>{j.numero||'—'}</div>
-                              <div style={{fontWeight:700,color:j.nombre.trim().toLowerCase()==='libre'?'#888':'#1a1a1a',fontStyle:j.nombre.trim().toLowerCase()==='libre'?'italic':undefined,textTransform:j.nombre.trim().toLowerCase()==='libre'?undefined:'uppercase'}}>{j.nombre}</div>
+                              <div style={{fontWeight:700,color:j.nombre.trim().toLowerCase()==='libre'?'#888':'#1a1a1a',fontStyle:j.nombre.trim().toLowerCase()==='libre'?'italic':undefined,textTransform:j.nombre.trim().toLowerCase()==='libre'?undefined:'uppercase',whiteSpace:'nowrap'}}>{j.nombre}</div>
                               <div style={{color:'#1a1a1a',fontSize:12}}>{j.posicion||'Jugador'}</div>
                               <div style={{color:'#1a1a1a'}}>{j.talleCamiseta}</div>
                               <div style={{color:'#1a1a1a'}}>{j.talleShort}</div>
