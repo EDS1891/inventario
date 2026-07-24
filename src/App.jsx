@@ -3046,13 +3046,16 @@ ${rowsHtml}
                         {ranking.length > 0 && (
                           <div className="card" style={{padding:'16px 20px',minWidth:300,maxWidth:460}}>
                             <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:12,textAlign:'center'}}>TOP PRENDAS POR INTEGRANTE</div>
-                            {ranking.map(([nombre, total], i) => (
-                              <div key={nombre} style={{display:'flex',alignItems:'center',gap:10,padding:'7px 0',borderBottom:'1px solid #ECECE8'}}>
-                                <span style={{width:22,fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:12,color:i<3?'#121212':'#8a8a82',flexShrink:0}}>#{i+1}</span>
-                                <span style={{flex:1,fontWeight:600,fontSize:13,textTransform:'uppercase',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{nombre}</span>
-                                <span style={{background:'#FFD200',borderRadius:20,padding:'2px 10px',fontWeight:700,fontSize:13,flexShrink:0}}>{total}</span>
-                              </div>
-                            ))}
+                            {ranking.map(([nombre, total]) => {
+                              const jug = jugadores.find(j => j.nombre.trim().toLowerCase() === nombre.toLowerCase())
+                              return (
+                                <div key={nombre} style={{display:'flex',alignItems:'center',gap:10,padding:'7px 0',borderBottom:'1px solid #ECECE8'}}>
+                                  <span style={{width:28,fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,textAlign:'right',flexShrink:0,color:'#121212'}}>{jug?.numero||'—'}</span>
+                                  <span style={{flex:1,fontWeight:600,fontSize:13,textTransform:'uppercase',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{nombre}</span>
+                                  <span style={{background:'#FFD200',borderRadius:20,padding:'2px 10px',fontWeight:700,fontSize:13,flexShrink:0}}>{total}</span>
+                                </div>
+                              )
+                            })}
                           </div>
                         )}
                       </div>
