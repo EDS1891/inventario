@@ -3065,17 +3065,16 @@ ${rowsHtml}
                         </div>
                         {ranking.length > 0 && (
                           <div className="card" style={{padding:'16px 20px',minWidth:300,maxWidth:460}}>
-                            <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:8,textAlign:'center'}}>RANKING DE DESCUENTOS POR JUGADOR</div>
-                            <div style={{display:'grid',gridTemplateColumns:'28px 1fr 44px auto',gap:'0 8px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',padding:'0 0 6px',borderBottom:'2px solid #ECECE8',marginBottom:2}}>
+                            <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:8,textAlign:'center'}}>TOP CAMISETAS ENTREGADAS POR JUGADOR</div>
+                            <div style={{display:'grid',gridTemplateColumns:'28px 1fr 44px',gap:'0 8px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',padding:'0 0 6px',borderBottom:'2px solid #ECECE8',marginBottom:2}}>
                               <span style={{textAlign:'right'}}>#</span>
                               <span>NOMBRE</span>
                               <span style={{textAlign:'center'}}>PRENDAS</span>
-                              <span style={{textAlign:'right'}}>MONTO</span>
                             </div>
                             {ranking.map(([nombre, {total, monto}]) => {
                               const jug = jugadores.find(j => j.nombre.trim().toLowerCase() === nombre.toLowerCase())
                               return (
-                                <div key={nombre} onClick={()=>setRankingDetalle(nombre)} style={{display:'grid',gridTemplateColumns:'28px 1fr 44px auto',gap:'0 8px',alignItems:'center',padding:'6px 0',borderBottom:'1px solid #ECECE8',cursor:'pointer',borderRadius:4,transition:'background .1s'}}
+                                <div key={nombre} onClick={()=>setRankingDetalle(nombre)} style={{display:'grid',gridTemplateColumns:'28px 1fr 44px',gap:'0 8px',alignItems:'center',padding:'6px 0',borderBottom:'1px solid #ECECE8',cursor:'pointer',borderRadius:4,transition:'background .1s'}}
                                   onMouseEnter={e=>e.currentTarget.style.background='#F8F8F4'}
                                   onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
                                   <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,textAlign:'right',color:'#121212'}}>{jug?.numero||'—'}</span>
@@ -3084,7 +3083,6 @@ ${rowsHtml}
                                     {!jug && <button onClick={e=>{e.stopPropagation();setRepararRanking(nombre)}} style={{background:'#EA580C',color:'#fff',border:'none',borderRadius:4,padding:'1px 5px',fontSize:10,fontWeight:700,cursor:'pointer',marginLeft:4}}>!</button>}
                                   </span>
                                   <span style={{background:'#FFD200',borderRadius:20,padding:'2px 6px',fontWeight:700,fontSize:12,textAlign:'center'}}>{total}</span>
-                                  <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:12,textAlign:'right',whiteSpace:'nowrap'}}>$ {monto.toLocaleString('es-UY')}</span>
                                 </div>
                               )
                             })}
