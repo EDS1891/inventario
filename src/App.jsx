@@ -3017,16 +3017,39 @@ ${rowsHtml}
                         <div style={{width:20,fontWeight:700,fontSize:13,flexShrink:0}}>{qty}</div>
                       </div>
                     )
+                    const ranking = (() => {
+                      const counts = {}
+                      ;(db.deliveries||[]).forEach(d => {
+                        if (!d.persona) return
+                        const total = (d.lines||[]).reduce((s,l) => s + (Number(l.qty)||0), 0)
+                        if (total > 0) counts[d.persona] = (counts[d.persona]||0) + total
+                      })
+                      return Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,15)
+                    })()
                     return (
-                      <div style={{display:'flex',flexDirection:'row',gap:20,flexWrap:'wrap',alignItems:'flex-start',paddingTop:36}}>
-                        <div className="card" style={{padding:'16px 20px',minWidth:200}}>
-                          <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:12,textAlign:'center'}}>TALLES CAMISETA</div>
-                          {tallesCam.map(([t,q]) => <BarFila key={t} talle={t} qty={q} max={maxCam} campo="talleCamiseta"/>)}
+                      <div style={{display:'flex',flexDirection:'column',gap:20,paddingTop:36}}>
+                        <div style={{display:'flex',gap:20,flexWrap:'wrap',alignItems:'flex-start'}}>
+                          <div className="card" style={{padding:'16px 20px',minWidth:200}}>
+                            <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:12,textAlign:'center'}}>TALLES CAMISETA</div>
+                            {tallesCam.map(([t,q]) => <BarFila key={t} talle={t} qty={q} max={maxCam} campo="talleCamiseta"/>)}
+                          </div>
+                          <div className="card" style={{padding:'16px 20px',minWidth:200}}>
+                            <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:12,textAlign:'center'}}>TALLES SHORT</div>
+                            {tallesSht.map(([t,q]) => <BarFila key={t} talle={t} qty={q} max={maxSht} campo="talleShort"/>)}
+                          </div>
                         </div>
-                        <div className="card" style={{padding:'16px 20px',minWidth:200}}>
-                          <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:12,textAlign:'center'}}>TALLES SHORT</div>
-                          {tallesSht.map(([t,q]) => <BarFila key={t} talle={t} qty={q} max={maxSht} campo="talleShort"/>)}
-                        </div>
+                        {ranking.length > 0 && (
+                          <div className="card" style={{padding:'16px 20px',minWidth:300,maxWidth:460}}>
+                            <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:12,textAlign:'center'}}>TOP PRENDAS POR INTEGRANTE</div>
+                            {ranking.map(([nombre, total], i) => (
+                              <div key={nombre} style={{display:'flex',alignItems:'center',gap:10,padding:'7px 0',borderBottom:'1px solid #ECECE8'}}>
+                                <span style={{width:22,fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:12,color:i<3?'#121212':'#8a8a82',flexShrink:0}}>#{i+1}</span>
+                                <span style={{flex:1,fontWeight:600,fontSize:13,textTransform:'uppercase',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{nombre}</span>
+                                <span style={{background:'#FFD200',borderRadius:20,padding:'2px 10px',fontWeight:700,fontSize:13,flexShrink:0}}>{total}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )
                   })()}
