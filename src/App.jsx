@@ -1212,8 +1212,8 @@ ${rowsHtml}
     const FILL_GRAY = {type:'pattern',pattern:'solid',fgColor:{argb:'FFD0D0D0'}}
     const FILL_ORAN = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFE5CC'}}
     const FILL_CREM = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFF8E8'}}
-    const F_BOLD    = {name:'Arial',size:12,bold:true}
-    const F_NORM    = {name:'Arial',size:12}
+    const F_BOLD    = {name:'Calibri',size:11,bold:true}
+    const F_NORM    = {name:'Calibri',size:11}
     const CENTER    = {horizontal:'center',vertical:'middle'}
     const BORDER    = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
     const style = (cell,fill,font) => { cell.fill=fill; cell.font=font; cell.alignment=CENTER; cell.border=BORDER }
@@ -3907,8 +3907,8 @@ ${rowsHtml}
           const YELLOW   = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
           const FILL_SUB = {type:'pattern',pattern:'solid',fgColor:{argb:'FFF5F2E8'}}
           const FILL_WHT = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFFFF'}}
-          const F_BOLD   = {name:'Arial',size:12,bold:true}
-          const F_NORM   = {name:'Arial',size:12}
+          const F_BOLD   = {name:'Calibri',size:11,bold:true}
+          const F_NORM   = {name:'Calibri',size:11}
           const CENTER   = {horizontal:'center',vertical:'middle'}
           const BORDER   = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
           const MONEY_FMT = '"$" #,##0'
