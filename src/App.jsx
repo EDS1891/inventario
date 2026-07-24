@@ -182,6 +182,7 @@ export default function App() {
   const [repResumen, setRepResumen] = useState(null)
   const [repDesglose, setRepDesglose] = useState(null)
   const [showUnidadesDesglose, setShowUnidadesDesglose] = useState(false)
+  const [talleDetalle, setTalleDetalle] = useState(null)
   const [repFilterTorneo, setRepFilterTorneo] = useState('')
   const [repConceptoEdit, setRepConceptoEdit] = useState(null)
   const [disciplinaEdit, setDisciplinaEdit] = useState(null)
@@ -3006,8 +3007,9 @@ ${rowsHtml}
                     const tallesSht = contarTalles('talleShort')
                     const maxCam = Math.max(...tallesCam.map(([,v])=>v), 1)
                     const maxSht = Math.max(...tallesSht.map(([,v])=>v), 1)
-                    const BarFila = ({talle, qty, max}) => (
-                      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                    const BarFila = ({talle, qty, max, campo}) => (
+                      <div onClick={() => setTalleDetalle({campo, talle})}
+                        style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,cursor:'pointer',borderRadius:6,padding:'2px 0'}}>
                         <div style={{width:28,fontWeight:700,fontSize:13,textAlign:'right',flexShrink:0}}>{talle}</div>
                         <div style={{flex:1,background:'#ECECE8',borderRadius:4,height:22,overflow:'hidden'}}>
                           <div style={{width:`${(qty/max)*100}%`,background:'#FFD200',height:'100%',borderRadius:4,minWidth:4}}/>
@@ -3019,11 +3021,11 @@ ${rowsHtml}
                       <div style={{display:'flex',flexDirection:'column',gap:20,minWidth:200,paddingTop:36}}>
                         <div className="card" style={{padding:'16px 20px',minWidth:200}}>
                           <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:12,textAlign:'center'}}>TALLES CAMISETA</div>
-                          {tallesCam.map(([t,q]) => <BarFila key={t} talle={t} qty={q} max={maxCam}/>)}
+                          {tallesCam.map(([t,q]) => <BarFila key={t} talle={t} qty={q} max={maxCam} campo="talleCamiseta"/>)}
                         </div>
                         <div className="card" style={{padding:'16px 20px',minWidth:200}}>
                           <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:12,textAlign:'center'}}>TALLES SHORT</div>
-                          {tallesSht.map(([t,q]) => <BarFila key={t} talle={t} qty={q} max={maxSht}/>)}
+                          {tallesSht.map(([t,q]) => <BarFila key={t} talle={t} qty={q} max={maxSht} campo="talleShort"/>)}
                         </div>
                       </div>
                     )
@@ -3553,6 +3555,38 @@ ${rowsHtml}
           </div>
         </div>
       )}
+
+      {/* Modal: Jugadores por talle */}
+      {talleDetalle && (() => {
+        const esCam = talleDetalle.campo === 'talleCamiseta'
+        const lista = (db.plantel||[])
+          .filter(j => j.nombre.trim().toLowerCase() !== 'libre' && j[talleDetalle.campo] === talleDetalle.talle)
+          .sort((a,b) => (Number(a.numero)||0) - (Number(b.numero)||0))
+        return (
+          <div className="modal-backdrop" onClick={() => setTalleDetalle(null)}>
+            <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:380,width:'96%'}}>
+              <div className="modal-header">
+                <div className="modal-title">{esCam ? 'Camiseta' : 'Short'} talle {talleDetalle.talle}</div>
+                <button className="modal-close" onClick={() => setTalleDetalle(null)}>×</button>
+              </div>
+              <div className="modal-body" style={{padding:0}}>
+                {lista.map(j => (
+                  <div key={j.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 20px',borderBottom:'1px solid #ECECE8',
+                    background: j.posicion === 'Golero' ? '#A5D6A7' : undefined}}>
+                    <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,width:28,flexShrink:0}}>{j.numero||'—'}</span>
+                    <span style={{fontWeight:700,fontSize:14,textTransform:'uppercase'}}>{j.nombre}</span>
+                    <span style={{marginLeft:'auto',fontSize:11,color:'#8a8a82'}}>{j.posicion||'Jugador'}</span>
+                  </div>
+                ))}
+                {lista.length === 0 && <div style={{padding:24,textAlign:'center',color:'#8a8a82'}}>Sin jugadores.</div>}
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={() => setTalleDetalle(null)}>Cerrar</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Modal: Desglose unidades en stock por categoría */}
       {showUnidadesDesglose && (
