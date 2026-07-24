@@ -3536,12 +3536,23 @@ ${rowsHtml}
         const filasJug = filas.filter(([t])=>jugTipos.includes(t))
         const filasGol = filas.filter(([t])=>golTipos.includes(t))
         const filasOtros = filas.filter(([t])=>!jugTipos.includes(t)&&!golTipos.includes(t))
-        const renderFila = ([tipo, qty]) => (
-          <div key={tipo} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 0',borderBottom:'1px solid #ECECE8'}}>
-            <span style={{fontWeight:600,fontSize:14}}>{tipo}</span>
-            <span style={{fontFamily:'Archivo Black,sans-serif',fontSize:22}}>{qty}</span>
-          </div>
-        )
+        const TIPO_COLORS = {
+          'TRADICIONAL': {bg:'#D6D6D0', color:'#121212'},
+          'AMARILLA':    {bg:'#FFD200', color:'#121212'},
+          'VERDE':       {bg:'#2d6a4f', color:'#fff'},
+          'NEGRO':       {bg:'#2a2a2a', color:'#fff'},
+          'NARANJA':     {bg:'#EA580C', color:'#fff'},
+          'CREMA':       {bg:'#F5ECD7', color:'#121212'},
+        }
+        const renderFila = ([tipo, qty]) => {
+          const c = TIPO_COLORS[tipo] || {bg:'#F5F5F0', color:'#121212'}
+          return (
+            <div key={tipo} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 16px',borderRadius:8,marginBottom:6,background:c.bg}}>
+              <span style={{fontWeight:700,fontSize:14,color:c.color}}>{tipo}</span>
+              <span style={{fontFamily:'Archivo Black,sans-serif',fontSize:22,color:c.color}}>{qty}</span>
+            </div>
+          )
+        }
         return (
           <div className="modal-backdrop" onClick={()=>setRepDesglose(null)}>
             <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:400,width:'96%'}}>
