@@ -452,6 +452,81 @@ ${rowsHtml}
 </body></html>`
   }
 
+  const buildRemitoHtml = (lines, persona, receptor, disciplina, fecha, obs, paga, monto) => {
+    const grouped = []
+    lines.forEach(l => {
+      let g = grouped.find(g => g.code === l.code)
+      if (!g) {
+        const arts = db.articles.filter(a => a.code === l.code)
+        const artWithPhoto = arts.find(a => a.photos?.length || a.photo)
+        const photo = artWithPhoto ? (artWithPhoto.photos?.length ? artWithPhoto.photos[0] : artWithPhoto.photo) : null
+        g = { code: l.code, name: l.name, photo, lines: [] }
+        grouped.push(g)
+      }
+      g.lines.push(l)
+    })
+    const [y,m,d] = fecha.split('-')
+    const fechaStr = `${d}/${m}/${y}`
+    const totalUnidades = lines.reduce((s,l)=>s+l.qty,0)
+    const receptorExtra = receptor==='Deportes Anexos'&&disciplina ? ` &nbsp;·&nbsp; <b>Disciplina:</b> ${disciplina}` : ''
+    const rowsHtml = grouped.map(g => {
+      const photoHtml = g.photo
+        ? `<img src="${g.photo}" style="width:88px;height:88px;object-fit:cover;border-radius:6px;border:1px solid #ddd;">`
+        : `<div style="width:88px;height:88px;border-radius:6px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:11px;text-align:center;">Sin foto</div>`
+      const tallesHtml = g.lines.map(l =>
+        `<tr><td style="padding:4px 14px 4px 0;font-size:13px;">${l.talle}</td><td style="padding:4px 0;font-size:13px;font-weight:700;">${l.qty}</td></tr>`
+      ).join('')
+      return `<div style="display:flex;gap:16px;border:1px solid #E4E4DE;border-radius:8px;padding:14px;margin-bottom:12px;break-inside:avoid;page-break-inside:avoid;">
+        <div style="flex-shrink:0;">${photoHtml}</div>
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:700;margin-bottom:2px;">${g.name}</div>
+          <div style="font-size:11px;color:#999;margin-bottom:10px;">${g.code}</div>
+          <table style="border-collapse:collapse;">
+            <thead><tr>
+              <th style="padding:0 14px 6px 0;font-size:11px;color:#888;text-align:left;font-weight:600;text-transform:uppercase;">Talle</th>
+              <th style="padding:0 0 6px 0;font-size:11px;color:#888;text-align:left;font-weight:600;text-transform:uppercase;">Cant.</th>
+            </tr></thead>
+            <tbody>${tallesHtml}</tbody>
+          </table>
+        </div>
+      </div>`
+    }).join('')
+    const montoHtml = paga==='si'&&monto>0
+      ? `<div style="margin:12px 0;padding:10px 14px;background:#f0faf4;border:1px solid #b6e4c8;border-radius:6px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:700;color:#1a5c33;">Total a cobrar</span>
+          <span style="font-weight:800;color:#1a5c33;font-size:15px;">$ ${monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+        </div>` : ''
+    const obsHtml = obs ? `<span><b>Obs:</b> ${obs}</span>` : ''
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Remito de Entrega</title>
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;font-size:13px;}
+.no-print{text-align:right;margin-bottom:16px;}
+.no-print button{background:#121212;color:#FFD200;border:none;padding:9px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
+.sigs{display:grid;grid-template-columns:1fr 1fr;gap:60px;margin-top:48px;}
+.sig{border-top:1.5px solid #333;padding-top:8px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+.sig-sub{font-size:10px;color:#888;margin-top:3px;font-weight:400;text-transform:none;letter-spacing:0;}
+@media print{.no-print{display:none;}body{padding:12px;}}</style>
+</head><body>
+<div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
+<div style="border-bottom:3px solid #FFD200;padding-bottom:12px;margin-bottom:14px;">
+  <div style="font-size:20px;font-weight:800;letter-spacing:-0.5px;">Remito de Entrega</div>
+  <div style="font-size:11px;color:#666;margin-top:2px;">Depósito Indumentaria — Club Atlético Peñarol</div>
+</div>
+<div style="display:flex;gap:28px;margin-bottom:18px;font-size:13px;flex-wrap:wrap;">
+  <span><b>Fecha:</b> ${fechaStr}</span>
+  <span><b>Para:</b> ${persona||'—'}</span>
+  <span><b>Receptor:</b> ${receptor||'—'}${receptorExtra}</span>
+  <span><b>Total:</b> ${totalUnidades} unidades</span>
+  ${obsHtml}
+</div>
+${rowsHtml}
+${montoHtml}
+<div class="sigs">
+  <div class="sig">Entregado por<div class="sig-sub">Firma y aclaración</div></div>
+  <div class="sig">Recibido por<div class="sig-sub">Firma y aclaración</div></div>
+</div>
+</body></html>`
+  }
+
   const openPrintWindow = (html) => {
     const w = window.open('', '_blank', 'width=860,height=720')
     if (!w) { showToast('Permitir ventanas emergentes para imprimir.'); return }
@@ -1290,6 +1365,93 @@ ${rowsHtml}
     const a = document.createElement('a'); a.href=url; a.download=`${rep.concepto.replace(/[\\/:*?"<>|]/g,'-')}.xlsx`; a.click()
     URL.revokeObjectURL(url)
   }
+  const printRemito = (rep) => {
+    const jugadores = (rep.jugadores||[]).filter(j => Number(j.cantCamiseta)>0 || Number(j.cantShort)>0)
+    const totCam = jugadores.reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
+    const totSht = jugadores.reduce((s,j)=>s+(Number(j.cantShort)||0),0)
+    const torneo = [rep.torneo, rep.fechaTorneo!=null&&rep.fechaTorneo!=='' ? 'Fecha '+rep.fechaTorneo : null].filter(Boolean).join(' · ')
+    const rows = jugadores.map((j,i) => {
+      const isGolero = j.posicion==='Golero'
+      const bg = isGolero ? '#e8f5e9' : (i%2===0 ? '#ffffff' : '#f9f9f7')
+      return `<tr style="background:${bg}">
+        <td style="text-align:center;font-weight:700">${j.numero||'—'}</td>
+        <td style="font-weight:600">${j.nombre||'—'}</td>
+        <td style="text-align:center;color:#666;font-size:11px">${j.posicion||'Jugador'}</td>
+        <td style="text-align:center">${j.tipoCamiseta||'—'}</td>
+        <td style="text-align:center">${j.talleCamiseta||'—'}</td>
+        <td style="text-align:center;font-weight:700;font-size:15px">${Number(j.cantCamiseta)||0}</td>
+        <td style="text-align:center">${j.talleShort||'—'}</td>
+        <td style="text-align:center;font-weight:700;font-size:15px">${Number(j.cantShort)||0}</td>
+      </tr>`
+    }).join('')
+    const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<title>Remito · ${rep.concepto}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Calibri,Arial,sans-serif;font-size:13px;color:#111;background:#fff;padding:36px 40px}
+.no-print{text-align:right;margin-bottom:20px}
+.no-print button{background:#121212;color:#FFD200;border:none;padding:10px 24px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.04em}
+.header{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:3px solid #FFD200;padding-bottom:14px;margin-bottom:22px}
+.logo{font-weight:900;font-size:22px;letter-spacing:.04em}
+.logo-badge{background:#121212;color:#FFD200;padding:3px 9px;border-radius:4px;margin-right:8px}
+.doc-info{text-align:right}
+.doc-title{font-size:18px;font-weight:700;letter-spacing:.04em}
+.doc-date{font-size:11px;color:#666;margin-top:3px}
+.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px;padding:14px 16px;background:#fafaf7;border:1px solid #e0e0dc;border-radius:8px}
+.info-item label{display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#888;margin-bottom:2px}
+.info-item span{font-size:13px;font-weight:600}
+table{width:100%;border-collapse:collapse;margin-bottom:12px}
+thead tr{background:#121212}
+thead th{padding:9px 12px;text-align:left;color:#FFD200;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+tbody tr:hover{background:#fffbea!important}
+tbody td{padding:9px 12px;border-bottom:1px solid #eeeeea}
+tfoot tr{background:#FFD200}
+tfoot td{padding:9px 12px;font-weight:700}
+.totals-note{font-size:11.5px;color:#666;margin-bottom:36px;text-align:right}
+.sigs{display:grid;grid-template-columns:1fr 1fr;gap:60px;margin-top:48px}
+.sig{border-top:1.5px solid #333;padding-top:8px;text-align:center}
+.sig-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.sig-sub{font-size:10px;color:#888;margin-top:2px}
+@media print{.no-print{display:none}body{padding:16px 20px}}
+</style></head><body>
+<div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
+<div class="header">
+  <div class="logo"><span class="logo-badge">CA</span>PEÑAROL</div>
+  <div class="doc-info">
+    <div class="doc-title">REMITO DE ENVÍO</div>
+    <div class="doc-date">Fecha de ingreso: ${rep.fecha||'—'}${rep.fechaPartido?' · Fecha partido: '+rep.fechaPartido:''}</div>
+  </div>
+</div>
+<div class="info-grid">
+  <div class="info-item" style="grid-column:1/3"><label>Concepto</label><span>${rep.concepto||'—'}</span></div>
+  <div class="info-item"><label>Torneo</label><span>${torneo||'—'}</span></div>
+  ${rep.tipoCamisetaJugador?`<div class="info-item"><label>Equipo Jugadores</label><span>${rep.tipoCamisetaJugador}</span></div>`:'<div></div>'}
+  ${rep.tipoCamisetaGolero?`<div class="info-item"><label>Equipo Goleros</label><span>${rep.tipoCamisetaGolero}</span></div>`:'<div></div>'}
+</div>
+<table>
+  <thead><tr>
+    <th>Nº</th><th>Nombre</th><th>Posición</th><th>Tipo Camiseta</th>
+    <th>Talle Cam.</th><th style="text-align:center">Camisetas</th>
+    <th>Talle Short</th><th style="text-align:center">Shorts</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+  <tfoot><tr>
+    <td colspan="5" style="text-align:right">TOTAL</td>
+    <td style="text-align:center;font-size:15px">${totCam}</td>
+    <td></td>
+    <td style="text-align:center;font-size:15px">${totSht}</td>
+  </tr></tfoot>
+</table>
+<div class="totals-note">${totCam+totSht} prenda${totCam+totSht!==1?'s':''} en total &nbsp;·&nbsp; ${totCam} camiseta${totCam!==1?'s':''} &nbsp;·&nbsp; ${totSht} short${totSht!==1?'s':''}</div>
+<div class="sigs">
+  <div class="sig"><div class="sig-label">Entregado por</div><div class="sig-sub">Firma y aclaración</div></div>
+  <div class="sig"><div class="sig-label">Recibido por</div><div class="sig-sub">Firma y aclaración</div></div>
+</div>
+</body></html>`
+    const win = window.open('','_blank')
+    if (win) { win.document.write(html); win.document.close() }
+  }
+
   const saveDisciplinaEdit = (deliveryId) => {
     if (!disciplinaEdit?.trim()) { showToast('Ingresá la disciplina.'); return }
     setDb(s => ({...s, deliveries:s.deliveries.map(d=>d.id===deliveryId?{...d,disciplina:disciplinaEdit.trim()}:d)}))
@@ -3289,6 +3451,7 @@ ${rowsHtml}
               </div>
               <div className="modal-footer">
                 {st !== 'pendiente_separar' && <button className="btn btn-ghost" onClick={() => setSelectedDeliveryId(null)}>Cerrar</button>}
+                <button className="btn btn-ghost" style={{border:'1px solid #7a5800',color:'#7a5800'}} onClick={() => openPrintWindow(buildRemitoHtml(d.lines, d.persona, d.receptor, d.disciplina, d.fecha, d.obs, d.paga, d.monto))}>↓ Remito</button>
                 {!isSoloVista && st === 'pendiente_separar' && (
                   <button className="btn" style={{background:'#FFD200',color:'#121212',fontWeight:700}}
                     onClick={() => confirmarSeparar(d.id)}>✓ Confirmar entrega</button>
