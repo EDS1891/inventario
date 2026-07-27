@@ -3439,16 +3439,17 @@ tfoot td{padding:9px 12px;font-weight:700}
                 {reps.length === 0
                   ? <div style={{padding:24,textAlign:'center',color:'#8a8a82',fontSize:13}}>Sin reposiciones registradas para este jugador.</div>
                   : <>
-                    <div style={{display:'grid',gridTemplateColumns:'95px 1fr 60px 60px',background:'#121212',padding:'4px 16px 0',gap:8}}>
-                      <div/>
-                      <div/>
-                      <div style={{fontSize:9,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',textAlign:'center',gridColumn:'3 / span 2'}}>DESCUENTO</div>
-                    </div>
-                    <div style={{display:'grid',gridTemplateColumns:'95px 1fr 60px 60px',background:'#121212',padding:'2px 16px 8px',gap:8}}>
+                    <div style={{display:'grid',gridTemplateColumns:'95px 1fr 60px 60px',background:'#121212',padding:'6px 16px',gap:8,alignItems:'center'}}>
                       <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em'}}>FECHA</div>
                       <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em'}}>CONCEPTO</div>
-                      <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em',textAlign:'center'}}>CAMISETA</div>
-                      <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em',textAlign:'center'}}>SHORT</div>
+                      <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:1}}>
+                        <div style={{fontSize:9,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em'}}>DESCUENTO</div>
+                        <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em'}}>CAMISETA</div>
+                      </div>
+                      <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:1}}>
+                        <div style={{fontSize:9,color:'transparent'}}>DESCUENTO</div>
+                        <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em'}}>SHORT</div>
+                      </div>
                     </div>
                     {reps.map(r => {
                       const jj = (r.jugadores||[]).find(x => x.nombre === j.nombre)
