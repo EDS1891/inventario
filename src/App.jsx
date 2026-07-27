@@ -498,7 +498,7 @@ ${rowsHtml}
           <span style="font-weight:800;color:#1a5c33;font-size:15px;">$ ${monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
         </div>` : ''
     const obsHtml = obs ? `<span><b>Obs:</b> ${obs}</span>` : ''
-    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Remito de Entrega</title>
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>INDUMENTARIA CLUB ATLETICO PEÑAROL</title>
 <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;font-size:13px;}
 .no-print{text-align:right;margin-bottom:16px;}
 .no-print button{background:#121212;color:#FFD200;border:none;padding:9px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
@@ -507,7 +507,6 @@ ${rowsHtml}
 <div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
 <div style="border-bottom:3px solid #FFD200;padding-bottom:12px;margin-bottom:14px;">
   <div style="font-size:20px;font-weight:800;letter-spacing:-0.5px;">Remito de Entrega</div>
-  <div style="font-size:11px;color:#666;margin-top:2px;">Depósito Indumentaria — Club Atlético Peñarol</div>
 </div>
 <div style="display:flex;gap:28px;margin-bottom:18px;font-size:13px;flex-wrap:wrap;">
   <span><b>Fecha:</b> ${fechaStr}</span>
@@ -548,12 +547,7 @@ ${montoHtml}
     const disciplina = deliveries[0]?.disciplina
     const receptorExtra = receptor==='Deportes Anexos'&&disciplina ? ` &nbsp;·&nbsp; <b>Disciplina:</b> ${disciplina}` : ''
     const fechas = [...new Set(deliveries.map(d => d.fecha).filter(Boolean))].sort()
-    const fechaStr = fechas.length === 1
-      ? (() => { const [y,m,d] = fechas[0].split('-'); return `${d}/${m}/${y}` })()
-      : (() => {
-          const fmt = f => { const [y,m,d] = f.split('-'); return `${d}/${m}/${y}` }
-          return `${fmt(fechas[0])} — ${fmt(fechas[fechas.length-1])}`
-        })()
+    const fechaStr = fechas.length === 1 ? fechas[0] : `${fechas[0]} — ${fechas[fechas.length-1]}`
     const totalUnidades = grouped.reduce((s,g)=>s+g.qty,0)
     const rowsHtml = byArticle.map(a => {
       const photoHtml = a.photo
@@ -582,7 +576,7 @@ ${montoHtml}
           <b>Integrantes:</b> ${personas.join(', ')}
         </div>`
       : ''
-    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Remito Combinado</title>
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>INDUMENTARIA CLUB ATLETICO PEÑAROL</title>
 <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;font-size:13px;}
 .no-print{text-align:right;margin-bottom:16px;}
 .no-print button{background:#121212;color:#FFD200;border:none;padding:9px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
@@ -591,7 +585,6 @@ ${montoHtml}
 <div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
 <div style="border-bottom:3px solid #FFD200;padding-bottom:12px;margin-bottom:14px;">
   <div style="font-size:20px;font-weight:800;letter-spacing:-0.5px;">Remito de Entrega</div>
-  <div style="font-size:11px;color:#666;margin-top:2px;">Depósito Indumentaria — Club Atlético Peñarol</div>
 </div>
 <div style="display:flex;gap:28px;margin-bottom:14px;font-size:13px;flex-wrap:wrap;">
   <span><b>Fecha:</b> ${fechaStr}</span>
