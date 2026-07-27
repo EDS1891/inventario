@@ -1820,11 +1820,13 @@ ${rowsHtml}
                     </div>
                   )}
                 </div>
-                {/* Fecha Partido */}
+                {/* Fecha Partido — solo para reposiciones con descuento cross-mes */}
+                {/reposici[oó]n/i.test(repForm.concepto) && (
                 <div className="form-group" style={{marginTop:10}}>
                   <label className="field-label">Fecha Partido <span style={{fontWeight:400,color:'#8a8a82'}}>(DD/MM/YYYY — opcional, define el mes para descuentos)</span></label>
                   <input className="field-input" value={repForm.fechaPartido||''} onChange={e=>setRepForm(p=>({...p,fechaPartido:e.target.value}))} placeholder="Ej. 31/07/2025" style={{maxWidth:160}} />
                 </div>
+                )}
                 {/* Selector de tipo de camiseta — uno por posición */}
                 <div style={{display:'flex',gap:16,marginTop:14}}>
                   <div style={{flex:1}}>
@@ -3481,11 +3483,13 @@ ${rowsHtml}
                   </div>
                 )}
               </div>
-              {/* Fecha Partido */}
+              {/* Fecha Partido — solo para reposiciones con descuento cross-mes */}
+              {/reposici[oó]n/i.test(repForm.concepto) && (
               <div className="form-group" style={{marginTop:10}}>
                 <label className="field-label">Fecha Partido <span style={{fontWeight:400,color:'#8a8a82'}}>(DD/MM/YYYY — opcional, define el mes para descuentos)</span></label>
                 <input className="field-input" value={repForm.fechaPartido||''} onChange={e=>setRepForm(p=>({...p,fechaPartido:e.target.value}))} placeholder="Ej. 31/07/2025" style={{maxWidth:160}} />
               </div>
+              )}
               {/* Selector de tipo de camiseta — uno por posición */}
               <div style={{display:'flex',gap:16,marginTop:14}}>
                 <div style={{flex:1}}>
