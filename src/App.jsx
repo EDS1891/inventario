@@ -2299,6 +2299,9 @@ tfoot td{padding:9px 12px;font-weight:700}
             )
           })}
         </nav>
+        <div style={{padding:'12px 16px 4px'}}>
+          <img src="/libertadores.jpeg" alt="5 Copas Libertadores" style={{width:'100%',borderRadius:8,display:'block'}} />
+        </div>
         <div className="sidebar-user" style={{flexDirection:'column',gap:10}}>
           <div style={{display:'flex',alignItems:'center',gap:11,minWidth:0}} title={`${currentUser?.displayName || session}\n${session}`}>
             <div className="user-avatar" style={{flexShrink:0}}>{ini(currentUser?.displayName || session || '')}</div>
@@ -2874,7 +2877,6 @@ tfoot td{padding:9px 12px;font-weight:700}
 
           {/* RECEPTORES */}
           {view === 'usuarios-reg' && (
-            <>
             <div style={{display:'flex',flexDirection:'column',gap:10,padding:'0 2px'}}>
               {[...db.users].sort((a,b) => (a.role==='admin'?0:1)-(b.role==='admin'?0:1)).map(u => (
                 <div key={u.username} className="card" style={{padding:'16px 20px',display:'flex',alignItems:'center',gap:14,borderLeft: u.status==='pendiente' ? '3px solid #FFD200' : undefined}}>
@@ -2906,10 +2908,6 @@ tfoot td{padding:9px 12px;font-weight:700}
                 </div>
               ))}
             </div>
-            <div style={{marginTop:24,textAlign:'center'}}>
-              <img src="/libertadores.jpeg" alt="5 Copas Libertadores" style={{maxWidth:'100%',width:360,borderRadius:12,display:'block',margin:'0 auto'}} />
-            </div>
-            </>
           )}
 
           {view === 'receptores' && (
