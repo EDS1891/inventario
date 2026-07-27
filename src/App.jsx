@@ -2299,8 +2299,8 @@ tfoot td{padding:9px 12px;font-weight:700}
             )
           })}
         </nav>
-        <div style={{padding:'12px 16px 4px'}}>
-          <img src="/libertadores.jpeg" alt="5 Copas Libertadores" style={{width:'100%',borderRadius:8,display:'block'}} />
+        <div style={{padding:'8px 12px 4px'}}>
+          <img src="/libertadores.jpeg" alt="5 Copas Libertadores" style={{width:'100%',display:'block',mixBlendMode:'lighten'}} />
         </div>
         <div className="sidebar-user" style={{flexDirection:'column',gap:10}}>
           <div style={{display:'flex',alignItems:'center',gap:11,minWidth:0}} title={`${currentUser?.displayName || session}\n${session}`}>
