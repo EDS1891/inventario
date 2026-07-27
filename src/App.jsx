@@ -166,6 +166,7 @@ export default function App() {
   const [delFilterPersona, setDelFilterPersona] = useState('')
   const [delFilterPaga, setDelFilterPaga] = useState('')
   const [selectedDeliveryId, setSelectedDeliveryId] = useState(null)
+  const [remitoSelIds, setRemitoSelIds] = useState(null)
   const [movsExpanded, setMovsExpanded] = useState(false)
   const [photoPreview, setPhotoPreview] = useState(null)
   const [selectedReceptor, setSelectedReceptor] = useState(null)
@@ -501,9 +502,6 @@ ${rowsHtml}
 <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;font-size:13px;}
 .no-print{text-align:right;margin-bottom:16px;}
 .no-print button{background:#121212;color:#FFD200;border:none;padding:9px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
-.sigs{display:grid;grid-template-columns:1fr 1fr;gap:60px;margin-top:48px;}
-.sig{border-top:1.5px solid #333;padding-top:8px;text-align:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
-.sig-sub{font-size:10px;color:#888;margin-top:3px;font-weight:400;text-transform:none;letter-spacing:0;}
 @media print{.no-print{display:none;}body{padding:12px;}}</style>
 </head><body>
 <div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
@@ -520,10 +518,89 @@ ${rowsHtml}
 </div>
 ${rowsHtml}
 ${montoHtml}
-<div class="sigs">
-  <div class="sig">Entregado por<div class="sig-sub">Firma y aclaración</div></div>
-  <div class="sig">Recibido por<div class="sig-sub">Firma y aclaración</div></div>
+</body></html>`
+  }
+
+  const buildRemitoCombinadoHtml = (deliveries) => {
+    const grouped = []
+    deliveries.forEach(d => {
+      ;(d.lines||[]).forEach(l => {
+        let g = grouped.find(g => g.code === l.code && g.talle === l.talle)
+        if (!g) {
+          const arts = db.articles.filter(a => a.code === l.code)
+          const artWithPhoto = arts.find(a => a.photos?.length || a.photo)
+          const photo = artWithPhoto ? (artWithPhoto.photos?.length ? artWithPhoto.photos[0] : artWithPhoto.photo) : null
+          g = { code: l.code, name: l.name, talle: l.talle, photo, qty: 0 }
+          grouped.push(g)
+        }
+        g.qty += l.qty
+      })
+    })
+    // Re-group by article (merge talles)
+    const byArticle = []
+    grouped.forEach(g => {
+      let a = byArticle.find(a => a.code === g.code)
+      if (!a) { a = { code: g.code, name: g.name, photo: g.photo, lines: [] }; byArticle.push(a) }
+      a.lines.push({ talle: g.talle, qty: g.qty })
+    })
+    const personas = [...new Set(deliveries.map(d => d.persona).filter(Boolean))]
+    const receptor = deliveries[0]?.receptor || '—'
+    const disciplina = deliveries[0]?.disciplina
+    const receptorExtra = receptor==='Deportes Anexos'&&disciplina ? ` &nbsp;·&nbsp; <b>Disciplina:</b> ${disciplina}` : ''
+    const fechas = [...new Set(deliveries.map(d => d.fecha).filter(Boolean))].sort()
+    const fechaStr = fechas.length === 1
+      ? (() => { const [y,m,d] = fechas[0].split('-'); return `${d}/${m}/${y}` })()
+      : (() => {
+          const fmt = f => { const [y,m,d] = f.split('-'); return `${d}/${m}/${y}` }
+          return `${fmt(fechas[0])} — ${fmt(fechas[fechas.length-1])}`
+        })()
+    const totalUnidades = grouped.reduce((s,g)=>s+g.qty,0)
+    const rowsHtml = byArticle.map(a => {
+      const photoHtml = a.photo
+        ? `<img src="${a.photo}" style="width:88px;height:88px;object-fit:cover;border-radius:6px;border:1px solid #ddd;">`
+        : `<div style="width:88px;height:88px;border-radius:6px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:11px;text-align:center;">Sin foto</div>`
+      const tallesHtml = a.lines.map(l =>
+        `<tr><td style="padding:4px 14px 4px 0;font-size:13px;">${l.talle}</td><td style="padding:4px 0;font-size:13px;font-weight:700;">${l.qty}</td></tr>`
+      ).join('')
+      return `<div style="display:flex;gap:16px;border:1px solid #E4E4DE;border-radius:8px;padding:14px;margin-bottom:12px;break-inside:avoid;page-break-inside:avoid;">
+        <div style="flex-shrink:0;">${photoHtml}</div>
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:700;margin-bottom:2px;">${a.name}</div>
+          <div style="font-size:11px;color:#999;margin-bottom:10px;">${a.code}</div>
+          <table style="border-collapse:collapse;">
+            <thead><tr>
+              <th style="padding:0 14px 6px 0;font-size:11px;color:#888;text-align:left;font-weight:600;text-transform:uppercase;">Talle</th>
+              <th style="padding:0 0 6px 0;font-size:11px;color:#888;text-align:left;font-weight:600;text-transform:uppercase;">Cant.</th>
+            </tr></thead>
+            <tbody>${tallesHtml}</tbody>
+          </table>
+        </div>
+      </div>`
+    }).join('')
+    const personasHtml = personas.length > 1
+      ? `<div style="margin-bottom:12px;padding:8px 14px;background:#fffbea;border:1px solid #ffe066;border-radius:6px;font-size:12px;">
+          <b>Integrantes:</b> ${personas.join(', ')}
+        </div>`
+      : ''
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Remito Combinado</title>
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;font-size:13px;}
+.no-print{text-align:right;margin-bottom:16px;}
+.no-print button{background:#121212;color:#FFD200;border:none;padding:9px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
+@media print{.no-print{display:none;}body{padding:12px;}}</style>
+</head><body>
+<div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
+<div style="border-bottom:3px solid #FFD200;padding-bottom:12px;margin-bottom:14px;">
+  <div style="font-size:20px;font-weight:800;letter-spacing:-0.5px;">Remito de Entrega</div>
+  <div style="font-size:11px;color:#666;margin-top:2px;">Depósito Indumentaria — Club Atlético Peñarol</div>
 </div>
+<div style="display:flex;gap:28px;margin-bottom:14px;font-size:13px;flex-wrap:wrap;">
+  <span><b>Fecha:</b> ${fechaStr}</span>
+  <span><b>Para:</b> ${personas.length===1?personas[0]:'Varias entregas'}</span>
+  <span><b>Receptor:</b> ${receptor}${receptorExtra}</span>
+  <span><b>Total:</b> ${totalUnidades} unidades</span>
+</div>
+${personasHtml}
+${rowsHtml}
 </body></html>`
   }
 
@@ -2659,6 +2736,11 @@ tfoot td{padding:9px 12px;font-weight:700}
                     ? `${filteredRepRows.length} de ${(db.reposiciones||[]).length} reposiciones`
                     : `${filteredDeliveryRows.length} de ${kpis.entregas} entregas`}
                 </span>
+                {delFilterReceptor!==REP_FILTER && (
+                  remitoSelIds !== null
+                    ? <button onClick={() => setRemitoSelIds(null)} style={{marginLeft:10,padding:'5px 12px',borderRadius:6,border:'1px solid #ccc',background:'#f5f5f0',color:'#666',fontSize:12,fontWeight:600,cursor:'pointer'}}>Cancelar</button>
+                    : <button onClick={() => setRemitoSelIds(new Set())} style={{marginLeft:10,padding:'5px 12px',borderRadius:6,border:'1px solid #7a5800',background:'#FFF8D6',color:'#7a5800',fontSize:12,fontWeight:700,cursor:'pointer'}}>Remito combinado</button>
+                )}
               </div>
               <div className={`table-header ${delFilterReceptor==='Deportes Anexos'?'del-cols-disc':'del-cols'}`}>
                 <div>FECHA</div><div>INTEGRANTE / GRUPO</div>
@@ -2685,10 +2767,33 @@ tfoot td{padding:9px 12px;font-weight:700}
                       <div/><div/>
                     </div>
                   ))
-                : filteredDeliveryRows.map(d => (
-                    <div key={d.id} className={`table-row ${delFilterReceptor==='Deportes Anexos'?'del-cols-disc':'del-cols'} clickable`} onClick={() => setSelectedDeliveryId(d.id)}>
-                      <div className="mono" style={{fontSize:12.5,color:'#6a6a62'}}>{d.fecha}</div>
+                : filteredDeliveryRows.map(d => {
+                    const isSelected = remitoSelIds?.has(d.id)
+                    const handleClick = () => {
+                      if (remitoSelIds !== null) {
+                        setRemitoSelIds(prev => {
+                          const next = new Set(prev)
+                          next.has(d.id) ? next.delete(d.id) : next.add(d.id)
+                          return next
+                        })
+                      } else {
+                        setSelectedDeliveryId(d.id)
+                      }
+                    }
+                    return (
+                    <div key={d.id} className={`table-row ${delFilterReceptor==='Deportes Anexos'?'del-cols-disc':'del-cols'} clickable`}
+                      onClick={handleClick}
+                      style={isSelected ? {background:'#FFFBEA',outline:'2px solid #FFD200',outlineOffset:'-2px'} : {}}>
+                      {remitoSelIds !== null
+                        ? <div style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
+                            <div style={{width:18,height:18,borderRadius:4,border:'2px solid',borderColor:isSelected?'#7a5800':'#ccc',background:isSelected?'#FFD200':'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:'#7a5800',flexShrink:0}}>
+                              {isSelected ? '✓' : ''}
+                            </div>
+                          </div>
+                        : <div className="mono" style={{fontSize:12.5,color:'#6a6a62'}}>{d.fecha}</div>
+                      }
                       <div style={{display:'flex',alignItems:'center',gap:11,minWidth:0}}>
+                        {remitoSelIds !== null && <div className="mono" style={{fontSize:11,color:'#8a8a82',whiteSpace:'nowrap'}}>{d.fecha}</div>}
                         <div className="avatar lg">{d.ini}</div>
                         <div style={{minWidth:0}}>
                           <div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.persona}</div>
@@ -2706,12 +2811,26 @@ tfoot td{padding:9px 12px;font-weight:700}
                         {(() => { const st=d.status||'aceptado'; const bSt={borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}; return st==='pendiente'?<span style={{...bSt,background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200'}}>Pendiente</span>:st==='rechazado'?<span style={{...bSt,background:'#FBEAE8',color:'#C2473D',border:'1px solid #C2473D'}}>Rechazado</span>:st==='pendiente_separar'?<span style={{...bSt,background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B'}}>Pend. separar</span>:<span style={{...bSt,background:'#EDF7F2',color:'#2e9b5e',border:'1px solid #2e9b5e'}}>Aceptado</span> })()}
                       </div>
                       <div style={{display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
-                        {!isSoloVista && <button className="btn-del" onClick={e => { e.stopPropagation(); askDeleteDelivery(d.id) }}>✕</button>}
+                        {!isSoloVista && remitoSelIds === null && <button className="btn-del" onClick={e => { e.stopPropagation(); askDeleteDelivery(d.id) }}>✕</button>}
                       </div>
                     </div>
-                  ))
+                    )
+                  })
               }
               {(delFilterReceptor===REP_FILTER ? filteredRepRows : filteredDeliveryRows).length === 0 && <div className="empty">{delFilterReceptor===REP_FILTER ? 'No hay reposiciones registradas.' : delFilterReceptor||delFilterPersona ? 'Sin entregas para este filtro.' : 'Sin entregas registradas.'}</div>}
+              {remitoSelIds !== null && remitoSelIds.size > 0 && (
+                <div style={{position:'sticky',bottom:0,background:'#121212',padding:'12px 20px',display:'flex',alignItems:'center',gap:12,borderTop:'2px solid #FFD200'}}>
+                  <span style={{color:'#FFD200',fontWeight:700,fontSize:13,flex:1}}>{remitoSelIds.size} entrega{remitoSelIds.size!==1?'s':''} seleccionada{remitoSelIds.size!==1?'s':''}</span>
+                  <button onClick={() => {
+                    const sel = filteredDeliveryRows.filter(d => remitoSelIds.has(d.id))
+                    openPrintWindow(buildRemitoCombinadoHtml(sel))
+                    setRemitoSelIds(null)
+                  }} style={{background:'#FFD200',color:'#121212',border:'none',padding:'8px 20px',borderRadius:6,fontWeight:700,fontSize:13,cursor:'pointer'}}>
+                    Generar remito
+                  </button>
+                  <button onClick={() => setRemitoSelIds(null)} style={{background:'none',border:'1px solid #555',color:'#aaa',padding:'8px 14px',borderRadius:6,fontSize:12,cursor:'pointer'}}>Cancelar</button>
+                </div>
+              )}
             </div>
             </>
           )}
