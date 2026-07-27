@@ -480,7 +480,7 @@ ${rowsHtml}
       return `<div style="display:flex;gap:16px;border:1px solid #E4E4DE;border-radius:8px;padding:14px;margin-bottom:12px;break-inside:avoid;page-break-inside:avoid;">
         <div style="flex-shrink:0;">${photoHtml}</div>
         <div style="flex:1;">
-          <div style="font-size:15px;font-weight:700;margin-bottom:2px;">${g.name}</div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:2px;">${g.name.replace(/\s+\d{4}(\/\d{2,4})?$/, '')}</div>
           <div style="font-size:11px;color:#999;margin-bottom:10px;">${g.code}</div>
           <table style="border-collapse:collapse;">
             <thead><tr>
@@ -559,7 +559,7 @@ ${montoHtml}
       return `<div style="display:flex;gap:16px;border:1px solid #E4E4DE;border-radius:8px;padding:14px;margin-bottom:12px;break-inside:avoid;page-break-inside:avoid;">
         <div style="flex-shrink:0;">${photoHtml}</div>
         <div style="flex:1;">
-          <div style="font-size:15px;font-weight:700;margin-bottom:2px;">${a.name}</div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:2px;">${a.name.replace(/\s+\d{4}(\/\d{2,4})?$/, '')}</div>
           <div style="font-size:11px;color:#999;margin-bottom:10px;">${a.code}</div>
           <table style="border-collapse:collapse;">
             <thead><tr>
