@@ -466,8 +466,6 @@ ${rowsHtml}
       }
       g.lines.push(l)
     })
-    const [y,m,d] = fecha.split('-')
-    const fechaStr = `${d}/${m}/${y}`
     const totalUnidades = lines.reduce((s,l)=>s+l.qty,0)
     const receptorExtra = receptor==='Deportes Anexos'&&disciplina ? ` &nbsp;·&nbsp; <b>Disciplina:</b> ${disciplina}` : ''
     const rowsHtml = grouped.map(g => {
@@ -509,7 +507,7 @@ ${rowsHtml}
   <div style="font-size:20px;font-weight:800;letter-spacing:-0.5px;">Remito de Entrega</div>
 </div>
 <div style="display:flex;gap:28px;margin-bottom:18px;font-size:13px;flex-wrap:wrap;">
-  <span><b>Fecha:</b> ${fechaStr}</span>
+  <span><b>Fecha:</b> ${fecha}</span>
   <span><b>Para:</b> ${persona||'—'}</span>
   <span><b>Receptor:</b> ${receptor||'—'}${receptorExtra}</span>
   <span><b>Total:</b> ${totalUnidades} unidades</span>
