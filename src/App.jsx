@@ -1675,7 +1675,7 @@ tfoot td{padding:9px 12px;font-weight:700}
       <div style={{background:'#1a1a1a',borderRadius:12,padding:'36px 32px',width:'100%',maxWidth:420,boxShadow:'0 20px 60px rgba(0,0,0,.5)'}}>
         <div style={{display:'flex',flexDirection:'column',alignItems:'center',marginBottom:28}}>
           <img src="/escudo.png" alt="Peñarol" style={{height:56,marginBottom:14}} />
-          <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:18,color:'#f2cb12',letterSpacing:'.05em'}}>INDUMENTARIA PEÑAROL</div>
+          <div style={{fontFamily:'Oswald,sans-serif',fontSize:18,color:'#f2cb12',letterSpacing:'.05em'}}>INDUMENTARIA PEÑAROL</div>
         </div>
 
         {/* Tabs login / registro — oculto en vistas auxiliares */}
@@ -1803,7 +1803,7 @@ tfoot td{padding:9px 12px;font-weight:700}
   if (loading) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',flexDirection:'column',gap:16,background:'#121212'}}>
       <img src="/escudo.png" alt="Peñarol" style={{height:64,opacity:.9}} />
-      <div style={{color:'#f2cb12',fontFamily:'Archivo Black,sans-serif',fontSize:14,letterSpacing:'.1em'}}>CARGANDO…</div>
+      <div style={{color:'#f2cb12',fontFamily:'Oswald,sans-serif',fontSize:14,letterSpacing:'.1em'}}>CARGANDO…</div>
     </div>
   )
 
@@ -1819,7 +1819,7 @@ tfoot td{padding:9px 12px;font-weight:700}
         <div style={{background:'#121212',padding:'18px 24px',display:'flex',alignItems:'center',gap:16}}>
           <img src="/escudo.png" alt="Peñarol" style={{height:44}} />
           <div style={{flex:1}}>
-            <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:14,color:'#f2cb12',letterSpacing:'.05em'}}>{currentUser?.role==='receptor' ? 'INDUMENTARIA CLUB ATLÉTICO PEÑAROL' : 'DEPÓSITO · INDUMENTARIA'}</div>
+            <div style={{fontFamily:'Oswald,sans-serif',fontSize:14,color:'#f2cb12',letterSpacing:'.05em'}}>{currentUser?.role==='receptor' ? 'INDUMENTARIA CLUB ATLÉTICO PEÑAROL' : 'DEPÓSITO · INDUMENTARIA'}</div>
             <div style={{fontSize:13,color:'#fff',marginTop:2}}>Hola, <b>{currentUser?.displayName || session}</b></div>
           </div>
           <button onClick={() => window.location.reload()} style={{background:'#2a2a2a',border:'1px solid #3a3a3a',color:'#ccc',borderRadius:8,padding:'8px 14px',cursor:'pointer',fontSize:13,marginRight:8}}>↺</button>
@@ -1910,7 +1910,7 @@ tfoot td{padding:9px 12px;font-weight:700}
 
           {/* Pendientes */}
           <div>
-            <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:13,color:'#8a8a82',letterSpacing:'.08em',marginBottom:14}}>PENDIENTES DE CONFIRMACIÓN</div>
+            <div style={{fontFamily:'Oswald,sans-serif',fontSize:13,color:'#8a8a82',letterSpacing:'.08em',marginBottom:14}}>PENDIENTES DE CONFIRMACIÓN</div>
             {pendientes.length === 0 && (
               <div style={{background:'#fff',borderRadius:12,padding:'20px 20px',textAlign:'center',color:'#8a8a82',fontSize:13.5,border:'1px solid #E7E7E3'}}>Sin entregas pendientes.</div>
             )}
@@ -1940,7 +1940,7 @@ tfoot td{padding:9px 12px;font-weight:700}
 
           {/* Historial */}
           <div>
-            <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:13,color:'#8a8a82',letterSpacing:'.08em',marginBottom:14}}>HISTORIAL</div>
+            <div style={{fontFamily:'Oswald,sans-serif',fontSize:13,color:'#8a8a82',letterSpacing:'.08em',marginBottom:14}}>HISTORIAL</div>
             {historial.length === 0 && (
               <div style={{background:'#fff',borderRadius:12,padding:'20px 20px',textAlign:'center',color:'#8a8a82',fontSize:13.5,border:'1px solid #E7E7E3'}}>Sin entregas en el historial.</div>
             )}
@@ -2599,7 +2599,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                         </div>
                       </div>
                       <div style={{textAlign:'right',flexShrink:0}}>
-                        <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:30,lineHeight:1}}>{detail.totalFmt}</div>
+                        <div style={{fontFamily:'Oswald,sans-serif',fontSize:30,lineHeight:1}}>{detail.totalFmt}</div>
                         <div style={{fontSize:11.5,color:'#8a8a82',marginTop:4}}>unidades totales</div>
                         {detail.precio > 0 && <div style={{marginTop:8,fontSize:13,fontWeight:700,color:'#1a1a1a'}}>$ {detail.precio.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>}
                       </div>
@@ -4102,7 +4102,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   padding:'12px 16px',borderRadius:8,marginBottom:8,background:'#f2cb12',cursor:'pointer'}}
                   onClick={()=>{ setCat(cat); setView('inventario'); setShowUnidadesDesglose(false) }}>
                   <span style={{fontWeight:700,fontSize:14}}>PRENDAS DE {cat.toUpperCase()}</span>
-                  <span style={{fontFamily:'Archivo Black,sans-serif',fontSize:26}}>{qty}</span>
+                  <span style={{fontFamily:'Oswald,sans-serif',fontSize:26}}>{qty}</span>
                 </div>
               ))}
             </div>
@@ -4149,8 +4149,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                 : <span style={{fontWeight:700,fontSize:14,color:c.color}}>{tipo}</span>
               }
               {c.badge
-                ? <span style={{fontFamily:'Archivo Black,sans-serif',fontSize:22,color:'#121212',background:'#f2cb12',padding:'2px 14px',borderRadius:20}}>{qty}</span>
-                : <span style={{fontFamily:'Archivo Black,sans-serif',fontSize:22,color:c.color}}>{qty}</span>
+                ? <span style={{fontFamily:'Oswald,sans-serif',fontSize:22,color:'#121212',background:'#f2cb12',padding:'2px 14px',borderRadius:20}}>{qty}</span>
+                : <span style={{fontFamily:'Oswald,sans-serif',fontSize:22,color:c.color}}>{qty}</span>
               }
             </div>
           )
@@ -4178,7 +4178,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 {filas.length === 0 && <div style={{textAlign:'center',color:'#8a8a82',padding:'24px 0'}}>Sin datos.</div>}
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:16,paddingTop:12,borderTop:'2px solid #121212'}}>
                   <span style={{fontWeight:700,fontSize:13}}>TOTAL</span>
-                  <span style={{fontFamily:'Archivo Black,sans-serif',fontSize:26}}>{totalGeneral}</span>
+                  <span style={{fontFamily:'Oswald,sans-serif',fontSize:26}}>{totalGeneral}</span>
                 </div>
               </div>
               <div className="modal-footer">
