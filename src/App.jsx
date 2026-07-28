@@ -190,6 +190,7 @@ export default function App() {
   const [disciplinaEdit, setDisciplinaEdit] = useState(null)
   const [editDelivery, setEditDelivery] = useState(null)
   const [pumaMetric, setPumaMetric] = useState('unidades')
+  const [pumaYear, setPumaYear] = useState(new Date().getFullYear())
   const [repTab, setRepTab] = useState('reposiciones')
   const [plantelForm, setPlantelForm] = useState({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',talleShort:'L'})
   const [plantelModal, setPlantelModal] = useState(false)
@@ -3076,9 +3077,25 @@ tfoot td{padding:9px 12px;font-weight:700}
               'Deportes Anexos':       '#E53935',
               'Funcionarios':          '#90A4AE',
             }
-            const repUnidades = (db.reposiciones||[]).reduce((s, r) =>
+            const yearStr = String(pumaYear)
+            const allYears = [...new Set([
+              ...(db.deliveries||[]).map(d => d.fecha?.slice(0,4)).filter(Boolean),
+              ...(db.reposiciones||[]).map(r => r.fecha?.slice(0,4)).filter(Boolean),
+              String(new Date().getFullYear()),
+            ])].sort()
+            const deliveriesYear = (db.deliveries||[]).filter(d => d.fecha?.startsWith(yearStr) && d.status !== 'pendiente_separar')
+            const pumaCards = RECEPTORES.map(name => {
+              const ds = deliveriesYear.filter(d => d.receptor === name)
+              const unidades = ds.reduce((s,d) => s+d.lines.reduce((x,l)=>x+l.qty,0),0)
+              const monto = ds.reduce((s,d) => s+d.lines.reduce((x,l)=>{
+                const art = articles.find(a=>a.code===l.code)
+                return x+(art?.precio||0)*l.qty
+              },0),0)
+              return { name, unidades, monto }
+            })
+            const repUnidades = (db.reposiciones||[]).filter(r => r.fecha?.startsWith(yearStr)).reduce((s, r) =>
               s + (r.jugadores||[]).reduce((a, j) => a + (Number(j.cantCamiseta)||0) + (Number(j.cantShort)||0), 0), 0)
-            const baseData = receptorCards
+            const baseData = pumaCards
               .map(r => {
                 const extra = r.name === '1° División' ? repUnidades : 0
                 const total = r.unidades + extra
@@ -3098,6 +3115,20 @@ tfoot td{padding:9px 12px;font-weight:700}
             const BAR_HEIGHT = 220
             return (
               <div style={{display:'flex',flexDirection:'column',gap:20}}>
+                {/* Selector de año */}
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  <span style={{fontSize:12,fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',color:'#888'}}>Año del contrato</span>
+                  <div style={{display:'flex',gap:4,background:'#F0F0EC',borderRadius:8,padding:3}}>
+                    {allYears.map(y => (
+                      <button key={y} onClick={() => setPumaYear(Number(y))}
+                        style={{padding:'5px 14px',borderRadius:6,border:'none',cursor:'pointer',fontSize:13,fontWeight:700,
+                          background: pumaYear===Number(y) ? '#121212' : 'transparent',
+                          color: pumaYear===Number(y) ? '#f2cb12' : '#6a6a62'}}>
+                        {y}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 {/* KPI global */}
                 <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
                   <div className="kpi-card" style={{minWidth:180}}>
