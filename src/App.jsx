@@ -2272,7 +2272,6 @@ tfoot td{padding:9px 12px;font-weight:700}
             <button className={`nav-item${isActive?' active':''}`} onClick={() => goView('panel')}>
               <span className="nav-dot" />
               PANEL PRINCIPAL
-              {isActive && <img src="/escudo.png" alt="" style={{height:20,width:'auto',marginLeft:'auto',opacity:0.85}} />}
             </button>
           )})()}
           {/* Grupo DEPÓSITO */}
@@ -2292,8 +2291,7 @@ tfoot td{padding:9px 12px;font-weight:700}
               <button key={key} className={`nav-item nav-item-sub${isActive?' active':''}`} onClick={() => goView(key)}>
                 <span className="nav-dot" />
                 {label}
-                {isActive && <img src="/escudo.png" alt="" style={{height:20,width:'auto',marginLeft:'auto',opacity:0.85}} />}
-              </button>
+                </button>
             )
           })}
           {/* Items top-level */}
@@ -2303,8 +2301,7 @@ tfoot td{padding:9px 12px;font-weight:700}
               <button key={key} className={`nav-item${isActive?' active':''}`} onClick={() => goView(key)}>
                 <span className="nav-dot" />
                 {label}
-                {isActive && <img src="/escudo.png" alt="" style={{height:20,width:'auto',marginLeft:'auto',opacity:0.85}} />}
-              </button>
+                </button>
             )
           })}
         </nav>
