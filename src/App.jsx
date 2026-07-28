@@ -437,18 +437,19 @@ export default function App() {
     }).join('')
     const receptorExtra = receptor==='Deportes Anexos'&&disciplina ? ` &nbsp;·&nbsp; <b>Disciplina:</b> ${disciplina}` : ''
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Pedido de Entrega</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
 <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;font-size:13px;}@media print{body{padding:12px;}}</style>
 </head><body>
-<div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;margin-bottom:20px;border-bottom:3px solid #f2cb12;">
-  <div style="display:flex;align-items:center;gap:12px;">
-    <img src="${window.location.origin}/escudo_marca.png" style="height:58px;width:auto;" alt="CAP">
+<div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;margin-bottom:20px;border-bottom:2px solid #111;">
+  <div style="display:flex;align-items:center;gap:14px;">
+    <img src="${window.location.origin}/escudo_blanco.png" style="height:64px;width:auto;" alt="CAP">
     <div>
-      <div style="font-size:14px;font-weight:800;letter-spacing:.04em;color:#111;">CLUB ATLÉTICO PEÑAROL</div>
-      <div style="font-size:9.5px;font-weight:600;letter-spacing:.1em;color:#888;text-transform:uppercase;margin-top:3px;">Depósito de Indumentaria</div>
+      <div style="font-family:'Oswald',Arial,sans-serif;font-size:20px;font-weight:700;letter-spacing:.06em;color:#111;text-transform:uppercase;line-height:1.1;-webkit-text-stroke:.4px #111;">CLUB ATLÉTICO PEÑAROL</div>
+      <div style="font-family:'Oswald',Arial,sans-serif;font-size:11px;font-weight:400;letter-spacing:.14em;color:#555;text-transform:uppercase;margin-top:5px;">Entregas de indumentaria</div>
     </div>
   </div>
   <div style="text-align:right;">
-    <div style="font-size:19px;font-weight:800;letter-spacing:-.5px;">Pedido de Entrega</div>
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:18px;font-weight:600;letter-spacing:.04em;color:#111;">Pedido de Entrega</div>
   </div>
 </div>
 <div style="display:flex;gap:28px;margin-bottom:18px;font-size:13px;flex-wrap:wrap;">
@@ -458,6 +459,9 @@ export default function App() {
   <span><b>Total:</b> ${totalUnidades} unidades</span>
 </div>
 ${rowsHtml}
+<div style="margin-top:32px;padding-top:14px;border-top:1px solid #ddd;display:flex;justify-content:center;">
+  <img src="${window.location.origin}/logo_horizontal.png" style="height:36px;width:auto;" alt="Club Atlético Peñarol">
+</div>
 </body></html>`
   }
 
@@ -505,22 +509,23 @@ ${rowsHtml}
         </div>` : ''
     const obsHtml = obs ? `<span><b>Obs:</b> ${obs}</span>` : ''
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>INDUMENTARIA CLUB ATLETICO PEÑAROL</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
 <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;font-size:13px;}
 .no-print{text-align:right;margin-bottom:16px;}
 .no-print button{background:#121212;color:#f2cb12;border:none;padding:9px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
 @media print{.no-print{display:none;}body{padding:12px;}}</style>
 </head><body>
 <div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
-<div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;margin-bottom:20px;border-bottom:3px solid #f2cb12;">
-  <div style="display:flex;align-items:center;gap:12px;">
-    <img src="${window.location.origin}/escudo_marca.png" style="height:58px;width:auto;" alt="CAP">
+<div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;margin-bottom:20px;border-bottom:2px solid #111;">
+  <div style="display:flex;align-items:center;gap:14px;">
+    <img src="${window.location.origin}/escudo_blanco.png" style="height:64px;width:auto;" alt="CAP">
     <div>
-      <div style="font-size:14px;font-weight:800;letter-spacing:.04em;color:#111;">CLUB ATLÉTICO PEÑAROL</div>
-      <div style="font-size:9.5px;font-weight:600;letter-spacing:.1em;color:#888;text-transform:uppercase;margin-top:3px;">Depósito de Indumentaria</div>
+      <div style="font-family:'Oswald',Arial,sans-serif;font-size:20px;font-weight:700;letter-spacing:.06em;color:#111;text-transform:uppercase;line-height:1.1;-webkit-text-stroke:.4px #111;">CLUB ATLÉTICO PEÑAROL</div>
+      <div style="font-family:'Oswald',Arial,sans-serif;font-size:11px;font-weight:400;letter-spacing:.14em;color:#555;text-transform:uppercase;margin-top:5px;">Entregas de indumentaria</div>
     </div>
   </div>
   <div style="text-align:right;">
-    <div style="font-size:19px;font-weight:800;letter-spacing:-.5px;">Remito de Entrega</div>
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:18px;font-weight:600;letter-spacing:.04em;color:#111;">Remito de Entrega</div>
   </div>
 </div>
 <div style="display:flex;gap:28px;margin-bottom:18px;font-size:13px;flex-wrap:wrap;">
@@ -532,6 +537,9 @@ ${rowsHtml}
 </div>
 ${rowsHtml}
 ${montoHtml}
+<div style="margin-top:32px;padding-top:14px;border-top:1px solid #ddd;display:flex;justify-content:center;">
+  <img src="${window.location.origin}/logo_horizontal.png" style="height:36px;width:auto;" alt="Club Atlético Peñarol">
+</div>
 </body></html>`
   }
 
@@ -592,22 +600,23 @@ ${montoHtml}
         </div>`
       : ''
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>INDUMENTARIA CLUB ATLETICO PEÑAROL</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
 <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;font-size:13px;}
 .no-print{text-align:right;margin-bottom:16px;}
 .no-print button{background:#121212;color:#f2cb12;border:none;padding:9px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
 @media print{.no-print{display:none;}body{padding:12px;}}</style>
 </head><body>
 <div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
-<div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;margin-bottom:20px;border-bottom:3px solid #f2cb12;">
-  <div style="display:flex;align-items:center;gap:12px;">
-    <img src="${window.location.origin}/escudo_marca.png" style="height:58px;width:auto;" alt="CAP">
+<div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;margin-bottom:20px;border-bottom:2px solid #111;">
+  <div style="display:flex;align-items:center;gap:14px;">
+    <img src="${window.location.origin}/escudo_blanco.png" style="height:64px;width:auto;" alt="CAP">
     <div>
-      <div style="font-size:14px;font-weight:800;letter-spacing:.04em;color:#111;">CLUB ATLÉTICO PEÑAROL</div>
-      <div style="font-size:9.5px;font-weight:600;letter-spacing:.1em;color:#888;text-transform:uppercase;margin-top:3px;">Depósito de Indumentaria</div>
+      <div style="font-family:'Oswald',Arial,sans-serif;font-size:20px;font-weight:700;letter-spacing:.06em;color:#111;text-transform:uppercase;line-height:1.1;-webkit-text-stroke:.4px #111;">CLUB ATLÉTICO PEÑAROL</div>
+      <div style="font-family:'Oswald',Arial,sans-serif;font-size:11px;font-weight:400;letter-spacing:.14em;color:#555;text-transform:uppercase;margin-top:5px;">Entregas de indumentaria</div>
     </div>
   </div>
   <div style="text-align:right;">
-    <div style="font-size:19px;font-weight:800;letter-spacing:-.5px;">Remito de Entrega</div>
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:18px;font-weight:600;letter-spacing:.04em;color:#111;">Remito de Entrega</div>
   </div>
 </div>
 <div style="display:flex;gap:28px;margin-bottom:14px;font-size:13px;flex-wrap:wrap;">
@@ -618,6 +627,9 @@ ${montoHtml}
 </div>
 ${personasHtml}
 ${rowsHtml}
+<div style="margin-top:32px;padding-top:14px;border-top:1px solid #ddd;display:flex;justify-content:center;">
+  <img src="${window.location.origin}/logo_horizontal.png" style="height:36px;width:auto;" alt="Club Atlético Peñarol">
+</div>
 </body></html>`
   }
 
@@ -1480,16 +1492,18 @@ ${rowsHtml}
     }).join('')
     const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
 <title>Remito · ${rep.concepto}</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Calibri,Arial,sans-serif;font-size:13px;color:#111;background:#fff;padding:36px 40px}
 .no-print{text-align:right;margin-bottom:20px}
 .no-print button{background:#121212;color:#f2cb12;border:none;padding:10px 24px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.04em}
-.header{display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid #f2cb12;padding-bottom:14px;margin-bottom:22px}
-.logo{display:flex;align-items:center;gap:12px}
-.logo img{height:58px;width:auto}
-.logo-text-name{font-size:14px;font-weight:800;letter-spacing:.04em;color:#111}
-.logo-text-sub{font-size:9.5px;font-weight:600;letter-spacing:.1em;color:#888;text-transform:uppercase;margin-top:3px}
+.header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:14px;margin-bottom:22px}
+.logo{display:flex;align-items:center;gap:14px}
+.logo img{height:64px;width:auto}
+.logo-text-name{font-family:'Oswald',Arial,sans-serif;font-size:20px;font-weight:700;letter-spacing:.06em;color:#111;text-transform:uppercase;line-height:1.1;-webkit-text-stroke:.4px #111}
+.logo-text-sub{font-family:'Oswald',Arial,sans-serif;font-size:11px;font-weight:400;letter-spacing:.14em;color:#555;text-transform:uppercase;margin-top:5px}
+.doc-footer{margin-top:32px;padding-top:14px;border-top:1px solid #ddd;display:flex;justify-content:center}
 .doc-info{text-align:right}
 .doc-title{font-size:18px;font-weight:700;letter-spacing:.04em}
 .doc-date{font-size:11px;color:#666;margin-top:3px}
@@ -1513,14 +1527,14 @@ tfoot td{padding:9px 12px;font-weight:700}
 <div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
 <div class="header">
   <div class="logo">
-    <img src="${window.location.origin}/escudo_marca.png" alt="CAP">
+    <img src="${window.location.origin}/escudo_blanco.png" alt="CAP">
     <div>
       <div class="logo-text-name">CLUB ATLÉTICO PEÑAROL</div>
-      <div class="logo-text-sub">Depósito de Indumentaria</div>
+      <div class="logo-text-sub">Entregas de indumentaria</div>
     </div>
   </div>
   <div class="doc-info">
-    <div class="doc-title">REMITO DE ENVÍO</div>
+    <div class="doc-title" style="font-family:'Oswald',Arial,sans-serif;font-size:18px;font-weight:600;letter-spacing:.04em;">REMITO DE ENVÍO</div>
     <div class="doc-date">Fecha de ingreso: ${rep.fecha||'—'}${rep.fechaPartido?' · Fecha partido: '+rep.fechaPartido:''}</div>
   </div>
 </div>
@@ -1548,6 +1562,9 @@ tfoot td{padding:9px 12px;font-weight:700}
 <div class="sigs">
   <div class="sig"><div class="sig-label">Entregado por</div><div class="sig-sub">Firma y aclaración</div></div>
   <div class="sig"><div class="sig-label">Recibido por</div><div class="sig-sub">Firma y aclaración</div></div>
+</div>
+<div class="doc-footer">
+  <img src="${window.location.origin}/logo_horizontal.png" style="height:36px;width:auto;" alt="Club Atlético Peñarol">
 </div>
 </body></html>`
     const win = window.open('','_blank')
