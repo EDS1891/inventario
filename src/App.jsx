@@ -1876,7 +1876,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                             const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
                             return s + (dc ? (Number(j.cantCamiseta)||0)*PRECIO_CAMISETA : 0) + (ds ? (Number(j.cantShort)||0)*PRECIO_SHORT : 0)
                           }, 0)
-                          const subInfo = [r.torneo, r.fechaTorneo!=null&&r.fechaTorneo!==''?'F'+r.fechaTorneo:null, equipoStr].filter(Boolean).join(' · ')
+                          const torneoStr = [r.torneo, r.fechaTorneo!=null&&r.fechaTorneo!==''?'F.'+r.fechaTorneo:null].filter(Boolean).join(' ')
                           return (
                           <div key={r.id} className="table-row" style={{gridTemplateColumns:'110px 1fr 70px 70px 120px 36px',cursor:'pointer',padding:'10px 20px'}} onClick={() => setRepDetail(r)}>
                             <div>
@@ -1885,10 +1885,9 @@ tfoot td{padding:9px 12px;font-weight:700}
                             </div>
                             <div style={{minWidth:0}}>
                               <div style={{fontWeight:600,fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
-                                {r.concepto}
-                                {r.creadoPor && <span style={{fontWeight:400,fontSize:11,color:'#8a8a82',marginLeft:6}}>· {r.creadoPor}</span>}
+                                {r.concepto}{torneoStr ? <span style={{fontWeight:400}}> — {torneoStr}</span> : ''}
                               </div>
-                              {subInfo && <div style={{fontSize:11,color:'#8a8a82',marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{subInfo}</div>}
+                              {equipoStr && <div style={{fontSize:11,color:'#8a8a82',marginTop:2}}>{equipoStr}</div>}
                             </div>
                             <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totCam>0?'#1a1a1a':'#ccc'}}>{totCam>0?totCam:'—'}</div>
                             <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totSht>0?'#1a1a1a':'#ccc'}}>{totSht>0?totSht:'—'}</div>
@@ -3268,7 +3267,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                                 const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
                                 return s + (dc ? (Number(j.cantCamiseta)||0)*PRECIO_CAMISETA : 0) + (ds ? (Number(j.cantShort)||0)*PRECIO_SHORT : 0)
                               }, 0)
-                              const subInfo = [r.torneo, r.fechaTorneo!=null&&r.fechaTorneo!==''?'F'+r.fechaTorneo:null, equipoStr].filter(Boolean).join(' · ')
+                              const torneoStr = [r.torneo, r.fechaTorneo!=null&&r.fechaTorneo!==''?'F.'+r.fechaTorneo:null].filter(Boolean).join(' ')
                               return (
                               <div key={r.id} className="table-row" style={{gridTemplateColumns:'110px 1fr 70px 70px 120px 36px',cursor:'pointer',padding:'10px 20px'}} onClick={() => setRepDetail(r)}>
                                 <div>
@@ -3277,10 +3276,9 @@ tfoot td{padding:9px 12px;font-weight:700}
                                 </div>
                                 <div style={{minWidth:0}}>
                                   <div style={{fontWeight:600,fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
-                                    {r.concepto}
-                                    {r.creadoPor && <span style={{fontWeight:400,fontSize:11,color:'#8a8a82',marginLeft:6}}>· {r.creadoPor}</span>}
+                                    {r.concepto}{torneoStr ? <span style={{fontWeight:400}}> — {torneoStr}</span> : ''}
                                   </div>
-                                  {subInfo && <div style={{fontSize:11,color:'#8a8a82',marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{subInfo}</div>}
+                                  {equipoStr && <div style={{fontSize:11,color:'#8a8a82',marginTop:2}}>{equipoStr}</div>}
                                 </div>
                                 <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totCam>0?'#1a1a1a':'#ccc'}}>{totCam>0?totCam:'—'}</div>
                                 <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totSht>0?'#1a1a1a':'#ccc'}}>{totSht>0?totSht:'—'}</div>
