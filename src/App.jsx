@@ -1862,8 +1862,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                       </div>
                     )}
                     <div className="card" style={{padding:0,overflow:'hidden'}}>
-                      <div className="table-header" style={{gridTemplateColumns:'100px 100px 2fr 1fr 140px 80px 80px 110px 36px'}}>
-                        <div>FECHA</div><div style={{textAlign:'center'}}>PARTIDO</div><div>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'center'}}>EQUIPO</div><div style={{textAlign:'right'}}>CAMISETAS</div><div style={{textAlign:'right'}}>SHORTS</div><div style={{textAlign:'right'}}>DESCUENTOS</div><div/>
+                      <div className="table-header" style={{gridTemplateColumns:'100px 100px 2fr 1fr 140px 80px 80px 110px 36px',columnGap:8}}>
+                        <div>FECHA</div><div style={{textAlign:'center'}}>PARTIDO</div><div style={{paddingLeft:16}}>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'center'}}>EQUIPO</div><div style={{textAlign:'right'}}>CAMISETAS</div><div style={{textAlign:'right'}}>SHORTS</div><div style={{textAlign:'right'}}>DESCUENTOS</div><div/>
                       </div>
                       {filtered.length === 0
                         ? <div style={{color:'#8a8a82',fontSize:13,textAlign:'center',padding:'24px 0'}}>Sin reposiciones para este torneo.</div>
@@ -1877,10 +1877,10 @@ tfoot td{padding:9px 12px;font-weight:700}
                             return s + (dc ? (Number(j.cantCamiseta)||0)*PRECIO_CAMISETA : 0) + (ds ? (Number(j.cantShort)||0)*PRECIO_SHORT : 0)
                           }, 0)
                           return (
-                          <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 100px 2fr 1fr 140px 80px 80px 110px 36px',cursor:'pointer',padding:'8px 20px'}} onClick={() => setRepDetail(r)}>
+                          <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 100px 2fr 1fr 140px 80px 80px 110px 36px',columnGap:8,cursor:'pointer',padding:'8px 20px'}} onClick={() => setRepDetail(r)}>
                             <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#6a6a62',whiteSpace:'nowrap'}}>{r.fecha}</div>
                             <div style={{textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:r.fechaPartido?'#1a1a1a':'#ccc'}}>{r.fechaPartido||'—'}</div>
-                            <div style={{fontWeight:600,fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                            <div style={{fontWeight:600,fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',paddingLeft:16}}>
                               {r.concepto}
                               {r.creadoPor && <span style={{fontWeight:400,fontSize:11,color:'#8a8a82',marginLeft:6}}>· {r.creadoPor}</span>}
                             </div>
@@ -3253,8 +3253,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                           </div>
                         )}
                         <div className="card" style={{padding:0,overflow:'hidden'}}>
-                          <div className="table-header" style={{gridTemplateColumns:'100px 100px 2fr 1fr 140px 80px 80px 110px 36px'}}>
-                            <div>FECHA</div><div style={{textAlign:'center'}}>PARTIDO</div><div>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'center'}}>EQUIPO</div><div style={{textAlign:'right'}}>CAMISETAS</div><div style={{textAlign:'right'}}>SHORTS</div><div style={{textAlign:'right'}}>DESCUENTOS</div><div/>
+                          <div className="table-header" style={{gridTemplateColumns:'100px 100px 2fr 1fr 140px 80px 80px 110px 36px',columnGap:8}}>
+                            <div>FECHA</div><div style={{textAlign:'center'}}>PARTIDO</div><div style={{paddingLeft:16}}>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'center'}}>EQUIPO</div><div style={{textAlign:'right'}}>CAMISETAS</div><div style={{textAlign:'right'}}>SHORTS</div><div style={{textAlign:'right'}}>DESCUENTOS</div><div/>
                           </div>
                           {filtered.length === 0
                             ? <div style={{color:'#8a8a82',fontSize:13,textAlign:'center',padding:'24px 0'}}>Sin reposiciones para este torneo.</div>
@@ -3268,10 +3268,10 @@ tfoot td{padding:9px 12px;font-weight:700}
                                 return s + (dc ? (Number(j.cantCamiseta)||0)*PRECIO_CAMISETA : 0) + (ds ? (Number(j.cantShort)||0)*PRECIO_SHORT : 0)
                               }, 0)
                               return (
-                              <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 100px 2fr 1fr 140px 80px 80px 110px 36px',cursor:'pointer',padding:'8px 20px'}} onClick={() => setRepDetail(r)}>
+                              <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 100px 2fr 1fr 140px 80px 80px 110px 36px',columnGap:8,cursor:'pointer',padding:'8px 20px'}} onClick={() => setRepDetail(r)}>
                                 <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#6a6a62'}}>{r.fecha}</div>
                                 <div style={{textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:r.fechaPartido?'#1a1a1a':'#ccc'}}>{r.fechaPartido||'—'}</div>
-                                <div>
+                                <div style={{paddingLeft:16}}>
                                   <div style={{fontWeight:600}}>{r.concepto}</div>
                                   {r.creadoPor && <div style={{fontSize:11.5,color:'#8a8a82'}}>{r.creadoPor}</div>}
                                 </div>
