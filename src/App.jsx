@@ -2332,7 +2332,6 @@ tfoot td{padding:9px 12px;font-weight:700}
           <button className="hamburger" onClick={() => setSidebarOpen(o=>!o)} aria-label="Menú">
             <span/><span/><span/>
           </button>
-          <img src="/1891_Amarillo.jpg" alt="1891" style={{height:28,width:'auto'}} />
           <div className="topbar-title">
             {{panel:'PANEL PRINCIPAL',inventario:'INVENTARIO',detalle:'DETALLE',entregas:'ENTREGAS',movimientos:'MOVIMIENTOS',receptores:'RECEPTORES','usuarios-reg':'USUARIOS REGISTRADOS',utileria:'CAMISETAS UTILERÍA',reposiciones:'REPOSICIÓN CAMISETAS','contrato-puma':'CONTRATO PUMA'}[view]}
           </div>
