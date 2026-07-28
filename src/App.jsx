@@ -2272,7 +2272,7 @@ tfoot td{padding:9px 12px;font-weight:700}
             <button className={`nav-item${isActive?' active':''}`} onClick={() => goView('panel')}>
               <span className="nav-dot" />
               PANEL PRINCIPAL
-              {isActive && <div style={{marginLeft:'auto',width:14,height:20,borderRadius:2,background:'repeating-linear-gradient(90deg,#121212 0px,#121212 3px,#f2cb12 3px,#f2cb12 6px)',flexShrink:0,border:'1px solid rgba(0,0,0,0.25)'}} />}
+              {isActive && <div style={{marginLeft:'auto',width:22,height:14,borderRadius:2,background:'repeating-linear-gradient(180deg,#121212 0px,#121212 3px,#f2cb12 3px,#f2cb12 6px)',flexShrink:0,border:'1px solid rgba(0,0,0,0.25)'}} />}
             </button>
           )})()}
           {/* Grupo DEPÓSITO */}
@@ -2281,7 +2281,7 @@ tfoot td{padding:9px 12px;font-weight:700}
               <span className="nav-dot" />
               DEPÓSITO
               <span style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:6}}>
-                {isGrpActive && <div style={{width:14,height:20,borderRadius:2,background:'repeating-linear-gradient(90deg,#121212 0px,#121212 3px,#f2cb12 3px,#f2cb12 6px)',flexShrink:0,border:'1px solid rgba(0,0,0,0.25)'}} />}
+                {isGrpActive && <div style={{width:22,height:14,borderRadius:2,background:'repeating-linear-gradient(180deg,#121212 0px,#121212 3px,#f2cb12 3px,#f2cb12 6px)',flexShrink:0,border:'1px solid rgba(0,0,0,0.25)'}} />}
                 <span style={{fontSize:10,opacity:0.6}}>{depositosOpen ? '▾' : '▸'}</span>
               </span>
             </button>
@@ -2292,7 +2292,7 @@ tfoot td{padding:9px 12px;font-weight:700}
               <button key={key} className={`nav-item nav-item-sub${isActive?' active':''}`} onClick={() => goView(key)}>
                 <span className="nav-dot" />
                 {label}
-                {isActive && <div style={{marginLeft:'auto',width:14,height:20,borderRadius:2,background:'repeating-linear-gradient(90deg,#121212 0px,#121212 3px,#f2cb12 3px,#f2cb12 6px)',flexShrink:0,border:'1px solid rgba(0,0,0,0.25)'}} />}
+                {isActive && <div style={{marginLeft:'auto',width:22,height:14,borderRadius:2,background:'repeating-linear-gradient(180deg,#121212 0px,#121212 3px,#f2cb12 3px,#f2cb12 6px)',flexShrink:0,border:'1px solid rgba(0,0,0,0.25)'}} />}
               </button>
             )
           })}
@@ -2303,7 +2303,7 @@ tfoot td{padding:9px 12px;font-weight:700}
               <button key={key} className={`nav-item${isActive?' active':''}`} onClick={() => goView(key)}>
                 <span className="nav-dot" />
                 {label}
-                {isActive && <div style={{marginLeft:'auto',width:14,height:20,borderRadius:2,background:'repeating-linear-gradient(90deg,#121212 0px,#121212 3px,#f2cb12 3px,#f2cb12 6px)',flexShrink:0,border:'1px solid rgba(0,0,0,0.25)'}} />}
+                {isActive && <div style={{marginLeft:'auto',width:22,height:14,borderRadius:2,background:'repeating-linear-gradient(180deg,#121212 0px,#121212 3px,#f2cb12 3px,#f2cb12 6px)',flexShrink:0,border:'1px solid rgba(0,0,0,0.25)'}} />}
               </button>
             )
           })}
