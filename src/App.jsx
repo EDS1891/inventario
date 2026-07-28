@@ -1862,8 +1862,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                       </div>
                     )}
                     <div className="card" style={{padding:0,overflow:'hidden'}}>
-                      <div className="table-header" style={{gridTemplateColumns:'100px 260px 160px 80px 80px 100px 140px 36px'}}>
-                        <div>FECHA</div><div>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'right'}}>CAMISETAS</div><div style={{textAlign:'right'}}>SHORTS</div><div style={{textAlign:'center'}}>F. PARTIDO</div><div style={{textAlign:'center'}}>EQUIPO</div><div/>
+                      <div className="table-header" style={{gridTemplateColumns:'100px 100px 1fr 140px 140px 80px 80px 36px'}}>
+                        <div>FECHA</div><div style={{textAlign:'center'}}>F. PARTIDO</div><div>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'center'}}>EQUIPO</div><div style={{textAlign:'right'}}>CAMISETAS</div><div style={{textAlign:'right'}}>SHORTS</div><div/>
                       </div>
                       {filtered.length === 0
                         ? <div style={{color:'#8a8a82',fontSize:13,textAlign:'center',padding:'24px 0'}}>Sin reposiciones para este torneo.</div>
@@ -1872,8 +1872,9 @@ tfoot td{padding:9px 12px;font-weight:700}
                           const totSht = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
                           const equipoStr = [r.tipoCamisetaJugador, r.tipoCamisetaGolero].filter(Boolean).join(' / ') || '—'
                           return (
-                          <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 260px 160px 80px 80px 100px 140px 36px',cursor:'pointer',padding:'8px 20px'}} onClick={() => setRepDetail(r)}>
+                          <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 100px 1fr 140px 140px 80px 80px 36px',cursor:'pointer',padding:'8px 20px'}} onClick={() => setRepDetail(r)}>
                             <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#6a6a62',whiteSpace:'nowrap'}}>{r.fecha}</div>
+                            <div style={{textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:r.fechaPartido?'#1a1a1a':'#ccc'}}>{r.fechaPartido||'—'}</div>
                             <div style={{fontWeight:600,fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
                               {r.concepto}
                               {r.creadoPor && <span style={{fontWeight:400,fontSize:11,color:'#8a8a82',marginLeft:6}}>· {r.creadoPor}</span>}
@@ -1882,10 +1883,9 @@ tfoot td{padding:9px 12px;font-weight:700}
                               {r.torneo && <span style={{fontWeight:600}}>{r.torneo}</span>}
                               {r.fechaTorneo != null && r.fechaTorneo !== '' && <span style={{fontWeight:400,color:'#8a8a82'}}>{r.torneo ? ' · F' : 'F'}{r.fechaTorneo}</span>}
                             </div>
+                            <div style={{textAlign:'center',fontSize:11,color:equipoStr==='—'?'#ccc':'#1a1a1a'}}>{equipoStr}</div>
                             <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totCam>0?'#1a1a1a':'#ccc'}}>{totCam>0?totCam:'—'}</div>
                             <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totSht>0?'#1a1a1a':'#ccc'}}>{totSht>0?totSht:'—'}</div>
-                            <div style={{textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:r.fechaPartido?'#1a1a1a':'#ccc'}}>{r.fechaPartido||'—'}</div>
-                            <div style={{textAlign:'center',fontSize:11,color:equipoStr==='—'?'#ccc':'#1a1a1a'}}>{equipoStr}</div>
                             <div style={{textAlign:'right',color:'#8a8a82',fontSize:18,lineHeight:1}}>›</div>
                           </div>
                           )
@@ -3247,8 +3247,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                           </div>
                         )}
                         <div className="card" style={{padding:0,overflow:'hidden'}}>
-                          <div className="table-header" style={{gridTemplateColumns:'100px 260px 160px 80px 80px 100px 140px 36px'}}>
-                            <div>FECHA</div><div>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'right'}}>CAMISETAS</div><div style={{textAlign:'right'}}>SHORTS</div><div style={{textAlign:'center'}}>F. PARTIDO</div><div style={{textAlign:'center'}}>EQUIPO</div><div/>
+                          <div className="table-header" style={{gridTemplateColumns:'100px 100px 1fr 140px 140px 80px 80px 36px'}}>
+                            <div>FECHA</div><div style={{textAlign:'center'}}>F. PARTIDO</div><div>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'center'}}>EQUIPO</div><div style={{textAlign:'right'}}>CAMISETAS</div><div style={{textAlign:'right'}}>SHORTS</div><div/>
                           </div>
                           {filtered.length === 0
                             ? <div style={{color:'#8a8a82',fontSize:13,textAlign:'center',padding:'24px 0'}}>Sin reposiciones para este torneo.</div>
@@ -3257,8 +3257,9 @@ tfoot td{padding:9px 12px;font-weight:700}
                               const totSht = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
                               const equipoStr = [r.tipoCamisetaJugador, r.tipoCamisetaGolero].filter(Boolean).join(' / ') || '—'
                               return (
-                              <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 260px 160px 80px 80px 100px 140px 36px',cursor:'pointer',padding:'8px 20px'}} onClick={() => setRepDetail(r)}>
+                              <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 100px 1fr 140px 140px 80px 80px 36px',cursor:'pointer',padding:'8px 20px'}} onClick={() => setRepDetail(r)}>
                                 <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#6a6a62'}}>{r.fecha}</div>
+                                <div style={{textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:r.fechaPartido?'#1a1a1a':'#ccc'}}>{r.fechaPartido||'—'}</div>
                                 <div>
                                   <div style={{fontWeight:600}}>{r.concepto}</div>
                                   {r.creadoPor && <div style={{fontSize:11.5,color:'#8a8a82'}}>{r.creadoPor}</div>}
@@ -3267,10 +3268,9 @@ tfoot td{padding:9px 12px;font-weight:700}
                                   {r.torneo && <div style={{fontWeight:600}}>{r.torneo}</div>}
                                   {r.fechaTorneo != null && r.fechaTorneo !== '' && <div style={{fontSize:11,color:'#8a8a82'}}>Fecha {r.fechaTorneo}</div>}
                                 </div>
+                                <div style={{textAlign:'center',fontSize:11,color:equipoStr==='—'?'#ccc':'#1a1a1a'}}>{equipoStr}</div>
                                 <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totCam>0?'#1a1a1a':'#ccc'}}>{totCam>0?totCam:'—'}</div>
                                 <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totSht>0?'#1a1a1a':'#ccc'}}>{totSht>0?totSht:'—'}</div>
-                                <div style={{textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:r.fechaPartido?'#1a1a1a':'#ccc'}}>{r.fechaPartido||'—'}</div>
-                                <div style={{textAlign:'center',fontSize:11,color:equipoStr==='—'?'#ccc':'#1a1a1a'}}>{equipoStr}</div>
                                 <div style={{textAlign:'right',color:'#8a8a82',fontSize:18,lineHeight:1}}>›</div>
                               </div>
                               )
