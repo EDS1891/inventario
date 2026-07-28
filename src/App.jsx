@@ -1863,7 +1863,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                     )}
                     <div className="card" style={{padding:0,overflow:'hidden'}}>
                       <div className="table-header" style={{gridTemplateColumns:'100px 100px 1fr 140px 140px 80px 80px 36px'}}>
-                        <div>FECHA</div><div style={{textAlign:'center'}}>F. PARTIDO</div><div>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'center'}}>EQUIPO</div><div style={{textAlign:'right'}}>CAMISETAS</div><div style={{textAlign:'right'}}>SHORTS</div><div/>
+                        <div>FECHA</div><div style={{textAlign:'center'}}>PARTIDO</div><div>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'center'}}>EQUIPO</div><div style={{textAlign:'right'}}>CAMISETAS</div><div style={{textAlign:'right'}}>SHORTS</div><div/>
                       </div>
                       {filtered.length === 0
                         ? <div style={{color:'#8a8a82',fontSize:13,textAlign:'center',padding:'24px 0'}}>Sin reposiciones para este torneo.</div>
@@ -3248,7 +3248,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                         )}
                         <div className="card" style={{padding:0,overflow:'hidden'}}>
                           <div className="table-header" style={{gridTemplateColumns:'100px 100px 1fr 140px 140px 80px 80px 36px'}}>
-                            <div>FECHA</div><div style={{textAlign:'center'}}>F. PARTIDO</div><div>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'center'}}>EQUIPO</div><div style={{textAlign:'right'}}>CAMISETAS</div><div style={{textAlign:'right'}}>SHORTS</div><div/>
+                            <div>FECHA</div><div style={{textAlign:'center'}}>PARTIDO</div><div>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'center'}}>EQUIPO</div><div style={{textAlign:'right'}}>CAMISETAS</div><div style={{textAlign:'right'}}>SHORTS</div><div/>
                           </div>
                           {filtered.length === 0
                             ? <div style={{color:'#8a8a82',fontSize:13,textAlign:'center',padding:'24px 0'}}>Sin reposiciones para este torneo.</div>
