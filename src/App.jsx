@@ -2329,7 +2329,6 @@ tfoot td{padding:9px 12px;font-weight:700}
           <button className="hamburger" onClick={() => setSidebarOpen(o=>!o)} aria-label="Menú">
             <span/><span/><span/>
           </button>
-          <div style={{width:20,height:28,borderRadius:2,background:'repeating-linear-gradient(90deg,#121212 0px,#121212 4px,#f2cb12 4px,#f2cb12 8px)',border:'1px solid #2a2a2a',flexShrink:0}} />
           <div className="topbar-title">
             {{panel:'PANEL PRINCIPAL',inventario:'INVENTARIO',detalle:'DETALLE',entregas:'ENTREGAS',movimientos:'MOVIMIENTOS',receptores:'RECEPTORES','usuarios-reg':'USUARIOS REGISTRADOS',utileria:'CAMISETAS UTILERÍA',reposiciones:'REPOSICIÓN CAMISETAS','contrato-puma':'CONTRATO PUMA'}[view]}
           </div>
