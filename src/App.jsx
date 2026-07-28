@@ -439,7 +439,7 @@ export default function App() {
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Pedido de Entrega</title>
 <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;font-size:13px;}@media print{body{padding:12px;}}</style>
 </head><body>
-<div style="border-bottom:3px solid #FFD200;padding-bottom:12px;margin-bottom:14px;">
+<div style="border-bottom:3px solid #f2cb12;padding-bottom:12px;margin-bottom:14px;">
   <div style="font-size:20px;font-weight:800;letter-spacing:-0.5px;">Pedido de Entrega</div>
   <div style="font-size:11px;color:#666;margin-top:2px;">Depósito Indumentaria — Club Atlético Peñarol</div>
 </div>
@@ -499,11 +499,11 @@ ${rowsHtml}
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>INDUMENTARIA CLUB ATLETICO PEÑAROL</title>
 <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;font-size:13px;}
 .no-print{text-align:right;margin-bottom:16px;}
-.no-print button{background:#121212;color:#FFD200;border:none;padding:9px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
+.no-print button{background:#121212;color:#f2cb12;border:none;padding:9px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
 @media print{.no-print{display:none;}body{padding:12px;}}</style>
 </head><body>
 <div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
-<div style="border-bottom:3px solid #FFD200;padding-bottom:12px;margin-bottom:14px;">
+<div style="border-bottom:3px solid #f2cb12;padding-bottom:12px;margin-bottom:14px;">
   <div style="font-size:20px;font-weight:800;letter-spacing:-0.5px;">Remito de Entrega</div>
 </div>
 <div style="display:flex;gap:28px;margin-bottom:18px;font-size:13px;flex-wrap:wrap;">
@@ -577,11 +577,11 @@ ${montoHtml}
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>INDUMENTARIA CLUB ATLETICO PEÑAROL</title>
 <style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;font-size:13px;}
 .no-print{text-align:right;margin-bottom:16px;}
-.no-print button{background:#121212;color:#FFD200;border:none;padding:9px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
+.no-print button{background:#121212;color:#f2cb12;border:none;padding:9px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
 @media print{.no-print{display:none;}body{padding:12px;}}</style>
 </head><body>
 <div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
-<div style="border-bottom:3px solid #FFD200;padding-bottom:12px;margin-bottom:14px;">
+<div style="border-bottom:3px solid #f2cb12;padding-bottom:12px;margin-bottom:14px;">
   <div style="font-size:20px;font-weight:800;letter-spacing:-0.5px;">Remito de Entrega</div>
 </div>
 <div style="display:flex;gap:28px;margin-bottom:14px;font-size:13px;flex-wrap:wrap;">
@@ -1458,10 +1458,10 @@ ${rowsHtml}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Calibri,Arial,sans-serif;font-size:13px;color:#111;background:#fff;padding:36px 40px}
 .no-print{text-align:right;margin-bottom:20px}
-.no-print button{background:#121212;color:#FFD200;border:none;padding:10px 24px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.04em}
-.header{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:3px solid #FFD200;padding-bottom:14px;margin-bottom:22px}
+.no-print button{background:#121212;color:#f2cb12;border:none;padding:10px 24px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.04em}
+.header{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:3px solid #f2cb12;padding-bottom:14px;margin-bottom:22px}
 .logo{font-weight:900;font-size:22px;letter-spacing:.04em}
-.logo-badge{background:#121212;color:#FFD200;padding:3px 9px;border-radius:4px;margin-right:8px}
+.logo-badge{background:#121212;color:#f2cb12;padding:3px 9px;border-radius:4px;margin-right:8px}
 .doc-info{text-align:right}
 .doc-title{font-size:18px;font-weight:700;letter-spacing:.04em}
 .doc-date{font-size:11px;color:#666;margin-top:3px}
@@ -1470,10 +1470,10 @@ body{font-family:Calibri,Arial,sans-serif;font-size:13px;color:#111;background:#
 .info-item span{font-size:13px;font-weight:600}
 table{width:100%;border-collapse:collapse;margin-bottom:12px}
 thead tr{background:#121212}
-thead th{padding:9px 12px;text-align:left;color:#FFD200;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+thead th{padding:9px 12px;text-align:left;color:#f2cb12;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 tbody tr:hover{background:#fffbea!important}
 tbody td{padding:9px 12px;border-bottom:1px solid #eeeeea}
-tfoot tr{background:#FFD200}
+tfoot tr{background:#f2cb12}
 tfoot td{padding:9px 12px;font-weight:700}
 .totals-note{font-size:11.5px;color:#666;margin-bottom:36px;text-align:right}
 .sigs{display:grid;grid-template-columns:1fr 1fr;gap:60px;margin-top:48px}
@@ -1675,14 +1675,14 @@ tfoot td{padding:9px 12px;font-weight:700}
       <div style={{background:'#1a1a1a',borderRadius:12,padding:'36px 32px',width:'100%',maxWidth:420,boxShadow:'0 20px 60px rgba(0,0,0,.5)'}}>
         <div style={{display:'flex',flexDirection:'column',alignItems:'center',marginBottom:28}}>
           <img src="/escudo.png" alt="Peñarol" style={{height:56,marginBottom:14}} />
-          <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:18,color:'#FFD200',letterSpacing:'.05em'}}>INDUMENTARIA PEÑAROL</div>
+          <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:18,color:'#f2cb12',letterSpacing:'.05em'}}>INDUMENTARIA PEÑAROL</div>
         </div>
 
         {/* Tabs login / registro — oculto en vistas auxiliares */}
         {(loginView === 'login' || loginView === 'register') && (
           <div style={{display:'flex',borderBottom:'1px solid #2a2a2a',marginBottom:24}}>
             {[['login','Ingresar'],['register','Registrarse']].map(([v,label]) => (
-              <button key={v} onClick={()=>setLoginView(v)} style={{flex:1,padding:'10px 0',background:'none',border:'none',cursor:'pointer',fontWeight:700,fontSize:13,color:loginView===v?'#FFD200':'#8a8a82',borderBottom:loginView===v?'2px solid #FFD200':'2px solid transparent',transition:'all .15s'}}>
+              <button key={v} onClick={()=>setLoginView(v)} style={{flex:1,padding:'10px 0',background:'none',border:'none',cursor:'pointer',fontWeight:700,fontSize:13,color:loginView===v?'#f2cb12':'#8a8a82',borderBottom:loginView===v?'2px solid #f2cb12':'2px solid transparent',transition:'all .15s'}}>
                 {label}
               </button>
             ))}
@@ -1803,7 +1803,7 @@ tfoot td{padding:9px 12px;font-weight:700}
   if (loading) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',flexDirection:'column',gap:16,background:'#121212'}}>
       <img src="/escudo.png" alt="Peñarol" style={{height:64,opacity:.9}} />
-      <div style={{color:'#FFD200',fontFamily:'Archivo Black,sans-serif',fontSize:14,letterSpacing:'.1em'}}>CARGANDO…</div>
+      <div style={{color:'#f2cb12',fontFamily:'Archivo Black,sans-serif',fontSize:14,letterSpacing:'.1em'}}>CARGANDO…</div>
     </div>
   )
 
@@ -1819,7 +1819,7 @@ tfoot td{padding:9px 12px;font-weight:700}
         <div style={{background:'#121212',padding:'18px 24px',display:'flex',alignItems:'center',gap:16}}>
           <img src="/escudo.png" alt="Peñarol" style={{height:44}} />
           <div style={{flex:1}}>
-            <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:14,color:'#FFD200',letterSpacing:'.05em'}}>{currentUser?.role==='receptor' ? 'INDUMENTARIA CLUB ATLÉTICO PEÑAROL' : 'DEPÓSITO · INDUMENTARIA'}</div>
+            <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:14,color:'#f2cb12',letterSpacing:'.05em'}}>{currentUser?.role==='receptor' ? 'INDUMENTARIA CLUB ATLÉTICO PEÑAROL' : 'DEPÓSITO · INDUMENTARIA'}</div>
             <div style={{fontSize:13,color:'#fff',marginTop:2}}>Hola, <b>{currentUser?.displayName || session}</b></div>
           </div>
           <button onClick={() => window.location.reload()} style={{background:'#2a2a2a',border:'1px solid #3a3a3a',color:'#ccc',borderRadius:8,padding:'8px 14px',cursor:'pointer',fontSize:13,marginRight:8}}>↺</button>
@@ -1830,7 +1830,7 @@ tfoot td{padding:9px 12px;font-weight:700}
           <div style={{maxWidth:680,margin:'0 auto',padding:'16px 16px 0'}}>
             <div style={{display:'flex',gap:6,borderBottom:'2px solid #ECECE8'}}>
               {[['entregas','Mis entregas'],['reposiciones','Reposiciones']].map(([k,l]) => (
-                <button key={k} onClick={() => setReceptorTab(k)} style={{padding:'7px 18px',border:'none',background:'none',fontWeight:700,fontSize:13,cursor:'pointer',borderBottom:receptorTab===k?'2px solid #FFD200':'2px solid transparent',marginBottom:-2,color:receptorTab===k?'#121212':'#8a8a82'}}>
+                <button key={k} onClick={() => setReceptorTab(k)} style={{padding:'7px 18px',border:'none',background:'none',fontWeight:700,fontSize:13,cursor:'pointer',borderBottom:receptorTab===k?'2px solid #f2cb12':'2px solid transparent',marginBottom:-2,color:receptorTab===k?'#121212':'#8a8a82'}}>
                   {l}
                 </button>
               ))}
@@ -1842,7 +1842,7 @@ tfoot td{padding:9px 12px;font-weight:700}
           <div style={{maxWidth:680,margin:'0 auto',padding:'20px 16px',display:'flex',flexDirection:'column',gap:12}}>
             <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed',alignSelf:'flex-start'}}>+ Nueva reposición</button>
             {!(db.plantel||[]).length && (
-              <div style={{fontSize:13,color:'#7a5800',background:'#FFF8D6',border:'1px solid #FFD200',borderRadius:8,padding:'10px 14px'}}>
+              <div style={{fontSize:13,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:8,padding:'10px 14px'}}>
                 Todavía no hay plantel cargado, no se pueden registrar reposiciones.
               </div>
             )}
@@ -1917,7 +1917,7 @@ tfoot td{padding:9px 12px;font-weight:700}
             {pendientes.map(d => (
               <div key={d.id} style={{background:'#fff',borderRadius:12,border:'1px solid #E7E7E3',marginBottom:12,overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,.06)'}}>
                 <div style={{padding:'14px 18px',borderBottom:'1px solid #F0F0EC',display:'flex',alignItems:'center',gap:12}}>
-                  <span style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200',borderRadius:6,padding:'2px 9px',fontSize:12,fontWeight:700}}>Pendiente</span>
+                  <span style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12',borderRadius:6,padding:'2px 9px',fontSize:12,fontWeight:700}}>Pendiente</span>
                   <span style={{fontSize:12.5,color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>{d.fecha}</span>
                   <span style={{fontSize:12.5,color:'#6a6a62',flex:1,textAlign:'right'}}>{d.receptor}</span>
                 </div>
@@ -2034,7 +2034,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                       {['APERTURA','CLAUSURA','INTERMEDIO','COPA AUF','LIBERTADORES','SUDAMERICANA'].map(t=>(
                         <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,torneo:t}))}
                           style={{padding:'6px 10px',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:11,cursor:'pointer',
-                            borderColor:repForm.torneo===t?'#FFD200':'#ECECE8',
+                            borderColor:repForm.torneo===t?'#f2cb12':'#ECECE8',
                             background:repForm.torneo===t?'#FFF8D6':'#fff',
                             color:repForm.torneo===t?'#7a5800':'#8a8a82'}}>
                           {t}
@@ -2073,7 +2073,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                       {REP_TIPOS_JUGADOR.map(t=>(
                         <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,tipoCamisetaJugador:t}))}
                           style={{flex:1,padding:'6px 4px',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:11,cursor:'pointer',
-                            borderColor:repForm.tipoCamisetaJugador===t?'#FFD200':'#ECECE8',
+                            borderColor:repForm.tipoCamisetaJugador===t?'#f2cb12':'#ECECE8',
                             background:repForm.tipoCamisetaJugador===t?'#FFF8D6':'#fff',
                             color:repForm.tipoCamisetaJugador===t?'#7a5800':'#8a8a82'}}>
                           {t}
@@ -2087,7 +2087,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                       {REP_TIPOS_GOLERO.map(t=>(
                         <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,tipoCamisetaGolero:t}))}
                           style={{flex:1,padding:'6px 4px',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:11,cursor:'pointer',
-                            borderColor:repForm.tipoCamisetaGolero===t?'#FFD200':'#ECECE8',
+                            borderColor:repForm.tipoCamisetaGolero===t?'#f2cb12':'#ECECE8',
                             background:repForm.tipoCamisetaGolero===t?'#FFF8D6':'#fff',
                             color:repForm.tipoCamisetaGolero===t?'#7a5800':'#8a8a82'}}>
                           {t}
@@ -2109,7 +2109,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                     const toggle = (field) => setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,[field]:!x[field]}:x)}))
                     return (
                       <div key={i} style={{display:'grid',gridTemplateColumns:'40px 1fr 62px 38px 62px 38px',gap:4,marginBottom:3,alignItems:'center',padding:'5px 6px',borderRadius:6,
-                        background:isLibre?'#3a3a3a':hasQty?'#FFFDF0':'transparent',border:hasQty?'1px solid #FFD200':'1px solid transparent'}}>
+                        background:isLibre?'#3a3a3a':hasQty?'#FFFDF0':'transparent',border:hasQty?'1px solid #f2cb12':'1px solid transparent'}}>
                         <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,color:isLibre?'#888':undefined}}>{r.numero||'—'}</div>
                         <div>
                           <span style={{fontWeight:600,fontSize:13,color:isLibre?'#888':undefined,fontStyle:isLibre?'italic':undefined}}>{r.nombre}</span>
@@ -2170,7 +2170,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   )}
                   <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>
                     {repDetail.fecha}
-                    {repDetail.torneo && <span style={{marginLeft:8,fontWeight:700,color:'#7a5800',background:'#FFF8D6',border:'1px solid #FFD200',borderRadius:4,padding:'1px 7px',fontSize:11}}>
+                    {repDetail.torneo && <span style={{marginLeft:8,fontWeight:700,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:4,padding:'1px 7px',fontSize:11}}>
                       {repDetail.torneo}{repDetail.fechaTorneo ? ' · Fecha '+repDetail.fechaTorneo : ''}
                     </span>}
                   </div>
@@ -2183,7 +2183,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 {(repDetail.tipoCamisetaJugador||repDetail.tipoCamisetaGolero) && (
                   <div style={{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap'}}>
                     {repDetail.tipoCamisetaJugador && (
-                      <span style={{fontSize:12,fontWeight:700,background:'#FFF8D6',border:'1px solid #FFD200',borderRadius:5,padding:'3px 10px'}}>
+                      <span style={{fontSize:12,fontWeight:700,background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:5,padding:'3px 10px'}}>
                         Jugadores: {repDetail.tipoCamisetaJugador}
                       </span>
                     )}
@@ -2260,11 +2260,7 @@ tfoot td{padding:9px 12px;font-weight:700}
       {/* Sidebar */}
       <aside className={`sidebar${sidebarOpen?' open':''}`}>
         <div className="sidebar-logo">
-          <img src="/escudo.png" alt="Peñarol" />
-          <div className="sidebar-logo-text">
-            <div className="name">CLUB ATLÉTICO PEÑAROL</div>
-            <div className="sub">Indumentaria</div>
-          </div>
+          <img src="/logo_penarol.png" alt="Club Atlético Peñarol" />
         </div>
         <nav className="sidebar-nav">
           {/* PANEL PRINCIPAL top-level */}
@@ -2431,14 +2427,14 @@ tfoot td{padding:9px 12px;font-weight:700}
                   <div className="card-header">
                     <div className="card-title">Entregas pendientes de respuesta</div>
                     <div className="card-spacer"/>
-                    {pendingDeliveries.length > 0 && <span className="badge" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200'}}>{pendingDeliveries.length}</span>}
+                    {pendingDeliveries.length > 0 && <span className="badge" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12'}}>{pendingDeliveries.length}</span>}
                     <button className="back-link" style={{color:'#9a7d00',margin:0}} onClick={() => goView('entregas')}>Ver todas →</button>
                   </div>
                   {pendingDeliveries.length === 0
                     ? <div className="empty">No hay entregas pendientes de confirmación.</div>
                     : pendingDeliveries.map(d => (
                       <div key={d.id} className="table-row" style={{gridTemplateColumns:'34px 1fr auto'}}>
-                        <div className="avatar" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200'}}>{d.ini}</div>
+                        <div className="avatar" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12'}}>{d.ini}</div>
                         <div style={{minWidth:0}}>
                           <div style={{fontWeight:600,fontSize:13.5,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.displayName}</div>
                           <div style={{fontSize:11.5,color:'#8a8a82'}}>
@@ -2446,7 +2442,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                           </div>
                         </div>
                         <div style={{textAlign:'right',flexShrink:0}}>
-                          <span style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200',borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700}}>Pendiente</span>
+                          <span style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12',borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700}}>Pendiente</span>
                           <div style={{fontSize:11,color:'#8a8a82',marginTop:3}}>{d.fecha}</div>
                         </div>
                       </div>
@@ -2461,7 +2457,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                       <div className="card-header">
                         <div className="card-title">Entregas pendientes de confirmación</div>
                         <div className="card-spacer"/>
-                        <span className="badge" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200'}}>{myPending.length}</span>
+                        <span className="badge" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12'}}>{myPending.length}</span>
                       </div>
                       {myPending.map(d => (
                         <div key={d.id} className="table-row" style={{gridTemplateColumns:'1fr auto'}}>
@@ -2483,18 +2479,18 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <div className="card-header">
                       <div className="card-title">Solicitudes de acceso pendientes</div>
                       <div className="card-spacer"/>
-                      <span className="badge" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200'}}>{pendingApprovals.length}</span>
+                      <span className="badge" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12'}}>{pendingApprovals.length}</span>
                       <button className="back-link" style={{color:'#9a7d00',margin:0}} onClick={() => goView('usuarios-reg')}>Ver →</button>
                     </div>
                     {pendingApprovals.map(u => (
                       <div key={u.username} className="table-row" style={{gridTemplateColumns:'34px 1fr auto'}}>
-                        <div className="avatar" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200',opacity:.8}}>{ini(u.displayName||u.username)}</div>
+                        <div className="avatar" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12',opacity:.8}}>{ini(u.displayName||u.username)}</div>
                         <div style={{minWidth:0}}>
                           <div style={{fontWeight:600,fontSize:13.5,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.displayName||u.username}</div>
                           <div style={{fontSize:11.5,color:'#8a8a82'}}>{u.cargo}{u.categoria ? ' · '+u.categoria : ''}</div>
                         </div>
                         <div style={{display:'flex',gap:6,flexShrink:0}}>
-                          <button onClick={()=>approveUser(u.username)} style={{padding:'4px 10px',borderRadius:5,border:'none',cursor:'pointer',fontWeight:700,fontSize:11.5,background:'#FFD200',color:'#121212'}}>Aprobar</button>
+                          <button onClick={()=>approveUser(u.username)} style={{padding:'4px 10px',borderRadius:5,border:'none',cursor:'pointer',fontWeight:700,fontSize:11.5,background:'#f2cb12',color:'#121212'}}>Aprobar</button>
                           <button onClick={()=>rejectUser(u.username)} style={{padding:'4px 10px',borderRadius:5,border:'1px solid #C2473D',cursor:'pointer',fontWeight:700,fontSize:11.5,background:'none',color:'#C2473D'}}>Rechazar</button>
                         </div>
                       </div>
@@ -2505,7 +2501,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 <div className="card-header">
                   <div className="card-title">⚠ Talles duplicados en múltiples ubicaciones</div>
                   <div className="card-spacer"/>
-                  {dupList.length > 0 && <span className="badge" style={{background:'#FFF0C2',color:'#7a5800',border:'1px solid #FFD200'}}>{dupList.length} artículo{dupList.length>1?'s':''}</span>}
+                  {dupList.length > 0 && <span className="badge" style={{background:'#FFF0C2',color:'#7a5800',border:'1px solid #f2cb12'}}>{dupList.length} artículo{dupList.length>1?'s':''}</span>}
                 </div>
                 {dupList.length === 0 && <div className="empty">No hay artículos en ubicaciones repetidas.</div>}
                 {dupList.map(d => (
@@ -2618,7 +2614,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                         <div key={entry.id}>
                           {idx > 0 && <div style={{borderTop:'1px solid #E7E7E3',margin:'20px 0'}} />}
                           <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14,flexWrap:'wrap'}}>
-                            <span className="ubic-badge" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200',fontWeight:700}}>
+                            <span className="ubic-badge" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12',fontWeight:700}}>
                               <span style={{fontSize:11,color:'#9a7d00',fontFamily:'Archivo,sans-serif'}}>UBIC. </span>{entry.ubic}
                             </span>
                             <span style={{fontSize:12.5,color:'#8a8a82'}}>{fmt(entryTot)} u.</span>
@@ -2633,7 +2629,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                           {entry.sizes.map(s => (
                             <div key={s.talle} className="bar-row">
                               <div style={{width:46,fontWeight:700,fontSize:13.5}}>{s.talle}</div>
-                              <div className="bar-track"><div className="bar-fill" style={{width:s.pct+'%',background:s.isLow||s.qty<=0?'#C2473D':'#FFD200'}} /></div>
+                              <div className="bar-track"><div className="bar-fill" style={{width:s.pct+'%',background:s.isLow||s.qty<=0?'#C2473D':'#f2cb12'}} /></div>
                               <div style={{textAlign:'right',flexShrink:0}}>
                                 <div className="mono" style={{fontWeight:600,fontSize:13.5}}>{s.qty}</div>
                                 <div style={{fontSize:10.5,color:'#8a8a82'}}>mín {s.min}</div>
@@ -2786,10 +2782,10 @@ tfoot td{padding:9px 12px;font-weight:700}
                     return (
                     <div key={d.id} className={`table-row ${delFilterReceptor==='Deportes Anexos'?'del-cols-disc':'del-cols'} clickable`}
                       onClick={handleClick}
-                      style={isSelected ? {background:'#FFFBEA',outline:'2px solid #FFD200',outlineOffset:'-2px'} : {}}>
+                      style={isSelected ? {background:'#FFFBEA',outline:'2px solid #f2cb12',outlineOffset:'-2px'} : {}}>
                       {remitoSelIds !== null
                         ? <div style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
-                            <div style={{width:18,height:18,borderRadius:4,border:'2px solid',borderColor:isSelected?'#7a5800':'#ccc',background:isSelected?'#FFD200':'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:'#7a5800',flexShrink:0}}>
+                            <div style={{width:18,height:18,borderRadius:4,border:'2px solid',borderColor:isSelected?'#7a5800':'#ccc',background:isSelected?'#f2cb12':'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:'#7a5800',flexShrink:0}}>
                               {isSelected ? '✓' : ''}
                             </div>
                           </div>
@@ -2811,7 +2807,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                       <div style={{textAlign:'center',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{d.totalUd}</div>
                       <div className="del-col-por" style={{fontSize:12.5,color:'#8a8a82',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.creadoPor || '—'}</div>
                       <div style={{textAlign:'right'}}>
-                        {(() => { const st=d.status||'aceptado'; const bSt={borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}; return st==='pendiente'?<span style={{...bSt,background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200'}}>Pendiente</span>:st==='rechazado'?<span style={{...bSt,background:'#FBEAE8',color:'#C2473D',border:'1px solid #C2473D'}}>Rechazado</span>:st==='pendiente_separar'?<span style={{...bSt,background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B'}}>Pend. separar</span>:<span style={{...bSt,background:'#EDF7F2',color:'#2e9b5e',border:'1px solid #2e9b5e'}}>Aceptado</span> })()}
+                        {(() => { const st=d.status||'aceptado'; const bSt={borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}; return st==='pendiente'?<span style={{...bSt,background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12'}}>Pendiente</span>:st==='rechazado'?<span style={{...bSt,background:'#FBEAE8',color:'#C2473D',border:'1px solid #C2473D'}}>Rechazado</span>:st==='pendiente_separar'?<span style={{...bSt,background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B'}}>Pend. separar</span>:<span style={{...bSt,background:'#EDF7F2',color:'#2e9b5e',border:'1px solid #2e9b5e'}}>Aceptado</span> })()}
                       </div>
                       <div style={{display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
                         {!isSoloVista && remitoSelIds === null && <button className="btn-del" onClick={e => { e.stopPropagation(); askDeleteDelivery(d.id) }}>✕</button>}
@@ -2822,13 +2818,13 @@ tfoot td{padding:9px 12px;font-weight:700}
               }
               {(delFilterReceptor===REP_FILTER ? filteredRepRows : filteredDeliveryRows).length === 0 && <div className="empty">{delFilterReceptor===REP_FILTER ? 'No hay reposiciones registradas.' : delFilterReceptor||delFilterPersona ? 'Sin entregas para este filtro.' : 'Sin entregas registradas.'}</div>}
               {remitoSelIds !== null && remitoSelIds.size > 0 && (
-                <div style={{position:'sticky',bottom:0,background:'#121212',padding:'12px 20px',display:'flex',alignItems:'center',gap:12,borderTop:'2px solid #FFD200'}}>
-                  <span style={{color:'#FFD200',fontWeight:700,fontSize:13,flex:1}}>{remitoSelIds.size} entrega{remitoSelIds.size!==1?'s':''} seleccionada{remitoSelIds.size!==1?'s':''}</span>
+                <div style={{position:'sticky',bottom:0,background:'#121212',padding:'12px 20px',display:'flex',alignItems:'center',gap:12,borderTop:'2px solid #f2cb12'}}>
+                  <span style={{color:'#f2cb12',fontWeight:700,fontSize:13,flex:1}}>{remitoSelIds.size} entrega{remitoSelIds.size!==1?'s':''} seleccionada{remitoSelIds.size!==1?'s':''}</span>
                   <button onClick={() => {
                     const sel = filteredDeliveryRows.filter(d => remitoSelIds.has(d.id))
                     openPrintWindow(buildRemitoCombinadoHtml(sel))
                     setRemitoSelIds(null)
-                  }} style={{background:'#FFD200',color:'#121212',border:'none',padding:'8px 20px',borderRadius:6,fontWeight:700,fontSize:13,cursor:'pointer'}}>
+                  }} style={{background:'#f2cb12',color:'#121212',border:'none',padding:'8px 20px',borderRadius:6,fontWeight:700,fontSize:13,cursor:'pointer'}}>
                     Generar remito
                   </button>
                   <button onClick={() => setRemitoSelIds(null)} style={{background:'none',border:'1px solid #555',color:'#aaa',padding:'8px 14px',borderRadius:6,fontSize:12,cursor:'pointer'}}>Cancelar</button>
@@ -2888,7 +2884,7 @@ tfoot td{padding:9px 12px;font-weight:700}
           {view === 'usuarios-reg' && (
             <div style={{display:'flex',flexDirection:'column',gap:10,padding:'0 2px'}}>
               {[...db.users].sort((a,b) => (a.role==='admin'?0:1)-(b.role==='admin'?0:1)).map(u => (
-                <div key={u.username} className="card" style={{padding:'16px 20px',display:'flex',alignItems:'center',gap:14,borderLeft: u.status==='pendiente' ? '3px solid #FFD200' : undefined}}>
+                <div key={u.username} className="card" style={{padding:'16px 20px',display:'flex',alignItems:'center',gap:14,borderLeft: u.status==='pendiente' ? '3px solid #f2cb12' : undefined}}>
                   <div className="avatar" style={{flexShrink:0,width:42,height:42,fontSize:15,opacity:u.status==='pendiente'?.6:1}}>{ini(u.displayName||u.username)}</div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontWeight:700,fontSize:14,display:'flex',alignItems:'center',gap:8}}>
@@ -2906,12 +2902,12 @@ tfoot td{padding:9px 12px;font-weight:700}
                     {u.telefono && <div style={{fontSize:12,color:'#8a8a82',marginTop:2}}>{u.telefono}</div>}
                     {u.status==='pendiente' && currentUser?.role==='admin' && (
                       <div style={{display:'flex',gap:8,marginTop:10}}>
-                        <button onClick={()=>approveUser(u.username)} style={{padding:'5px 14px',borderRadius:5,border:'none',cursor:'pointer',fontWeight:700,fontSize:12,background:'#FFD200',color:'#121212'}}>Aprobar</button>
+                        <button onClick={()=>approveUser(u.username)} style={{padding:'5px 14px',borderRadius:5,border:'none',cursor:'pointer',fontWeight:700,fontSize:12,background:'#f2cb12',color:'#121212'}}>Aprobar</button>
                         <button onClick={()=>rejectUser(u.username)} style={{padding:'5px 14px',borderRadius:5,border:'1px solid #C2473D',cursor:'pointer',fontWeight:700,fontSize:12,background:'none',color:'#C2473D'}}>Rechazar</button>
                       </div>
                     )}
                   </div>
-                  <span style={{background:u.role==='admin'?'#121212':u.role==='solo-vista'?'#FFF4E6':'#EDF7F2',color:u.role==='admin'?'#FFD200':u.role==='solo-vista'?'#c2560a':'#2e9b5e',border:'1px solid '+(u.role==='admin'?'#3a3a3a':u.role==='solo-vista'?'#e8834a':'#2e9b5e'),borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700,flexShrink:0}}>
+                  <span style={{background:u.role==='admin'?'#121212':u.role==='solo-vista'?'#FFF4E6':'#EDF7F2',color:u.role==='admin'?'#f2cb12':u.role==='solo-vista'?'#c2560a':'#2e9b5e',border:'1px solid '+(u.role==='admin'?'#3a3a3a':u.role==='solo-vista'?'#e8834a':'#2e9b5e'),borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700,flexShrink:0}}>
                     {ROLE_LABELS[u.role]||'Receptor'}
                   </span>
                 </div>
@@ -2932,7 +2928,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 </div>
               ))}
               <div className="card" style={{padding:20,display:'flex',gap:14,alignItems:'center',cursor:'pointer'}} onClick={() => setView('reposiciones')}>
-                <div className="avatar xl" style={{background:'#FFD200',color:'#121212'}}>R</div>
+                <div className="avatar xl" style={{background:'#f2cb12',color:'#121212'}}>R</div>
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:15}}>Reposiciones Primera División</div>
                   <div style={{fontSize:12.5,color:'#8a8a82',marginTop:3}}>{(db.reposiciones||[]).length} reposiciones registradas</div>
@@ -2981,7 +2977,7 @@ tfoot td{padding:9px 12px;font-weight:700}
               <div className="card" style={{overflow:'auto'}}>
                 <div style={{display:'grid',gridTemplateColumns:'62px 90px 50px 46px 1fr 110px 1fr 44px 1fr 65px 28px',background:'#121212',padding:'9px 16px',gap:8,minWidth:860}}>
                   {['TIPO','MODELO','TEMP.','NRO.','NOMBRE','ESTAMPADO','COMPETICIÓN','TALLE','PARCHES','',''].map((h,i) => (
-                    <div key={i} style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:.5}}>{h}</div>
+                    <div key={i} style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:.5}}>{h}</div>
                   ))}
                 </div>
                 {utiFiltered.length === 0
@@ -3019,7 +3015,7 @@ tfoot td{padding:9px 12px;font-weight:700}
             const RECEPTOR_ORDER = ['Protocolo','1° División','3 División','Juveniles','Femenino','Juveniles Femenino','Basket','Captación','Futbol Sala Masculino','Futbol Sala Femenino','Funcionarios']
             const RECEPTOR_COLORS = {
               'Protocolo':             '#7BC67E',
-              '1° División':           '#FFD200',
+              '1° División':           '#f2cb12',
               '3° División':           '#BDBDBD',
               'Juveniles':             '#5a5a5a',
               'Femenino':              '#9B59B6',
@@ -3096,7 +3092,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                             <button key={key} onClick={() => setPumaMetric(key)}
                               style={{padding:'4px 14px',borderRadius:6,border:'none',cursor:'pointer',fontSize:12,fontWeight:600,
                                 background: pumaMetric===key ? '#121212' : 'transparent',
-                                color: pumaMetric===key ? '#FFD200' : '#6a6a62',
+                                color: pumaMetric===key ? '#f2cb12' : '#6a6a62',
                                 transition:'all .15s'}}>
                               {label}
                             </button>
@@ -3177,7 +3173,7 @@ tfoot td{padding:9px 12px;font-weight:700}
               {/* Tabs */}
               <div style={{display:'flex',gap:6,borderBottom:'2px solid #ECECE8',paddingBottom:0}}>
                 {[['reposiciones','REPOSICIONES'],['plantel','PLANTEL']].map(([k,l]) => (
-                  <button key={k} onClick={() => setRepTab(k)} style={{padding:'7px 18px',border:'none',background:'none',fontWeight:700,fontSize:13,cursor:'pointer',borderBottom:repTab===k?'2px solid #FFD200':'2px solid transparent',marginBottom:-2,color:repTab===k?'#121212':'#8a8a82'}}>
+                  <button key={k} onClick={() => setRepTab(k)} style={{padding:'7px 18px',border:'none',background:'none',fontWeight:700,fontSize:13,cursor:'pointer',borderBottom:repTab===k?'2px solid #f2cb12':'2px solid transparent',marginBottom:-2,color:repTab===k?'#121212':'#8a8a82'}}>
                     {l}{k==='plantel'&&(db.plantel||[]).length>0?` (${(db.plantel||[]).length})`:''}
                   </button>
                 ))}
@@ -3219,10 +3215,10 @@ tfoot td{padding:9px 12px;font-weight:700}
                           </div>
                         </div>
                       </div>
-                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#FFD200'}} onClick={()=>setRepResumen('ambos')}>
-                        <div className="kpi-label" style={{color:'#FFD200'}}>TOTAL DESCUENTOS</div>
-                        <div className="kpi-value" style={{color:'#FFD200'}}>$ {totalDinero.toLocaleString('es-UY')}</div>
-                        <div className="kpi-sub" style={{color:'#FFD200'}}>ver detalle →</div>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#f2cb12'}} onClick={()=>setRepResumen('ambos')}>
+                        <div className="kpi-label" style={{color:'#f2cb12'}}>TOTAL DESCUENTOS</div>
+                        <div className="kpi-value" style={{color:'#f2cb12'}}>$ {totalDinero.toLocaleString('es-UY')}</div>
+                        <div className="kpi-sub" style={{color:'#f2cb12'}}>ver detalle →</div>
                       </div>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepTab('plantel')}>
                         <div className="kpi-label">PLANTEL</div>
@@ -3234,7 +3230,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   )
                 })()}
                 {!(db.plantel||[]).length && (
-                  <div style={{fontSize:13,color:'#7a5800',background:'#FFF8D6',border:'1px solid #FFD200',borderRadius:8,padding:'10px 14px'}}>
+                  <div style={{fontSize:13,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:8,padding:'10px 14px'}}>
                     Configurá el <button onClick={()=>setRepTab('plantel')} style={{background:'none',border:'none',fontWeight:700,color:'#7a5800',cursor:'pointer',padding:0,textDecoration:'underline'}}>plantel</button> primero para poder registrar reposiciones.
                   </div>
                 )}
@@ -3314,7 +3310,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                         <div className="card" style={{padding:0,overflow:'hidden',width:'max-content'}}>
                           <div style={{display:'grid',gridTemplateColumns:'50px max-content 80px 90px 90px 72px'}}>
                             {['Nº','NOMBRE','POSICIÓN','CAMISETA','SHORT',''].map((h,i)=>(
-                              <div key={i} style={{padding:'11px 20px',background:'#121212',color:'#FFD200',fontWeight:700,fontSize:11,letterSpacing:'.04em',whiteSpace:'nowrap'}}>{h}</div>
+                              <div key={i} style={{padding:'11px 20px',background:'#121212',color:'#f2cb12',fontWeight:700,fontSize:11,letterSpacing:'.04em',whiteSpace:'nowrap'}}>{h}</div>
                             ))}
                             {(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => {
                               const isLibre = j.nombre.trim().toLowerCase()==='libre'
@@ -3361,7 +3357,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                         style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,cursor:'pointer',borderRadius:6,padding:'2px 0'}}>
                         <div style={{width:28,fontWeight:700,fontSize:13,textAlign:'right',flexShrink:0}}>{talle}</div>
                         <div style={{flex:1,background:'#ECECE8',borderRadius:4,height:22,overflow:'hidden'}}>
-                          <div style={{width:`${(qty/max)*100}%`,background:'#FFD200',height:'100%',borderRadius:4,minWidth:4}}/>
+                          <div style={{width:`${(qty/max)*100}%`,background:'#f2cb12',height:'100%',borderRadius:4,minWidth:4}}/>
                         </div>
                         <div style={{width:20,fontWeight:700,fontSize:13,flexShrink:0}}>{qty}</div>
                       </div>
@@ -3415,7 +3411,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                                     {nombre}
                                     {!jug && <button onClick={e=>{e.stopPropagation();setRepararRanking(nombre)}} style={{background:'#EA580C',color:'#fff',border:'none',borderRadius:4,padding:'1px 5px',fontSize:10,fontWeight:700,cursor:'pointer',marginLeft:4}}>!</button>}
                                   </span>
-                                  <span style={{background:'#FFD200',borderRadius:20,padding:'2px 6px',fontWeight:700,fontSize:12,textAlign:'center'}}>{total}</span>
+                                  <span style={{background:'#f2cb12',borderRadius:20,padding:'2px 6px',fontWeight:700,fontSize:12,textAlign:'center'}}>{total}</span>
                                 </div>
                               )
                             })}
@@ -3457,15 +3453,15 @@ tfoot td{padding:9px 12px;font-weight:700}
                   ? <div style={{padding:24,textAlign:'center',color:'#8a8a82',fontSize:13}}>Sin reposiciones registradas para este jugador.</div>
                   : <>
                     <div style={{display:'grid',gridTemplateColumns:'95px 1fr 60px 60px',background:'#121212',padding:'6px 16px',gap:8,alignItems:'center'}}>
-                      <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em'}}>FECHA</div>
-                      <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em'}}>CONCEPTO</div>
+                      <div style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:'.04em'}}>FECHA</div>
+                      <div style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:'.04em'}}>CONCEPTO</div>
                       <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:1}}>
                         <div style={{fontSize:9,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em'}}>DESCUENTO</div>
-                        <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em'}}>CAMISETA</div>
+                        <div style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:'.04em'}}>CAMISETA</div>
                       </div>
                       <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:1}}>
                         <div style={{fontSize:9,color:'transparent'}}>DESCUENTO</div>
-                        <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em'}}>SHORT</div>
+                        <div style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:'.04em'}}>SHORT</div>
                       </div>
                     </div>
                     {reps.map(r => {
@@ -3508,7 +3504,7 @@ tfoot td{padding:9px 12px;font-weight:700}
         if (!d) return null
         const st = d.status || 'aceptado'
         const stStyle = st==='pendiente'
-          ? {background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200'}
+          ? {background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12'}
           : st==='rechazado'
           ? {background:'#FBEAE8',color:'#C2473D',border:'1px solid #C2473D'}
           : st==='pendiente_separar'
@@ -3531,7 +3527,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                               <option value="">— Seleccioná —</option>
                               {DISCIPLINAS_DEPORTES_ANEXOS.map(d => <option key={d} value={d}>{d}</option>)}
                             </select>
-                            <button onClick={()=>saveDisciplinaEdit(d.id)} style={{background:'#FFD200',border:'none',borderRadius:4,padding:'2px 8px',fontWeight:700,fontSize:11,cursor:'pointer'}}>✓</button>
+                            <button onClick={()=>saveDisciplinaEdit(d.id)} style={{background:'#f2cb12',border:'none',borderRadius:4,padding:'2px 8px',fontWeight:700,fontSize:11,cursor:'pointer'}}>✓</button>
                             <button onClick={()=>setDisciplinaEdit(null)} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:13}}>✕</button>
                           </span>
                         : <span>
@@ -3550,9 +3546,9 @@ tfoot td{padding:9px 12px;font-weight:700}
               </div>
               <div className="modal-body" style={{padding:0}}>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 60px 55px',background:'#121212',padding:'9px 20px'}}>
-                  <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em'}}>PRENDA</div>
-                  <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em',textAlign:'center'}}>TALLE</div>
-                  <div style={{fontSize:11,fontWeight:700,color:'#FFD200',letterSpacing:'.04em',textAlign:'right'}}>CANT.</div>
+                  <div style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:'.04em'}}>PRENDA</div>
+                  <div style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:'.04em',textAlign:'center'}}>TALLE</div>
+                  <div style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:'.04em',textAlign:'right'}}>CANT.</div>
                 </div>
                 {st === 'rechazado' && d.motivoRechazo && (
                   <div style={{padding:'10px 20px',background:'#FBEAE8',borderBottom:'1px solid #f5c6c3',fontSize:13,color:'#C2473D'}}>
@@ -3584,7 +3580,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 {st !== 'pendiente_separar' && <button className="btn btn-ghost" onClick={() => setSelectedDeliveryId(null)}>Cerrar</button>}
                 <button className="btn btn-ghost" style={{border:'1px solid #7a5800',color:'#7a5800'}} onClick={() => openPrintWindow(buildRemitoHtml(d.lines, d.persona, d.receptor, d.disciplina, d.fecha, d.obs, d.paga, d.monto))}>↓ Remito</button>
                 {!isSoloVista && st === 'pendiente_separar' && (
-                  <button className="btn" style={{background:'#FFD200',color:'#121212',fontWeight:700}}
+                  <button className="btn" style={{background:'#f2cb12',color:'#121212',fontWeight:700}}
                     onClick={() => confirmarSeparar(d.id)}>✓ Confirmar entrega</button>
                 )}
                 {!isSoloVista && st === 'pendiente_separar' && (
@@ -3753,7 +3749,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                     {['APERTURA','CLAUSURA','INTERMEDIO','COPA AUF','LIBERTADORES','SUDAMERICANA'].map(t=>(
                       <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,torneo:t}))}
                         style={{padding:'6px 10px',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:11,cursor:'pointer',
-                          borderColor:repForm.torneo===t?'#FFD200':'#ECECE8',
+                          borderColor:repForm.torneo===t?'#f2cb12':'#ECECE8',
                           background:repForm.torneo===t?'#FFF8D6':'#fff',
                           color:repForm.torneo===t?'#7a5800':'#8a8a82'}}>
                         {t}
@@ -3792,7 +3788,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                     {REP_TIPOS_JUGADOR.map(t=>(
                       <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,tipoCamisetaJugador:t}))}
                         style={{flex:1,padding:'6px 4px',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:11,cursor:'pointer',
-                          borderColor:repForm.tipoCamisetaJugador===t?'#FFD200':'#ECECE8',
+                          borderColor:repForm.tipoCamisetaJugador===t?'#f2cb12':'#ECECE8',
                           background:repForm.tipoCamisetaJugador===t?'#FFF8D6':'#fff',
                           color:repForm.tipoCamisetaJugador===t?'#7a5800':'#8a8a82'}}>
                         {t}
@@ -3806,7 +3802,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                     {REP_TIPOS_GOLERO.map(t=>(
                       <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,tipoCamisetaGolero:t}))}
                         style={{flex:1,padding:'6px 4px',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:11,cursor:'pointer',
-                          borderColor:repForm.tipoCamisetaGolero===t?'#FFD200':'#ECECE8',
+                          borderColor:repForm.tipoCamisetaGolero===t?'#f2cb12':'#ECECE8',
                           background:repForm.tipoCamisetaGolero===t?'#FFF8D6':'#fff',
                           color:repForm.tipoCamisetaGolero===t?'#7a5800':'#8a8a82'}}>
                         {t}
@@ -3828,7 +3824,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   const toggle = (field) => setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,[field]:!x[field]}:x)}))
                   return (
                     <div key={i} style={{display:'grid',gridTemplateColumns:'40px 1fr 62px 38px 62px 38px',gap:4,marginBottom:3,alignItems:'center',padding:'5px 6px',borderRadius:6,
-                      background:isLibre?'#3a3a3a':hasQty?'#FFFDF0':'transparent',border:hasQty?'1px solid #FFD200':'1px solid transparent'}}>
+                      background:isLibre?'#3a3a3a':hasQty?'#FFFDF0':'transparent',border:hasQty?'1px solid #f2cb12':'1px solid transparent'}}>
                       <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,color:isLibre?'#888':undefined}}>{r.numero||'—'}</div>
                       <div>
                         <span style={{fontWeight:600,fontSize:13,color:isLibre?'#888':undefined,fontStyle:isLibre?'italic':undefined}}>{r.nombre}</span>
@@ -3889,7 +3885,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 )}
                 <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>
                   {repDetail.fecha}{repDetail.creadoPor ? ' · '+repDetail.creadoPor : ''}
-                  {repDetail.torneo && <span style={{marginLeft:8,fontWeight:700,color:'#7a5800',background:'#FFF8D6',border:'1px solid #FFD200',borderRadius:4,padding:'1px 7px',fontSize:11}}>
+                  {repDetail.torneo && <span style={{marginLeft:8,fontWeight:700,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:4,padding:'1px 7px',fontSize:11}}>
                     {repDetail.torneo}{repDetail.fechaTorneo ? ' · Fecha '+repDetail.fechaTorneo : ''}
                   </span>}
                 </div>
@@ -3901,7 +3897,7 @@ tfoot td{padding:9px 12px;font-weight:700}
               {(repDetail.tipoCamisetaJugador||repDetail.tipoCamisetaGolero) && (
                 <div style={{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap'}}>
                   {repDetail.tipoCamisetaJugador && (
-                    <span style={{fontSize:12,fontWeight:700,background:'#FFF8D6',border:'1px solid #FFD200',borderRadius:5,padding:'3px 10px'}}>
+                    <span style={{fontSize:12,fontWeight:700,background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:5,padding:'3px 10px'}}>
                       Jugadores: {repDetail.tipoCamisetaJugador}
                     </span>
                   )}
@@ -4008,8 +4004,8 @@ tfoot td{padding:9px 12px;font-weight:700}
               </div>
               <div style={{display:'grid',gridTemplateColumns:'1fr 60px 60px auto',gap:'0 10px',alignItems:'center',padding:'10px 0 0',borderTop:'2px solid #121212',marginTop:8}}>
                 <span style={{fontWeight:700,fontSize:12}}>TOTAL</span>
-                <span style={{textAlign:'center',fontWeight:700,fontSize:14,background:'#FFD200',borderRadius:20,padding:'2px 6px'}}>{totCam}</span>
-                <span style={{textAlign:'center',fontWeight:700,fontSize:14,background:'#FFD200',borderRadius:20,padding:'2px 6px'}}>{totSht}</span>
+                <span style={{textAlign:'center',fontWeight:700,fontSize:14,background:'#f2cb12',borderRadius:20,padding:'2px 6px'}}>{totCam}</span>
+                <span style={{textAlign:'center',fontWeight:700,fontSize:14,background:'#f2cb12',borderRadius:20,padding:'2px 6px'}}>{totSht}</span>
                 <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,textAlign:'right',whiteSpace:'nowrap'}}>$ {totMonto.toLocaleString('es-UY')}</span>
               </div>
               <button onClick={()=>setRankingDetalle(null)} style={{marginTop:16,width:'100%',padding:'9px 0',border:'1px solid #D0D0CC',borderRadius:8,background:'#fff',cursor:'pointer',fontSize:13,color:'#666'}}>Cerrar</button>
@@ -4099,7 +4095,7 @@ tfoot td{padding:9px 12px;font-weight:700}
             <div className="modal-body">
               {[['Entrenamiento', kpis.entrenamiento], ['Juego', kpis.juego], ['Casual', kpis.casual]].map(([cat, qty]) => (
                 <div key={cat} style={{display:'flex',justifyContent:'space-between',alignItems:'center',
-                  padding:'12px 16px',borderRadius:8,marginBottom:8,background:'#FFD200',cursor:'pointer'}}
+                  padding:'12px 16px',borderRadius:8,marginBottom:8,background:'#f2cb12',cursor:'pointer'}}
                   onClick={()=>{ setCat(cat); setView('inventario'); setShowUnidadesDesglose(false) }}>
                   <span style={{fontWeight:700,fontSize:14}}>PRENDAS DE {cat.toUpperCase()}</span>
                   <span style={{fontFamily:'Archivo Black,sans-serif',fontSize:26}}>{qty}</span>
@@ -4133,8 +4129,8 @@ tfoot td{padding:9px 12px;font-weight:700}
         const filasGol = filas.filter(([t])=>golTipos.includes(t))
         const filasOtros = filas.filter(([t])=>!jugTipos.includes(t)&&!golTipos.includes(t))
         const TIPO_COLORS = {
-          'TRADICIONAL': {bg:'repeating-linear-gradient(45deg,#FFD200,#FFD200 28px,#121212 28px,#121212 56px)', color:'#fff', badge:true},
-          'AMARILLA':    {bg:'#FFD200', color:'#121212'},
+          'TRADICIONAL': {bg:'repeating-linear-gradient(45deg,#f2cb12,#f2cb12 28px,#121212 28px,#121212 56px)', color:'#fff', badge:true},
+          'AMARILLA':    {bg:'#f2cb12', color:'#121212'},
           'VERDE':       {bg:'#2d6a4f', color:'#fff'},
           'NEGRO':       {bg:'#2a2a2a', color:'#fff'},
           'NARANJA':     {bg:'#EA580C', color:'#121212'},
@@ -4149,7 +4145,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 : <span style={{fontWeight:700,fontSize:14,color:c.color}}>{tipo}</span>
               }
               {c.badge
-                ? <span style={{fontFamily:'Archivo Black,sans-serif',fontSize:22,color:'#121212',background:'#FFD200',padding:'2px 14px',borderRadius:20}}>{qty}</span>
+                ? <span style={{fontFamily:'Archivo Black,sans-serif',fontSize:22,color:'#121212',background:'#f2cb12',padding:'2px 14px',borderRadius:20}}>{qty}</span>
                 : <span style={{fontFamily:'Archivo Black,sans-serif',fontSize:22,color:c.color}}>{qty}</span>
               }
             </div>
@@ -4297,12 +4293,12 @@ tfoot td{padding:9px 12px;font-weight:700}
                 {datosPorMes.map(({mesKey, mesNombre, filas, totCam, totSht, totDesc}) => {
                   return (
                     <div key={mesKey}>
-                      <div style={{background:'#121212',color:'#FFD200',fontWeight:700,fontSize:12,letterSpacing:'.06em',padding:'9px 14px',position:'sticky',top:0,zIndex:2}}>
+                      <div style={{background:'#121212',color:'#f2cb12',fontWeight:700,fontSize:12,letterSpacing:'.06em',padding:'9px 14px',position:'sticky',top:0,zIndex:2}}>
                         {mesNombre.toUpperCase()}
                       </div>
                       <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
                         <thead>
-                          <tr style={{background:'#2a2a2a',color:'#FFD200'}}>
+                          <tr style={{background:'#2a2a2a',color:'#f2cb12'}}>
                             <th style={{padding:'6px 12px',textAlign:'left',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>JUGADOR</th>
                             <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>CAMISETAS</th>
                             <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>SHORTS</th>
@@ -4370,7 +4366,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   <button key={pos} type="button"
                     onClick={() => setPlantelForm(p=>({...p,posicion:pos}))}
                     style={{flex:1,padding:'8px 0',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:13,cursor:'pointer',
-                      borderColor: plantelForm.posicion===pos ? '#FFD200' : '#ECECE8',
+                      borderColor: plantelForm.posicion===pos ? '#f2cb12' : '#ECECE8',
                       background: plantelForm.posicion===pos ? '#FFF8D6' : '#fff',
                       color: plantelForm.posicion===pos ? '#7a5800' : '#8a8a82'}}>
                     {pos}
@@ -4423,7 +4419,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   : rDeliveries.map(d => {
                       const st = d.status || 'aceptado'
                       const stStyle = st==='pendiente'
-                        ? {background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200'}
+                        ? {background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12'}
                         : st==='rechazado'
                         ? {background:'#FBEAE8',color:'#C2473D',border:'1px solid #C2473D'}
                         : st==='pendiente_separar'
@@ -4511,7 +4507,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                     {receptorUsers.map(u => <option key={u.username} value={u.username}>{u.displayName} ({u.username})</option>)}
                   </select>
                   {receptorUsers.length === 0 && <div style={{marginTop:6,fontSize:12,color:'#8a8a82'}}>No hay usuarios receptores registrados aún.</div>}
-                  {nd.toUser && <div style={{marginTop:6,fontSize:12,color:'#7a5800',background:'#FFF8D6',border:'1px solid #FFD200',borderRadius:6,padding:'6px 10px'}}>La entrega quedará pendiente de confirmación por el receptor.</div>}
+                  {nd.toUser && <div style={{marginTop:6,fontSize:12,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:6,padding:'6px 10px'}}>La entrega quedará pendiente de confirmación por el receptor.</div>}
                 </div>
               )}
               {nd.receptor === 'Protocolo' && !ndIsDev && (
@@ -4520,7 +4516,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   <div style={{display:'flex',gap:8}}>
                     {[['si','SÍ'],['no','NO']].map(([v,label]) => (
                       <button key={v} style={{flex:1,padding:'7px 0',borderRadius:6,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:13,
-                        background:nd.paga===v?'#FFD200':'#F5F5F0',
+                        background:nd.paga===v?'#f2cb12':'#F5F5F0',
                         borderColor:nd.paga===v?'#e6be00':'#E0E0DA',
                         color:nd.paga===v?'#121212':'#8a8a82'}}
                         onClick={() => setNd(p=>({...p,paga:v}))}>
@@ -4577,7 +4573,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                           <button key={ubic} onClick={() => setNd(p=>({...p, cUbic:ubic, cTalle:'', cQty:''}))}
                             style={{padding:'5px 14px',borderRadius:5,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:12.5,
                               background: nd.cUbic===ubic ? '#121212' : '#F5F5F0',
-                              color: nd.cUbic===ubic ? '#FFD200' : '#5a5a52',
+                              color: nd.cUbic===ubic ? '#f2cb12' : '#5a5a52',
                               borderColor: nd.cUbic===ubic ? '#121212' : '#E0E0DA'}}>
                             {ubic}
                           </button>
@@ -4619,7 +4615,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 <button className="btn btn-ghost" onClick={printPedido} title="Imprimir pedido en PDF">🖨 Imprimir Pedido</button>
               )}
               <button className="btn btn-ghost" onClick={closeModal}>Cancelar</button>
-              <button className="btn" style={{background:ndOk?'#FFD200':'#EDE9D2',color:ndOk?'#121212':'#a89e6a',cursor:ndOk?'pointer':'not-allowed'}} onClick={ndConfirm}>
+              <button className="btn" style={{background:ndOk?'#f2cb12':'#EDE9D2',color:ndOk?'#121212':'#a89e6a',cursor:ndOk?'pointer':'not-allowed'}} onClick={ndConfirm}>
                 {ndIsDev ? 'Confirmar devolución' : 'Confirmar entrega'}
               </button>
             </div>
@@ -4652,13 +4648,13 @@ tfoot td{padding:9px 12px;font-weight:700}
                     const existing = na.code ? db.articles.find(a => a.code === na.code) : null
                     if (!existing?.ubic) return null
                     return (
-                      <div style={{marginTop:6,fontSize:12,color:'#7a5800',background:'#FFF8D6',border:'1px solid #FFD200',borderRadius:6,padding:'6px 10px',display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>
+                      <div style={{marginTop:6,fontSize:12,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:6,padding:'6px 10px',display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>
                         <span>Ya existe en <b>{existing.ubic}</b></span>
                         <button type="button" onClick={() => {
                           const ubic = existing.ubic
                           const isT = ubic === 'TRANSITO'
                           setNa(p => ({...p, estante: isT ? 'TRANSITO' : ubic.slice(0,-1), altura: isT ? 'A' : ubic.slice(-1)}))
-                        }} style={{padding:'3px 10px',borderRadius:5,border:'1px solid #e6be00',background:'#FFD200',color:'#121212',fontWeight:700,fontSize:11.5,cursor:'pointer',whiteSpace:'nowrap'}}>
+                        }} style={{padding:'3px 10px',borderRadius:5,border:'1px solid #e6be00',background:'#f2cb12',color:'#121212',fontWeight:700,fontSize:11.5,cursor:'pointer',whiteSpace:'nowrap'}}>
                           Usar ubicación
                         </button>
                       </div>
@@ -4685,7 +4681,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 <div style={{display:'flex',gap:8,marginBottom:10}}>
                   {['adulto','nino'].map(t => (
                     <button key={t} style={{flex:1,padding:'7px 0',borderRadius:6,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:13,
-                      background:na.tipo===t?'#FFD200':'#F5F5F0',
+                      background:na.tipo===t?'#f2cb12':'#F5F5F0',
                       borderColor:na.tipo===t?'#b89900':'#E0E0DA',
                       color:na.tipo===t?'#121212':'#8a8a82'}}
                       onClick={() => setNa(p=>({...p,tipo:t,tallesArr:[],tallesMins:{},tallesQty:{}}))}>
@@ -5080,7 +5076,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                         )}
                         {u.telefono && <div style={{fontSize:11.5,color:'#8a8a82'}}>{u.telefono}</div>}
                       </div>
-                      <span style={{background:u.role==='admin'?'#121212':u.role==='solo-vista'?'#FFF4E6':'#EDF7F2',color:u.role==='admin'?'#FFD200':u.role==='solo-vista'?'#c2560a':'#2e9b5e',border:'1px solid '+(u.role==='admin'?'#3a3a3a':u.role==='solo-vista'?'#e8834a':'#2e9b5e'),borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700,flexShrink:0}}>{ROLE_LABELS[u.role]||'Receptor'}</span>
+                      <span style={{background:u.role==='admin'?'#121212':u.role==='solo-vista'?'#FFF4E6':'#EDF7F2',color:u.role==='admin'?'#f2cb12':u.role==='solo-vista'?'#c2560a':'#2e9b5e',border:'1px solid '+(u.role==='admin'?'#3a3a3a':u.role==='solo-vista'?'#e8834a':'#2e9b5e'),borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700,flexShrink:0}}>{ROLE_LABELS[u.role]||'Receptor'}</span>
                       {u.username === session && <span className="badge gray">Vos</span>}
                       {currentUser?.role === 'admin' && u.username !== session && <button className="btn-del" onClick={()=>deleteUser(u.username)}>✕</button>}
                     </div>
@@ -5091,7 +5087,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                             const list = userMgmt.list.map(x => x.username===u.username?{...x,role:v}:x)
                             saveUsers(list)
                             setUserMgmt(p=>({...p,list}))
-                          }} style={{padding:'4px 12px',borderRadius:5,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:11.5,background:u.role===v?'#FFD200':'#F5F5F0',borderColor:u.role===v?'#e6be00':'#E0E0DA',color:u.role===v?'#121212':'#8a8a82'}}>
+                          }} style={{padding:'4px 12px',borderRadius:5,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:11.5,background:u.role===v?'#f2cb12':'#F5F5F0',borderColor:u.role===v?'#e6be00':'#E0E0DA',color:u.role===v?'#121212':'#8a8a82'}}>
                             {label}
                           </button>
                         ))}
@@ -5123,7 +5119,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                       {ROLE_OPTIONS.map(([v,label]) => (
                         <button key={v} style={{flex:'1 1 auto',minWidth:110,padding:'8px 0',borderRadius:6,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:13,
-                          background:(userMgmt.newRole||'receptor')===v?'#FFD200':'#F5F5F0',
+                          background:(userMgmt.newRole||'receptor')===v?'#f2cb12':'#F5F5F0',
                           borderColor:(userMgmt.newRole||'receptor')===v?'#e6be00':'#E0E0DA',
                           color:(userMgmt.newRole||'receptor')===v?'#121212':'#8a8a82'}}
                           onClick={() => setUserMgmt(p=>({...p,newRole:v}))}>

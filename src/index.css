@@ -24,15 +24,10 @@ button, input, select, textarea { font-family: 'Archivo', sans-serif; }
   transition: transform 0.25s ease;
 }
 .sidebar-logo {
-  padding: 22px 20px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  padding: 18px 20px;
   border-bottom: 1px solid #262626;
 }
-.sidebar-logo img { height: 48px; width: auto; }
-.sidebar-logo-text .name { font-family: 'Archivo Black', sans-serif; font-size: 14px; color: #fff; letter-spacing: .02em; }
-.sidebar-logo-text .sub { font-size: 10px; color: #8a8a82; letter-spacing: .16em; margin-top: 3px; }
+.sidebar-logo img { width: 100%; height: auto; display: block; }
 
 nav.sidebar-nav {
   padding: 14px 12px;
@@ -58,7 +53,7 @@ nav.sidebar-nav {
   width: 100%;
 }
 .nav-item.active {
-  background: #FFD200;
+  background: #f2cb12;
   color: #121212;
   font-weight: 700;
 }
@@ -81,7 +76,7 @@ nav.sidebar-nav {
 .user-avatar {
   width: 34px; height: 34px;
   border-radius: 50%;
-  background: #FFD200;
+  background: #f2cb12;
   color: #121212;
   display: flex;
   align-items: center;
@@ -115,7 +110,7 @@ nav.sidebar-nav {
 .topbar-title {
   font-weight: 700;
   font-size: 18px;
-  color: #FFD200;
+  color: #f2cb12;
   white-space: nowrap;
 }
 .topbar-spacer { flex: 1; }
@@ -161,7 +156,7 @@ nav.sidebar-nav {
   border: none;
 }
 .btn-ghost { background: #fff; border: 1px solid #d7d7d1 !important; color: #1a1a1a; }
-.btn-yellow { background: #FFD200; color: #121212; }
+.btn-yellow { background: #f2cb12; color: #121212; }
 .btn-dark { background: #121212; color: #fff; }
 .btn-red { background: #C2473D; color: #fff; }
 
@@ -180,7 +175,7 @@ nav.sidebar-nav {
   margin-bottom: 22px;
 }
 .kpi-card {
-  background: #FFD200;
+  background: #f2cb12;
   border: 1px solid #e6be00;
   border-radius: 6px;
   padding: 18px 20px;
@@ -221,7 +216,7 @@ nav.sidebar-nav {
   background: #121212;
   border-bottom: 1px solid #121212;
   font-size: 11.5px;
-  color: #FFD200;
+  color: #f2cb12;
   font-weight: 700;
   letter-spacing: .04em;
 }
@@ -289,7 +284,7 @@ nav.sidebar-nav {
   width: 30px; height: 30px;
   border-radius: 50%;
   background: #121212;
-  color: #FFD200;
+  color: #f2cb12;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -380,7 +375,7 @@ label.field-label { font-size: 12.5px; font-weight: 700; color: #4a4a42; }
   outline: none;
   background: #fff;
 }
-.field-input:focus { border-color: #FFD200; }
+.field-input:focus { border-color: #f2cb12; }
 select.field-input { cursor: pointer; }
 
 /* ---- Toast ---- */
@@ -402,7 +397,7 @@ select.field-input { cursor: pointer; }
   z-index: 60;
   white-space: nowrap;
 }
-.toast-dot { width: 8px; height: 8px; border-radius: 50%; background: #FFD200; }
+.toast-dot { width: 8px; height: 8px; border-radius: 50%; background: #f2cb12; }
 
 /* ---- Back link ---- */
 .back-link {
