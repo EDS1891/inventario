@@ -1862,33 +1862,34 @@ tfoot td{padding:9px 12px;font-weight:700}
                       </div>
                     )}
                     <div className="card" style={{padding:0,overflow:'hidden'}}>
-                      <div className="table-header" style={{gridTemplateColumns:'100px 100px 2fr 1fr 140px 80px 80px 110px 36px',columnGap:8}}>
-                        <div>FECHA</div><div style={{textAlign:'center'}}>PARTIDO</div><div style={{paddingLeft:16}}>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'center'}}>EQUIPO</div><div style={{textAlign:'right'}}>CAMISETAS</div><div style={{textAlign:'right'}}>SHORTS</div><div style={{textAlign:'right'}}>DESCUENTOS</div><div/>
+                      <div className="table-header" style={{gridTemplateColumns:'110px 1fr 70px 70px 120px 36px'}}>
+                        <div>FECHA</div><div>CONCEPTO</div><div style={{textAlign:'right'}}>CAM.</div><div style={{textAlign:'right'}}>SHT.</div><div style={{textAlign:'right'}}>DESCUENTOS</div><div/>
                       </div>
                       {filtered.length === 0
                         ? <div style={{color:'#8a8a82',fontSize:13,textAlign:'center',padding:'24px 0'}}>Sin reposiciones para este torneo.</div>
                         : filtered.map(r => {
                           const totCam = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
                           const totSht = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
-                          const equipoStr = [r.tipoCamisetaJugador, r.tipoCamisetaGolero].filter(Boolean).join(' / ') || '—'
+                          const equipoStr = [r.tipoCamisetaJugador, r.tipoCamisetaGolero].filter(Boolean).join(' / ')
                           const totalDesc = (r.jugadores||[]).reduce((s,j)=>{
                             const dc = j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
                             const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
                             return s + (dc ? (Number(j.cantCamiseta)||0)*PRECIO_CAMISETA : 0) + (ds ? (Number(j.cantShort)||0)*PRECIO_SHORT : 0)
                           }, 0)
+                          const subInfo = [r.torneo, r.fechaTorneo!=null&&r.fechaTorneo!==''?'F'+r.fechaTorneo:null, equipoStr].filter(Boolean).join(' · ')
                           return (
-                          <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 100px 2fr 1fr 140px 80px 80px 110px 36px',columnGap:8,cursor:'pointer',padding:'8px 20px'}} onClick={() => setRepDetail(r)}>
-                            <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#6a6a62',whiteSpace:'nowrap'}}>{r.fecha}</div>
-                            <div style={{textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:r.fechaPartido?'#1a1a1a':'#ccc'}}>{r.fechaPartido||'—'}</div>
-                            <div style={{fontWeight:600,fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',paddingLeft:16}}>
-                              {r.concepto}
-                              {r.creadoPor && <span style={{fontWeight:400,fontSize:11,color:'#8a8a82',marginLeft:6}}>· {r.creadoPor}</span>}
+                          <div key={r.id} className="table-row" style={{gridTemplateColumns:'110px 1fr 70px 70px 120px 36px',cursor:'pointer',padding:'10px 20px'}} onClick={() => setRepDetail(r)}>
+                            <div>
+                              <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#1a1a1a'}}>{r.fecha}</div>
+                              {r.fechaPartido && <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#8a8a82',marginTop:2}}>P: {r.fechaPartido}</div>}
                             </div>
-                            <div style={{fontSize:12,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
-                              {r.torneo && <span style={{fontWeight:600}}>{r.torneo}</span>}
-                              {r.fechaTorneo != null && r.fechaTorneo !== '' && <span style={{fontWeight:400,color:'#8a8a82'}}>{r.torneo ? ' · F' : 'F'}{r.fechaTorneo}</span>}
+                            <div style={{minWidth:0}}>
+                              <div style={{fontWeight:600,fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                                {r.concepto}
+                                {r.creadoPor && <span style={{fontWeight:400,fontSize:11,color:'#8a8a82',marginLeft:6}}>· {r.creadoPor}</span>}
+                              </div>
+                              {subInfo && <div style={{fontSize:11,color:'#8a8a82',marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{subInfo}</div>}
                             </div>
-                            <div style={{textAlign:'center',fontSize:11,color:equipoStr==='—'?'#ccc':'#1a1a1a'}}>{equipoStr}</div>
                             <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totCam>0?'#1a1a1a':'#ccc'}}>{totCam>0?totCam:'—'}</div>
                             <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totSht>0?'#1a1a1a':'#ccc'}}>{totSht>0?totSht:'—'}</div>
                             <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:totalDesc>0?'#1a1a1a':'#ccc'}}>{totalDesc>0?'$'+totalDesc.toLocaleString('es-UY'):'—'}</div>
@@ -3253,33 +3254,34 @@ tfoot td{padding:9px 12px;font-weight:700}
                           </div>
                         )}
                         <div className="card" style={{padding:0,overflow:'hidden'}}>
-                          <div className="table-header" style={{gridTemplateColumns:'100px 100px 2fr 1fr 140px 80px 80px 110px 36px',columnGap:8}}>
-                            <div>FECHA</div><div style={{textAlign:'center'}}>PARTIDO</div><div style={{paddingLeft:16}}>CONCEPTO</div><div>TORNEO</div><div style={{textAlign:'center'}}>EQUIPO</div><div style={{textAlign:'right'}}>CAMISETAS</div><div style={{textAlign:'right'}}>SHORTS</div><div style={{textAlign:'right'}}>DESCUENTOS</div><div/>
+                          <div className="table-header" style={{gridTemplateColumns:'110px 1fr 70px 70px 120px 36px'}}>
+                            <div>FECHA</div><div>CONCEPTO</div><div style={{textAlign:'right'}}>CAM.</div><div style={{textAlign:'right'}}>SHT.</div><div style={{textAlign:'right'}}>DESCUENTOS</div><div/>
                           </div>
                           {filtered.length === 0
                             ? <div style={{color:'#8a8a82',fontSize:13,textAlign:'center',padding:'24px 0'}}>Sin reposiciones para este torneo.</div>
                             : filtered.map(r => {
                               const totCam = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
                               const totSht = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
-                              const equipoStr = [r.tipoCamisetaJugador, r.tipoCamisetaGolero].filter(Boolean).join(' / ') || '—'
+                              const equipoStr = [r.tipoCamisetaJugador, r.tipoCamisetaGolero].filter(Boolean).join(' / ')
                               const totalDesc = (r.jugadores||[]).reduce((s,j)=>{
                                 const dc = j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
                                 const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
                                 return s + (dc ? (Number(j.cantCamiseta)||0)*PRECIO_CAMISETA : 0) + (ds ? (Number(j.cantShort)||0)*PRECIO_SHORT : 0)
                               }, 0)
+                              const subInfo = [r.torneo, r.fechaTorneo!=null&&r.fechaTorneo!==''?'F'+r.fechaTorneo:null, equipoStr].filter(Boolean).join(' · ')
                               return (
-                              <div key={r.id} className="table-row" style={{gridTemplateColumns:'100px 100px 2fr 1fr 140px 80px 80px 110px 36px',columnGap:8,cursor:'pointer',padding:'8px 20px'}} onClick={() => setRepDetail(r)}>
-                                <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#6a6a62'}}>{r.fecha}</div>
-                                <div style={{textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:r.fechaPartido?'#1a1a1a':'#ccc'}}>{r.fechaPartido||'—'}</div>
-                                <div style={{paddingLeft:16}}>
-                                  <div style={{fontWeight:600}}>{r.concepto}</div>
-                                  {r.creadoPor && <div style={{fontSize:11.5,color:'#8a8a82'}}>{r.creadoPor}</div>}
+                              <div key={r.id} className="table-row" style={{gridTemplateColumns:'110px 1fr 70px 70px 120px 36px',cursor:'pointer',padding:'10px 20px'}} onClick={() => setRepDetail(r)}>
+                                <div>
+                                  <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#1a1a1a'}}>{r.fecha}</div>
+                                  {r.fechaPartido && <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#8a8a82',marginTop:2}}>P: {r.fechaPartido}</div>}
                                 </div>
-                                <div style={{fontSize:12}}>
-                                  {r.torneo && <div style={{fontWeight:600}}>{r.torneo}</div>}
-                                  {r.fechaTorneo != null && r.fechaTorneo !== '' && <div style={{fontSize:11,color:'#8a8a82'}}>Fecha {r.fechaTorneo}</div>}
+                                <div style={{minWidth:0}}>
+                                  <div style={{fontWeight:600,fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                                    {r.concepto}
+                                    {r.creadoPor && <span style={{fontWeight:400,fontSize:11,color:'#8a8a82',marginLeft:6}}>· {r.creadoPor}</span>}
+                                  </div>
+                                  {subInfo && <div style={{fontSize:11,color:'#8a8a82',marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{subInfo}</div>}
                                 </div>
-                                <div style={{textAlign:'center',fontSize:11,color:equipoStr==='—'?'#ccc':'#1a1a1a'}}>{equipoStr}</div>
                                 <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totCam>0?'#1a1a1a':'#ccc'}}>{totCam>0?totCam:'—'}</div>
                                 <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totSht>0?'#1a1a1a':'#ccc'}}>{totSht>0?totSht:'—'}</div>
                                 <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:totalDesc>0?'#1a1a1a':'#ccc'}}>{totalDesc>0?'$'+totalDesc.toLocaleString('es-UY'):'—'}</div>
