@@ -2279,10 +2279,7 @@ tfoot td{padding:9px 12px;font-weight:700}
             <button className={`nav-item${isGrpActive?' active':''}`} onClick={() => setDepositosOpen(o => !o)}>
               <span className="nav-dot" />
               DEPÓSITO
-              <span style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:6}}>
-                <span style={{fontSize:10,opacity:0.6}}>{depositosOpen ? '▾' : '▸'}</span>
-                {isGrpActive && <img src="/escudo.png" alt="" style={{height:20,width:'auto',opacity:0.85}} />}
-              </span>
+              <span style={{marginLeft:'auto',fontSize:10,opacity:0.6}}>{depositosOpen ? '▾' : '▸'}</span>
             </button>
           )})()}
           {depositosOpen && [['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES'],['utileria','CAMISETAS UTILERÍA']].map(([key,label]) => {
