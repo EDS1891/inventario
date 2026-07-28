@@ -2260,7 +2260,11 @@ tfoot td{padding:9px 12px;font-weight:700}
       {/* Sidebar */}
       <aside className={`sidebar${sidebarOpen?' open':''}`}>
         <div className="sidebar-logo">
-          <img src="/logo_penarol.png" alt="Club Atlético Peñarol" />
+          <img src="/escudo_marca.png" alt="Club Atlético Peñarol" />
+          <div className="sidebar-logo-text">
+            <div className="name">CLUB ATLÉTICO PEÑAROL</div>
+            <div className="sub">CAMPEÓN DEL SIGLO</div>
+          </div>
         </div>
         <nav className="sidebar-nav">
           {/* PANEL PRINCIPAL top-level */}
