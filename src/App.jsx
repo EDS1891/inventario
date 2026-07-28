@@ -2305,8 +2305,9 @@ tfoot td{padding:9px 12px;font-weight:700}
             )
           })}
         </nav>
-        <div style={{padding:'8px 12px 4px'}}>
-          <img src="/libertadores.jpeg" alt="5 Copas Libertadores" style={{width:'100%',display:'block',mixBlendMode:'lighten'}} />
+        <div style={{flex:1}} />
+        <div style={{padding:'14px 18px 12px',borderTop:'1px solid #1e1e1e'}}>
+          <img src="/iconos_penarol.png" alt="Peñarol" style={{width:'100%',display:'block',opacity:.9}} />
         </div>
         <div className="sidebar-user" style={{flexDirection:'column',gap:10}}>
           <div style={{display:'flex',alignItems:'center',gap:11,minWidth:0}} title={`${currentUser?.displayName || session}\n${session}`}>
