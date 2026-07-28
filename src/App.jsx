@@ -2733,7 +2733,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 {delFilterReceptor!==REP_FILTER && (
                   remitoSelIds !== null
                     ? <button onClick={() => setRemitoSelIds(null)} style={{marginLeft:10,padding:'5px 12px',borderRadius:6,border:'1px solid #ccc',background:'#f5f5f0',color:'#666',fontSize:12,fontWeight:600,cursor:'pointer'}}>Cancelar</button>
-                    : <button onClick={() => setRemitoSelIds(new Set())} style={{marginLeft:10,padding:'5px 12px',borderRadius:6,border:'1px solid #7a5800',background:'#FFF8D6',color:'#7a5800',fontSize:12,fontWeight:700,cursor:'pointer'}}>Emitir Remito</button>
+                    : <button className="btn btn-ghost" style={{border:'1px solid #7a5800',color:'#7a5800'}} onClick={() => setRemitoSelIds(new Set())}>↓ Remito</button>
                 )}
               </div>
               <div className={`table-header ${delFilterReceptor==='Deportes Anexos'?'del-cols-disc':'del-cols'}`}>
