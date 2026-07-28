@@ -2169,11 +2169,12 @@ tfoot td{padding:9px 12px;font-weight:700}
                     </div>
                   )}
                   <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>
-                    {repDetail.fecha}{repDetail.creadoPor ? ' · '+repDetail.creadoPor : ''}
+                    {repDetail.fecha}
                     {repDetail.torneo && <span style={{marginLeft:8,fontWeight:700,color:'#7a5800',background:'#FFF8D6',border:'1px solid #FFD200',borderRadius:4,padding:'1px 7px',fontSize:11}}>
                       {repDetail.torneo}{repDetail.fechaTorneo ? ' · Fecha '+repDetail.fechaTorneo : ''}
                     </span>}
                   </div>
+                  {repDetail.creadoPor && <div style={{fontSize:11.5,color:'#8a8a82',marginTop:2}}>Creado por: {repDetail.creadoPor}</div>}
                 </div>
                 <button className="modal-close" onClick={() => { setRepConceptoEdit(null); setRepDetail(null) }}>×</button>
               </div>
