@@ -1880,8 +1880,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                           return (
                           <div key={r.id} className="table-row" style={{gridTemplateColumns:'110px 1fr 70px 70px 120px 36px',cursor:'pointer',padding:'10px 20px'}} onClick={() => setRepDetail(r)}>
                             <div>
-                              <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#1a1a1a'}}>{r.fecha}</div>
-                              {r.fechaPartido && <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#8a8a82',marginTop:2}}>P: {r.fechaPartido}</div>}
+                              <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#1a1a1a',fontWeight:700}}>{r.fecha}</div>
+                              {r.fechaPartido && <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#1a1a1a',marginTop:2}}>P: {r.fechaPartido}</div>}
                             </div>
                             <div style={{minWidth:0}}>
                               <div style={{fontWeight:600,fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
@@ -3272,8 +3272,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                               return (
                               <div key={r.id} className="table-row" style={{gridTemplateColumns:'110px 1fr 70px 70px 120px 36px',cursor:'pointer',padding:'10px 20px'}} onClick={() => setRepDetail(r)}>
                                 <div>
-                                  <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#1a1a1a'}}>{r.fecha}</div>
-                                  {r.fechaPartido && <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#8a8a82',marginTop:2}}>P: {r.fechaPartido}</div>}
+                                  <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#1a1a1a',fontWeight:700}}>{r.fecha}</div>
+                                  {r.fechaPartido && <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#1a1a1a',marginTop:2}}>P: {r.fechaPartido}</div>}
                                 </div>
                                 <div style={{minWidth:0}}>
                                   <div style={{fontWeight:600,fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
