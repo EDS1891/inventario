@@ -438,7 +438,7 @@ export default function App() {
     const receptorExtra = receptor==='Deportes Anexos'&&disciplina ? ` &nbsp;·&nbsp; <b>Disciplina:</b> ${disciplina}` : ''
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Pedido de Entrega</title>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
-<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;font-size:13px;}@media print{body{padding:12px;}}</style>
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;padding-bottom:80px;font-size:13px;}@media print{body{padding:12px;padding-bottom:80px;}}</style>
 </head><body>
 <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;margin-bottom:20px;border-bottom:2px solid #111;">
   <div style="display:flex;align-items:center;gap:14px;">
@@ -459,7 +459,7 @@ export default function App() {
   <span><b>Total:</b> ${totalUnidades} unidades</span>
 </div>
 ${rowsHtml}
-<div style="margin-top:32px;padding-top:14px;border-top:1px solid #ddd;display:flex;justify-content:center;">
+<div style="position:fixed;bottom:0;left:0;right:0;padding:14px 24px;border-top:1px solid #ddd;display:flex;justify-content:center;background:#fff;">
   <img src="${window.location.origin}/logo_horizontal.png" style="height:36px;width:auto;" alt="Club Atlético Peñarol">
 </div>
 </body></html>`
@@ -510,10 +510,10 @@ ${rowsHtml}
     const obsHtml = obs ? `<span><b>Obs:</b> ${obs}</span>` : ''
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>INDUMENTARIA CLUB ATLETICO PEÑAROL</title>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
-<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;font-size:13px;}
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;padding-bottom:80px;font-size:13px;}
 .no-print{text-align:right;margin-bottom:16px;}
 .no-print button{background:#121212;color:#f2cb12;border:none;padding:9px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
-@media print{.no-print{display:none;}body{padding:12px;}}</style>
+@media print{.no-print{display:none;}body{padding:12px;padding-bottom:80px;}}</style>
 </head><body>
 <div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
 <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;margin-bottom:20px;border-bottom:2px solid #111;">
@@ -537,7 +537,7 @@ ${rowsHtml}
 </div>
 ${rowsHtml}
 ${montoHtml}
-<div style="margin-top:32px;padding-top:14px;border-top:1px solid #ddd;display:flex;justify-content:center;">
+<div style="position:fixed;bottom:0;left:0;right:0;padding:14px 24px;border-top:1px solid #ddd;display:flex;justify-content:center;background:#fff;">
   <img src="${window.location.origin}/logo_horizontal.png" style="height:36px;width:auto;" alt="Club Atlético Peñarol">
 </div>
 </body></html>`
@@ -601,10 +601,10 @@ ${montoHtml}
       : ''
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>INDUMENTARIA CLUB ATLETICO PEÑAROL</title>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
-<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;font-size:13px;}
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;padding-bottom:80px;font-size:13px;}
 .no-print{text-align:right;margin-bottom:16px;}
 .no-print button{background:#121212;color:#f2cb12;border:none;padding:9px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
-@media print{.no-print{display:none;}body{padding:12px;}}</style>
+@media print{.no-print{display:none;}body{padding:12px;padding-bottom:80px;}}</style>
 </head><body>
 <div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
 <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;margin-bottom:20px;border-bottom:2px solid #111;">
@@ -627,7 +627,7 @@ ${montoHtml}
 </div>
 ${personasHtml}
 ${rowsHtml}
-<div style="margin-top:32px;padding-top:14px;border-top:1px solid #ddd;display:flex;justify-content:center;">
+<div style="position:fixed;bottom:0;left:0;right:0;padding:14px 24px;border-top:1px solid #ddd;display:flex;justify-content:center;background:#fff;">
   <img src="${window.location.origin}/logo_horizontal.png" style="height:36px;width:auto;" alt="Club Atlético Peñarol">
 </div>
 </body></html>`
@@ -1495,7 +1495,7 @@ ${rowsHtml}
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Calibri,Arial,sans-serif;font-size:13px;color:#111;background:#fff;padding:36px 40px}
+body{font-family:Calibri,Arial,sans-serif;font-size:13px;color:#111;background:#fff;padding:36px 40px 80px}
 .no-print{text-align:right;margin-bottom:20px}
 .no-print button{background:#121212;color:#f2cb12;border:none;padding:10px 24px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.04em}
 .header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:14px;margin-bottom:22px}
@@ -1503,7 +1503,7 @@ body{font-family:Calibri,Arial,sans-serif;font-size:13px;color:#111;background:#
 .logo img{height:64px;width:auto}
 .logo-text-name{font-family:'Oswald',Arial,sans-serif;font-size:20px;font-weight:700;letter-spacing:.06em;color:#111;text-transform:uppercase;line-height:1.1;-webkit-text-stroke:.4px #111}
 .logo-text-sub{font-family:'Oswald',Arial,sans-serif;font-size:11px;font-weight:400;letter-spacing:.14em;color:#555;text-transform:uppercase;margin-top:5px}
-.doc-footer{margin-top:32px;padding-top:14px;border-top:1px solid #ddd;display:flex;justify-content:center}
+.doc-footer{position:fixed;bottom:0;left:0;right:0;padding:14px 24px;border-top:1px solid #ddd;display:flex;justify-content:center;background:#fff}
 .doc-info{text-align:right}
 .doc-title{font-size:18px;font-weight:700;letter-spacing:.04em}
 .doc-date{font-size:11px;color:#666;margin-top:3px}
@@ -1522,7 +1522,7 @@ tfoot td{padding:9px 12px;font-weight:700}
 .sig{border-top:1.5px solid #333;padding-top:8px;text-align:center}
 .sig-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
 .sig-sub{font-size:10px;color:#888;margin-top:2px}
-@media print{.no-print{display:none}body{padding:16px 20px}}
+@media print{.no-print{display:none}body{padding:16px 20px 80px}}
 </style></head><body>
 <div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
 <div class="header">
