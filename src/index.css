@@ -163,6 +163,10 @@ nav.sidebar-nav {
 .btn-ghost { background: #fff; border: 1px solid #d7d7d1 !important; color: #1a1a1a; }
 .btn-yellow { background: #f2cb12; color: #121212; }
 .btn-dark { background: #121212; color: #fff; }
+.btn-black-yellow { background: #121212; color: #f2cb12; }
+.btn-green-light { background: #c8e6c9; color: #121212; }
+.btn-gray-light { background: #e5e5e5; color: #121212; }
+.btn-gray-dark { background: #555555; color: #fff; }
 .btn-red { background: #C2473D; color: #fff; }
 
 /* ---- Content ---- */
