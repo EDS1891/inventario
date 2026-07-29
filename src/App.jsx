@@ -4368,7 +4368,7 @@ tfoot td{padding:9px 12px;font-weight:700}
           <div className="modal-backdrop" onClick={()=>setRepResumen(null)}>
             <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:580,width:'96%'}}>
               <div className="modal-header">
-                <div className="modal-title">Detalle por jugador</div>
+                <div className="modal-title">Descuentos por jugador</div>
                 <button className="modal-close" onClick={()=>setRepResumen(null)}>×</button>
               </div>
               <div className="modal-body" style={{padding:'0 0 8px',maxHeight:'72vh',overflowY:'auto'}}>
