@@ -163,7 +163,7 @@ nav.sidebar-nav {
 .btn-ghost { background: #fff; border: 1px solid #d7d7d1 !important; color: #1a1a1a; }
 .btn-yellow { background: #f2cb12; color: #121212; }
 .btn-dark { background: #121212; color: #fff; }
-.btn-black-yellow { background: #121212; color: #f2cb12; }
+.btn-black-yellow { background: #333333; color: #fff; }
 .btn-green-light { background: #c8e6c9; color: #121212; }
 .btn-gray-light { background: #e5e5e5; color: #121212; }
 .btn-gray-dark { background: #555555; color: #fff; }
@@ -496,7 +496,7 @@ select.field-input { cursor: pointer; }
   gap: 10px;
   margin-top: 18px;
 }
-.detail-actions .btn { height: 42px; font-size: 13.5px; border-radius: 6px; justify-content: center; }
+.detail-actions .btn { height: 42px; font-size: 13.5px; border-radius: 6px; justify-content: center; border: 1px solid #121212 !important; }
 .detail-actions .btn-full { grid-column: 1 / -1; }
 
 /* ============================================================
