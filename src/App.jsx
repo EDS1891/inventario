@@ -50,7 +50,7 @@ async function loadFromSupabase() {
     supabase.from('deposito_state').select('articles,deliveries,movimientos,next_del').eq('id', 3).single(),
     supabase.from('deposito_state').select('deliveries').eq('id', 4).single(),
   ])
-  if (error || !data) return null
+  if (error || !data) { console.error('[Supabase] Error cargando datos:', error?.message, error?.code, error?.details); return null }
   let users = (usersRow?.deliveries?.length > 0 && usersRow.deliveries[0]?.username)
     ? usersRow.deliveries
     : null
@@ -232,11 +232,10 @@ export default function App() {
   // Keep dbRef current so visibilitychange flush always sees latest state
   useEffect(() => { dbRef.current = db }, [db])
 
-  // Load from Supabase on mount (filter out articles with no stock)
   useEffect(() => {
     loadFromSupabase().then(data => {
       if (data) {
-        setDb({...data, articles: data.articles.filter(a => total(a) > 0)})
+        setDb(data)
         saveEnabled.current = true
       }
       setLoading(false)
@@ -687,7 +686,6 @@ ${rowsHtml}
         movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'salida', fecha, talle:l.talle, qty:l.qty,
           detalle:'Entrega a '+persona+' ('+nd.receptor+(nd.disciplina?' - '+nd.disciplina:'')+')', delId:s.nextDel, creadoPor:currentUser?.displayName||session})
       })
-      const activeArticles = articles.filter(a => total(a) > 0)
       const deliveries = [{
         id: s.nextDel, fecha, persona, receptor: nd.receptor,
         disciplina: nd.receptor==='Deportes Anexos' ? nd.disciplina.trim() : undefined,
@@ -695,7 +693,7 @@ ${rowsHtml}
         obs: nd.obs?.trim()||undefined, lines, toUser: nd.toUser||null,
         status: 'pendiente_separar', confirmedAt: null, creadoPor: currentUser?.displayName||session
       }, ...s.deliveries]
-      const r = {...s, articles:activeArticles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid}
+      const r = {...s, articles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid}
       newDbState = r; return r
     })
     if (newDbState) saveToSupabase(newDbState)
@@ -765,8 +763,7 @@ ${rowsHtml}
             detalle:'Entrega a '+del.persona+' ('+del.receptor+(del.disciplina?' - '+del.disciplina:'')+')', delId:del.id, creadoPor:del.creadoPor||session})
         })
       })
-      const activeArticles = articles.filter(a => total(a) > 0)
-      const r = {...s, articles:activeArticles, movimientos, nextMov:mid}
+      const r = {...s, articles, movimientos, nextMov:mid}
       newDbState = r; return r
     })
     if (newDbState) saveToSupabase(newDbState)
@@ -798,13 +795,12 @@ ${rowsHtml}
           movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'salida', fecha, talle:l.talle, qty:l.qty, detalle:'Entrega a '+nd.persona+' ('+nd.receptor+(nd.disciplina?' - '+nd.disciplina:'')+')', delId:s.nextDel, creadoPor:currentUser?.displayName||session})
         }
       })
-      const activeArticles = articles.filter(a => total(a) > 0)
-      if(esDev) { const r = { ...s, articles:activeArticles, movimientos, modal:null, nextMov:mid }; newDbState = r; return r }
+      if(esDev) { const r = { ...s, articles, movimientos, modal:null, nextMov:mid }; newDbState = r; return r }
       const toUser = nd.toUser || null
       const status = toUser ? 'pendiente' : 'aceptado'
       const confirmedAt = toUser ? null : fecha
       const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, disciplina:nd.receptor==='Deportes Anexos'?nd.disciplina.trim():undefined, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, obs:nd.obs?.trim()||undefined, lines:[...nd.lines], toUser, status, confirmedAt, creadoPor:currentUser?.displayName||session}, ...s.deliveries]
-      const r = { ...s, articles:activeArticles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid }
+      const r = { ...s, articles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid }
       newDbState = r; return r
     })
     // Guardar inmediatamente en Supabase sin esperar el debounce de 800ms
@@ -929,9 +925,8 @@ ${rowsHtml}
     setDb(s => {
       const artName = selA.name
       const articles = s.articles.map(a => { if(a.id!==selectedId) return a; return {...a, sizes:a.sizes.map(z => z.talle===aj.talle?{...z,qty:Math.max(0,q)}:z)} })
-      const activeArticles = articles.filter(a => total(a) > 0)
       const movimientos = [{id:s.nextMov, code, name:artName, tipo:(delta>0?'entrada':'salida'), fecha, talle:aj.talle, qty:Math.abs(delta), detalle:'Ajuste por recuento (de '+cur+' a '+q+')', creadoPor:currentUser?.displayName||session}, ...s.movimientos]
-      return { ...s, articles:activeArticles, movimientos, nextMov:s.nextMov+1 }
+      return { ...s, articles, movimientos, nextMov:s.nextMov+1 }
     })
     setModal(null)
     showToast('Stock ajustado: '+aj.talle+' = '+q+' ('+(delta>0?'+':'')+delta+').')
@@ -1109,7 +1104,17 @@ ${rowsHtml}
       setDb(s => {
         const del = s.deliveries.find(d => d.id === c.id); if(!del) return {...s}
         const articles = s.articles.map(a => ({...a, sizes:a.sizes.map(z=>({...z}))}))
-        del.lines.forEach(l => { const a=articles.find(x=>x.code===l.code); const z=a&&a.sizes.find(x=>x.talle===l.talle); if(z) z.qty+=l.qty })
+        del.lines.forEach(l => {
+          let a = articles.find(x => x.code === l.code && (!l.ubic || x.ubic === l.ubic))
+          if (!a) a = articles.find(x => x.code === l.code)
+          if (!a) {
+            a = { id: Date.now() + articles.length, code: l.code, name: l.name || l.code, cat: '', ubic: l.ubic || '', sizes: [], photos: [] }
+            articles.push(a)
+          }
+          let z = a.sizes.find(x => x.talle === l.talle)
+          if (!z) { z = { talle: l.talle, qty: 0 }; a.sizes.push(z) }
+          z.qty += l.qty
+        })
         return {...s, articles, deliveries:s.deliveries.filter(d=>d.id!==c.id), movimientos:s.movimientos.filter(m=>m.delId!==c.id)}
       })
       showToast('Entrega eliminada y stock restituido.')
@@ -1190,7 +1195,7 @@ ${rowsHtml}
 
   const normStr = s => s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()
   const q = normStr(search.trim())
-  let filtered = articles.filter(a => cat==='Todas' || a.cat===cat)
+  let filtered = articles.filter(a => total(a) > 0 && (cat==='Todas' || a.cat===cat))
   if(q) filtered = filtered.filter(a => normStr(a.name).includes(q) || normStr(a.code).includes(q) || normStr(a.ubic||'').includes(q))
   if(filterUbic) filtered = filtered.filter(a => (a.ubic||'') === filterUbic)
 

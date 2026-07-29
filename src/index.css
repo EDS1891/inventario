@@ -70,6 +70,8 @@ nav.sidebar-nav {
 }
 .nav-item.active .nav-dot { background: #121212; }
 .nav-item-sub { padding-left: 30px; font-size: 12.5px; }
+.nav-item-sub.active { background: rgba(242,203,18,0.12); color: #f2cb12; border-left: 3px solid #f2cb12; border-radius: 0 4px 4px 0; padding-left: 27px; }
+.nav-item-sub.active .nav-dot { background: #f2cb12; }
 
 .sidebar-user {
   padding: 16px 18px;
