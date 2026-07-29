@@ -3259,7 +3259,7 @@ tfoot td{padding:9px 12px;font-weight:700}
               <div style={{display:'flex',gap:6,borderBottom:'2px solid #ECECE8',paddingBottom:0}}>
                 {[['reposiciones','REPOSICIONES'],['plantel','PLANTEL']].map(([k,l]) => (
                   <button key={k} onClick={() => setRepTab(k)} style={{padding:'7px 18px',border:'none',background:'none',fontWeight:700,fontSize:13,cursor:'pointer',borderBottom:repTab===k?'2px solid #f2cb12':'2px solid transparent',marginBottom:-2,color:repTab===k?'#121212':'#8a8a82'}}>
-                    {l}{k==='plantel'&&(db.plantel||[]).length>0?` (${(db.plantel||[]).length})`:''}
+                    {l}{k==='plantel'&&(db.plantel||[]).length>0?` (${(db.plantel||[]).filter(j=>j.nombre.trim().toLowerCase()!=='libre').length})`:''}
                   </button>
                 ))}
               </div>
@@ -3307,7 +3307,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                       </div>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepTab('plantel')}>
                         <div className="kpi-label">PLANTEL</div>
-                        <div className="kpi-value">{(db.plantel||[]).length}</div>
+                        <div className="kpi-value">{(db.plantel||[]).filter(j=>j.nombre.trim().toLowerCase()!=='libre').length}</div>
                         <div className="kpi-sub">jugadores registrados →</div>
                       </div>
                       <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed',alignSelf:'flex-start'}}>+ Nueva reposición</button>
