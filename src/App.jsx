@@ -190,6 +190,10 @@ export default function App() {
   const [disciplinaEdit, setDisciplinaEdit] = useState(null)
   const [editDelivery, setEditDelivery] = useState(null)
   const [pumaMetric, setPumaMetric] = useState('unidades')
+  const [cartLines, setCartLines] = useState([])
+  const [cartPickerCode, setCartPickerCode] = useState(null)
+  const [cartPickerTalle, setCartPickerTalle] = useState('')
+  const [cartPickerQty, setCartPickerQty] = useState('')
   const [repTab, setRepTab] = useState('reposiciones')
   const [plantelForm, setPlantelForm] = useState({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',talleShort:'L'})
   const [plantelModal, setPlantelModal] = useState(false)
@@ -394,6 +398,26 @@ export default function App() {
     }
     const artName = db.articles.find(a => a.code === nd.cCode)?.name || nd.cCode
     setNd(p => ({...p, lines:[...p.lines,{code:nd.cCode,talle:nd.cTalle,qty,ubic:ubicToUse,name:artName}], cTalle:'', cQty:''}))
+  }
+
+  const addToCart = () => {
+    const qty = parseInt(cartPickerQty, 10)
+    if (!cartPickerCode || !cartPickerTalle || !qty || qty <= 0) { showToast('Elegí talle y cantidad.'); return }
+    const artsForCode = db.articles.filter(a => a.code === cartPickerCode)
+    const artName = artsForCode[0]?.name || cartPickerCode
+    const sizeMap = {}
+    artsForCode.forEach(a => a.sizes.forEach(s => { sizeMap[s.talle] = (sizeMap[s.talle] || 0) + s.qty }))
+    const avail = sizeMap[cartPickerTalle] || 0
+    const already = cartLines.filter(l => l.code === cartPickerCode && l.talle === cartPickerTalle).reduce((s, l) => s + l.qty, 0)
+    if (avail === 0 || qty + already > avail) { showToast(`Stock insuficiente (${avail - already} disp.).`); return }
+    setCartLines(p => [...p, { code: cartPickerCode, talle: cartPickerTalle, qty, name: artName }])
+    setCartPickerCode(null); setCartPickerTalle(''); setCartPickerQty('')
+  }
+
+  const openCartConfirm = () => {
+    setNd(p => ({ ...p, mode: 'entrega', lines: cartLines, cCode: '', cSearch: '', cTalle: '', cQty: '' }))
+    setCartLines([])
+    setModal('entrega')
   }
 
   const buildPedidoHtml = (lines, persona, receptor, disciplina, fecha) => {
@@ -2599,6 +2623,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   <div style={{textAlign:'center'}}>FOTO</div>
                   <div style={{textAlign:'right'}}>ESTADO</div>
                   <div className="inv-col-precio" style={{textAlign:'right'}}>PRECIO SOCIO</div>
+                  <div/>
                 </div>
                 {invRows.map(r => (
                   <div key={r.code} className="table-row clickable inv-cols" onClick={() => openDetail(r.code)}>
@@ -2619,6 +2644,16 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <div className="inv-col-precio mono" style={{textAlign:'right',fontSize:12.5,color:'#1a1a1a'}}>
                       {r.precio > 0 ? '$ '+r.precio.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}
                     </div>
+                    {!isSoloVista
+                      ? <div onClick={e => e.stopPropagation()} style={{display:'flex',justifyContent:'center',alignItems:'center'}}>
+                          <button title="Agregar al carrito de entrega"
+                            onClick={() => { setCartPickerCode(r.code); setCartPickerTalle(''); setCartPickerQty('') }}
+                            style={{width:28,height:28,borderRadius:6,border:'1.5px solid #E0E0DA',background:cartLines.some(l=>l.code===r.code)?'#f2cb12':'#F5F5F0',color:cartLines.some(l=>l.code===r.code)?'#121212':'#7a7a72',fontSize:16,lineHeight:1,cursor:'pointer',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',padding:0}}>
+                            +
+                          </button>
+                        </div>
+                      : <div/>
+                    }
                   </div>
                 ))}
                 {invRows.length === 0 && <div className="empty">{search ? `Sin resultados para «${search}».` : 'Sin artículos. Creá el primero con + Artículo.'}</div>}
@@ -2699,6 +2734,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <div className="detail-actions" style={{marginTop:24,paddingTop:20,borderTop:'1px solid #E7E7E3'}}>
                       {!isSoloVista && <button className="btn btn-ghost" onClick={openEntregaFromDetail}>Registrar entrega</button>}
                       {!isSoloVista && <button className="btn btn-ghost" onClick={openDevolucionFromDetail}>↩ Devolución</button>}
+                      {!isSoloVista && <button className="btn btn-ghost" onClick={() => { setCartPickerCode(selectedCode); setCartPickerTalle(''); setCartPickerQty('') }}>+ Agregar al carrito</button>}
                       {!isSoloVista && <button className="btn btn-ghost btn-full" onClick={() => { setSelectedId(detail.entries[0].id); openEdit() }}>✎ Editar artículo</button>}
                     </div>
                   </div>
@@ -5274,6 +5310,79 @@ tfoot td{padding:9px 12px;font-weight:700}
                   {photos.map((_,i) => <div key={i} onClick={()=>setPhotoPreview(p=>({...p,idx:i}))} style={{width:8,height:8,borderRadius:'50%',background:i===idx?'#121212':'#D0D0C8',cursor:'pointer'}} />)}
                 </div>
               )}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Carrito de entrega — panel flotante */}
+      {cartLines.length > 0 && !cartPickerCode && (
+        <div style={{position:'fixed',bottom:24,right:24,width:300,background:'#fff',borderRadius:12,boxShadow:'0 8px 32px rgba(0,0,0,.18)',border:'1px solid #E8E8E0',zIndex:300,overflow:'hidden'}}>
+          <div style={{background:'#121212',color:'#f2cb12',padding:'11px 16px',fontWeight:700,fontSize:13,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <span>Carrito · {cartLines.reduce((s,l)=>s+l.qty,0)} unidades</span>
+            <button onClick={() => setCartLines([])} title="Descartar carrito" style={{background:'none',border:'none',color:'#f2cb12',cursor:'pointer',fontSize:20,lineHeight:1,padding:0}}>×</button>
+          </div>
+          <div style={{maxHeight:220,overflowY:'auto'}}>
+            {cartLines.map((l,i) => (
+              <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'9px 14px',borderBottom:'1px solid #F0F0EC'}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:600,fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.name}</div>
+                  <div style={{fontSize:11.5,color:'#8a8a82'}}>Talle {l.talle}</div>
+                </div>
+                <div style={{fontWeight:700,fontSize:13,fontFamily:'IBM Plex Mono,monospace'}}>×{l.qty}</div>
+                <button onClick={() => setCartLines(p=>p.filter((_,j)=>j!==i))} style={{background:'none',border:'none',color:'#C2473D',fontSize:18,cursor:'pointer',padding:0,lineHeight:1}}>×</button>
+              </div>
+            ))}
+          </div>
+          <div style={{padding:'12px 14px',borderTop:'1px solid #E8E8E0'}}>
+            <button onClick={openCartConfirm} style={{width:'100%',background:'#f2cb12',color:'#121212',border:'none',borderRadius:7,padding:'10px',fontWeight:700,fontSize:13,cursor:'pointer'}}>
+              Completar entrega →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Picker de talle/cantidad para el carrito */}
+      {cartPickerCode && (() => {
+        const artsForCode = db.articles.filter(a => a.code === cartPickerCode)
+        const artName = artsForCode[0]?.name || cartPickerCode
+        const sizeMap = {}
+        artsForCode.forEach(a => a.sizes.forEach(s => { sizeMap[s.talle] = (sizeMap[s.talle] || 0) + s.qty }))
+        const tallesConStock = Object.entries(sizeMap).filter(([,q]) => q > 0).map(([t]) => t)
+        return (
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.45)',zIndex:400,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={() => setCartPickerCode(null)}>
+            <div style={{background:'#fff',borderRadius:12,padding:24,width:320,boxShadow:'0 8px 32px rgba(0,0,0,.22)'}} onClick={e=>e.stopPropagation()}>
+              <div style={{fontWeight:700,fontSize:15,marginBottom:3}}>{artName}</div>
+              <div style={{fontSize:11.5,color:'#8a8a82',marginBottom:18,fontFamily:'IBM Plex Mono,monospace'}}>{cartPickerCode}</div>
+              <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.05em',marginBottom:8}}>TALLE</div>
+              {tallesConStock.length > 0
+                ? <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:18}}>
+                    {tallesConStock.map(t => (
+                      <button key={t} onClick={() => setCartPickerTalle(t)}
+                        style={{padding:'6px 13px',borderRadius:6,border:'1.5px solid',cursor:'pointer',fontWeight:700,fontSize:12.5,
+                          background: cartPickerTalle===t ? '#121212' : '#F5F5F0',
+                          color: cartPickerTalle===t ? '#f2cb12' : '#5a5a52',
+                          borderColor: cartPickerTalle===t ? '#121212' : '#E0E0DA'}}>
+                        {t} <span style={{fontWeight:400,fontSize:10.5,opacity:.7}}>({sizeMap[t]})</span>
+                      </button>
+                    ))}
+                  </div>
+                : <div style={{color:'#C2473D',fontSize:13,marginBottom:18}}>Sin stock disponible.</div>
+              }
+              <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.05em',marginBottom:8}}>CANTIDAD</div>
+              <input type="number" min="1" className="field-input" value={cartPickerQty}
+                onChange={e => setCartPickerQty(e.target.value)}
+                onKeyDown={e => e.key==='Enter' && addToCart()}
+                placeholder="Cantidad" style={{marginBottom:18}} autoFocus />
+              <div style={{display:'flex',gap:8}}>
+                <button onClick={() => setCartPickerCode(null)} style={{flex:1,padding:'9px',border:'1px solid #E0E0DA',borderRadius:6,background:'#F5F5F0',color:'#5a5a52',fontWeight:600,fontSize:13,cursor:'pointer'}}>Cancelar</button>
+                <button onClick={addToCart} disabled={!cartPickerTalle||!cartPickerQty}
+                  style={{flex:2,padding:'9px',border:'none',borderRadius:6,fontWeight:700,fontSize:13,cursor:'pointer',
+                    background: cartPickerTalle&&cartPickerQty ? '#f2cb12' : '#EDE9D2',
+                    color: cartPickerTalle&&cartPickerQty ? '#121212' : '#a89e6a'}}>
+                  Agregar al carrito
+                </button>
+              </div>
             </div>
           </div>
         )
