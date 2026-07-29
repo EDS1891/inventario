@@ -2720,18 +2720,23 @@ tfoot td{padding:9px 12px;font-weight:700}
                               </div>
                             </div>
                           ))}
-                          {/* Botones por ubicación */}
-                          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:16}}>
-                            {!isSoloVista && <button className="btn btn-yellow" onClick={() => { setSelectedId(entry.id); openReponer() }}>＋ Registrar entrada</button>}
-                            {!isSoloVista && <button className="btn btn-dark" onClick={() => { setSelectedId(entry.id); openAjuste() }}>Ajustar stock</button>}
-                            {!isSoloVista && <button className="btn btn-ghost" onClick={() => { setSelectedId(entry.id); openMover() }}>⇄ Cambiar de ubicación</button>}
-                          </div>
+                          {/* Botones por ubicación — solo para multi-entrada */}
+                          {detail.entries.length > 1 && (
+                            <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:16}}>
+                              {!isSoloVista && <button className="btn btn-yellow" onClick={() => { setSelectedId(entry.id); openReponer() }}>＋ Registrar entrada</button>}
+                              {!isSoloVista && <button className="btn btn-dark" onClick={() => { setSelectedId(entry.id); openAjuste() }}>Ajustar stock</button>}
+                              {!isSoloVista && <button className="btn btn-ghost" onClick={() => { setSelectedId(entry.id); openMover() }}>⇄ Cambiar de ubicación</button>}
+                            </div>
+                          )}
                         </div>
                       )
                     })})()}
 
-                    {/* Acciones globales */}
-                    <div className="detail-actions" style={{marginTop:24,paddingTop:20,borderTop:'1px solid #E7E7E3'}}>
+                    {/* Acciones unificadas */}
+                    <div className="detail-actions" style={{marginTop:20,paddingTop:20,borderTop:'1px solid #E7E7E3'}}>
+                      {detail.entries.length === 1 && !isSoloVista && <button className="btn btn-yellow" onClick={() => { setSelectedId(detail.entries[0].id); openReponer() }}>＋ Registrar entrada</button>}
+                      {detail.entries.length === 1 && !isSoloVista && <button className="btn btn-dark" onClick={() => { setSelectedId(detail.entries[0].id); openAjuste() }}>Ajustar stock</button>}
+                      {detail.entries.length === 1 && !isSoloVista && <button className="btn btn-ghost" onClick={() => { setSelectedId(detail.entries[0].id); openMover() }}>⇄ Cambiar de ubicación</button>}
                       {!isSoloVista && <button className="btn btn-ghost" onClick={openEntregaFromDetail}>Registrar entrega</button>}
                       {!isSoloVista && <button className="btn btn-ghost" onClick={openDevolucionFromDetail}>↩ Devolución</button>}
                       {!isSoloVista && <button className="btn btn-ghost" onClick={() => { setCartPickerCode(selectedCode); setCartPickerTalle(''); setCartPickerQty('') }}>+ Entrega múltiple</button>}
