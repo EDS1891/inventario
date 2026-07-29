@@ -2099,7 +2099,7 @@ tfoot td{padding:9px 12px;font-weight:700}
               <div className="modal-body" style={{maxHeight:'70vh',overflowY:'auto'}}>
                 <div className="form-group">
                   <label className="field-label">Concepto</label>
-                  <input className="field-input" value={repForm.concepto} onChange={e => setRepForm(p=>({...p,concepto:e.target.value}))} placeholder="Ej. Reposición vs Nacional" autoFocus />
+                  <input className="field-input" value={repForm.concepto} onChange={e => setRepForm(p=>({...p,concepto:e.target.value}))} placeholder="Ej. Reposición vs. Danubio" autoFocus />
                 </div>
                 {/* Torneo y Fecha */}
                 <div style={{display:'flex',gap:12,marginTop:4,alignItems:'flex-end'}}>
@@ -3824,7 +3824,7 @@ tfoot td{padding:9px 12px;font-weight:700}
             <div className="modal-body" style={{maxHeight:'70vh',overflowY:'auto'}}>
               <div className="form-group">
                 <label className="field-label">Concepto</label>
-                <input className="field-input" value={repForm.concepto} onChange={e => setRepForm(p=>({...p,concepto:e.target.value}))} placeholder="Ej. Reposición vs Nacional" autoFocus />
+                <input className="field-input" value={repForm.concepto} onChange={e => setRepForm(p=>({...p,concepto:e.target.value}))} placeholder="Ej. Reposición vs. Danubio" autoFocus />
               </div>
               {/* Torneo y Fecha */}
               <div style={{display:'flex',gap:12,marginTop:4,alignItems:'flex-end'}}>
