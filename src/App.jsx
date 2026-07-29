@@ -2646,7 +2646,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                     </div>
                     {!isSoloVista
                       ? <div onClick={e => e.stopPropagation()} style={{display:'flex',justifyContent:'center',alignItems:'center'}}>
-                          <button title="Agregar al carrito de entrega"
+                          <button title="Entrega múltiple"
                             onClick={() => { setCartPickerCode(r.code); setCartPickerTalle(''); setCartPickerQty('') }}
                             style={{width:28,height:28,borderRadius:6,border:'1.5px solid #E0E0DA',background:cartLines.some(l=>l.code===r.code)?'#f2cb12':'#F5F5F0',color:cartLines.some(l=>l.code===r.code)?'#121212':'#7a7a72',fontSize:16,lineHeight:1,cursor:'pointer',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',padding:0}}>
                             +
@@ -2734,7 +2734,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <div className="detail-actions" style={{marginTop:24,paddingTop:20,borderTop:'1px solid #E7E7E3'}}>
                       {!isSoloVista && <button className="btn btn-ghost" onClick={openEntregaFromDetail}>Registrar entrega</button>}
                       {!isSoloVista && <button className="btn btn-ghost" onClick={openDevolucionFromDetail}>↩ Devolución</button>}
-                      {!isSoloVista && <button className="btn btn-ghost" onClick={() => { setCartPickerCode(selectedCode); setCartPickerTalle(''); setCartPickerQty('') }}>+ Agregar al carrito</button>}
+                      {!isSoloVista && <button className="btn btn-ghost" onClick={() => { setCartPickerCode(selectedCode); setCartPickerTalle(''); setCartPickerQty('') }}>+ Entrega múltiple</button>}
                       {!isSoloVista && <button className="btn btn-ghost btn-full" onClick={() => { setSelectedId(detail.entries[0].id); openEdit() }}>✎ Editar artículo</button>}
                     </div>
                   </div>
@@ -5319,8 +5319,8 @@ tfoot td{padding:9px 12px;font-weight:700}
       {cartLines.length > 0 && !cartPickerCode && (
         <div style={{position:'fixed',bottom:24,right:24,width:300,background:'#fff',borderRadius:12,boxShadow:'0 8px 32px rgba(0,0,0,.18)',border:'1px solid #E8E8E0',zIndex:300,overflow:'hidden'}}>
           <div style={{background:'#121212',color:'#f2cb12',padding:'11px 16px',fontWeight:700,fontSize:13,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-            <span>Carrito · {cartLines.reduce((s,l)=>s+l.qty,0)} unidades</span>
-            <button onClick={() => setCartLines([])} title="Descartar carrito" style={{background:'none',border:'none',color:'#f2cb12',cursor:'pointer',fontSize:20,lineHeight:1,padding:0}}>×</button>
+            <span>Entrega múltiple · {cartLines.reduce((s,l)=>s+l.qty,0)} unidades</span>
+            <button onClick={() => setCartLines([])} title="Descartar" style={{background:'none',border:'none',color:'#f2cb12',cursor:'pointer',fontSize:20,lineHeight:1,padding:0}}>×</button>
           </div>
           <div style={{maxHeight:220,overflowY:'auto'}}>
             {cartLines.map((l,i) => (
@@ -5380,7 +5380,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   style={{flex:2,padding:'9px',border:'none',borderRadius:6,fontWeight:700,fontSize:13,cursor:'pointer',
                     background: cartPickerTalle&&cartPickerQty ? '#f2cb12' : '#EDE9D2',
                     color: cartPickerTalle&&cartPickerQty ? '#121212' : '#a89e6a'}}>
-                  Agregar al carrito
+                  Agregar a entrega múltiple
                 </button>
               </div>
             </div>
