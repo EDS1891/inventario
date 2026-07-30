@@ -181,6 +181,7 @@ export default function App() {
   const [repDetail, setRepDetail] = useState(null)
   const [repResumen, setRepResumen] = useState(null)
   const [repDesglose, setRepDesglose] = useState(null)
+  const [resumenMesSel, setResumenMesSel] = useState(null)
   const [showUnidadesDesglose, setShowUnidadesDesglose] = useState(false)
   const [talleDetalle, setTalleDetalle] = useState(null)
   const [repararRanking, setRepararRanking] = useState(null)
@@ -195,7 +196,7 @@ export default function App() {
   const [cartPickerTalle, setCartPickerTalle] = useState('')
   const [cartPickerQty, setCartPickerQty] = useState('')
   const [repTab, setRepTab] = useState('reposiciones')
-  const [plantelForm, setPlantelForm] = useState({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',talleShort:'L'})
+  const [plantelForm, setPlantelForm] = useState({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',cantCamiseta:1,talleShort:'L',cantShort:1})
   const [plantelModal, setPlantelModal] = useState(false)
   const [selectedPlantelId, setSelectedPlantelId] = useState(null)
   const [plantelHoverRow, setPlantelHoverRow] = useState(null)
@@ -2014,6 +2015,16 @@ tfoot td{padding:9px 12px;font-weight:700}
               const totalEquipos  = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
               const totalShorts   = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
               const totalDinero   = totalEquipos * PRECIO_CAMISETA + totalShorts * PRECIO_SHORT
+              const mesActualKey  = (() => { const p = today().split('/'); return p[1]+'/'+p[2] })()
+              const esRepVs = r => /^reposici[oó]n\.?\s+vs/i.test((r.concepto||'').trim())
+              const repsDelMesActual = (db.reposiciones||[]).filter(r => {
+                if (!esRepVs(r)) return false
+                const p = (r.fechaPartido||r.fecha||'').split('/')
+                return p.length===3 && p[1]+'/'+p[2] === mesActualKey
+              })
+              const totalEquiposMes = repsDelMesActual.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
+              const totalShortsMes  = repsDelMesActual.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
+              const totalDineroMes  = totalEquiposMes * PRECIO_CAMISETA + totalShortsMes * PRECIO_SHORT
               return (
                 <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
                   <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepDesglose('camisetas')}>
@@ -2034,9 +2045,9 @@ tfoot td{padding:9px 12px;font-weight:700}
                       <div><div className="kpi-value">{totalShorts}</div><div className="kpi-sub">shorts →</div></div>
                     </div>
                   </div>
-                  <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#f2cb12'}} onClick={()=>setRepResumen('ambos')}>
-                    <div className="kpi-label" style={{color:'#f2cb12'}}>TOTAL DESCUENTOS</div>
-                    <div className="kpi-value" style={{color:'#f2cb12'}}>$ {totalDinero.toLocaleString('es-UY')}</div>
+                  <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#f2cb12'}} onClick={()=>{ setResumenMesSel(mesActualKey); setRepResumen('ambos') }}>
+                    <div className="kpi-label" style={{color:'#f2cb12'}}>DESCUENTOS {['','ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'][Number(mesActualKey.split('/')[0])]}</div>
+                    <div className="kpi-value" style={{color:'#f2cb12'}}>$ {totalDineroMes.toLocaleString('es-UY')}</div>
                     <div className="kpi-sub" style={{color:'#f2cb12'}}>ver detalle →</div>
                   </div>
                   <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setReceptorTab('plantel')}>
@@ -2187,39 +2198,73 @@ tfoot td{padding:9px 12px;font-weight:700}
         {receptorTab === 'plantel' && (
           <div style={{display:'flex',flexDirection:'column',gap:12}}>
             <div style={{display:'flex',justifyContent:'flex-end'}}>
-              <button className="btn btn-dark" onClick={() => { setPlantelForm({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',talleShort:'L'}); setPlantelModal(true) }}>+ Jugador</button>
+              <button className="btn btn-dark" onClick={() => { setPlantelForm({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',cantCamiseta:1,talleShort:'L',cantShort:1}); setPlantelModal(true) }}>+ Jugador</button>
             </div>
             {(db.plantel||[]).length === 0
               ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay jugadores en el plantel.</div>
-              : (
-                <div className="card" style={{padding:0,overflow:'hidden',width:'max-content',maxWidth:'100%',overflowX:'auto'}}>
-                  <div style={{display:'grid',gridTemplateColumns:'50px max-content 80px 90px 90px 60px'}}>
-                    {['Nº','NOMBRE','POSICIÓN','CAMISETA','SHORT',''].map((h,i)=>(
-                      <div key={i} style={{padding:'11px 20px',background:'#121212',color:'#f2cb12',fontWeight:700,fontSize:11,letterSpacing:'.04em',whiteSpace:'nowrap'}}>{h}</div>
-                    ))}
-                    {(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => {
-                      const isLibre = j.nombre.trim().toLowerCase()==='libre'
-                      const isGolero = j.posicion==='Golero'
-                      const baseBg = isLibre?'#3a3a3a':isGolero?'#A5D6A7':'#fff'
-                      const textColor = isLibre?'#888':'#1a1a1a'
-                      const cell = {background:baseBg,padding:'13px 20px',borderBottom:'1px solid #F0F0EC',fontSize:13.5,color:textColor,display:'flex',alignItems:'center'}
-                      return (
-                        <Fragment key={j.id}>
-                          <div style={{...cell,fontWeight:800,fontSize:15}}>{j.numero||'—'}</div>
-                          <div style={{...cell,fontWeight:700,fontStyle:isLibre?'italic':undefined,textTransform:isLibre?undefined:'uppercase',whiteSpace:'nowrap'}}>{j.nombre}</div>
-                          <div style={{...cell,fontSize:12}}>{j.posicion||'Jugador'}</div>
-                          <div style={cell}>{j.talleCamiseta}</div>
-                          <div style={cell}>{j.talleShort}</div>
-                          <div style={{...cell,gap:6,justifyContent:'flex-end',cursor:'default'}}>
-                            <button onClick={e=>{e.stopPropagation();setPlantelForm({...j});setPlantelModal(true)}} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button>
-                            <button onClick={e=>{e.stopPropagation();deletePlantelJugador(j.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'#C2473D',fontSize:16,fontWeight:700,padding:'2px 4px'}}>×</button>
-                          </div>
-                        </Fragment>
-                      )
-                    })}
-                  </div>
-                </div>
-              )
+              : (() => {
+                  const jugadoresPlantel = (db.plantel||[]).filter(j => j.nombre.trim().toLowerCase() !== 'libre')
+                  const contarTalles = campo => {
+                    const counts = {}
+                    jugadoresPlantel.forEach(j => { const t = j[campo]; if(t) counts[t] = (counts[t]||0)+1 })
+                    return Object.entries(counts).sort((a,b) => TALLE_ORDER.indexOf(a[0]) - TALLE_ORDER.indexOf(b[0]))
+                  }
+                  const tallesCam = contarTalles('talleCamiseta')
+                  const tallesSht = contarTalles('talleShort')
+                  const maxCam = Math.max(...tallesCam.map(([,v])=>v), 1)
+                  const maxSht = Math.max(...tallesSht.map(([,v])=>v), 1)
+                  const BarFila = ({talle, qty, max, campo}) => (
+                    <div onClick={() => setTalleDetalle({campo, talle})}
+                      style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,cursor:'pointer',borderRadius:6,padding:'2px 0'}}>
+                      <div style={{width:28,fontWeight:700,fontSize:13,textAlign:'right',flexShrink:0}}>{talle}</div>
+                      <div style={{flex:1,background:'#ECECE8',borderRadius:4,height:22,overflow:'hidden'}}>
+                        <div style={{width:`${(qty/max)*100}%`,background:'#f2cb12',height:'100%',borderRadius:4,minWidth:4}}/>
+                      </div>
+                      <div style={{width:20,fontWeight:700,fontSize:13,flexShrink:0}}>{qty}</div>
+                    </div>
+                  )
+                  return (
+                    <div style={{display:'flex',gap:16,alignItems:'flex-start',flexWrap:'wrap'}}>
+                      <div className="card" style={{padding:0,overflow:'hidden',flexShrink:0,overflowX:'auto'}}>
+                        <div style={{display:'grid',gridTemplateColumns:'50px max-content 80px 90px 90px 60px'}}>
+                          {['Nº','NOMBRE','POSICIÓN','CAMISETA','SHORT',''].map((h,i)=>(
+                            <div key={i} style={{padding:'11px 20px',background:'#121212',color:'#f2cb12',fontWeight:700,fontSize:11,letterSpacing:'.04em',whiteSpace:'nowrap'}}>{h}</div>
+                          ))}
+                          {(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => {
+                            const isLibre = j.nombre.trim().toLowerCase()==='libre'
+                            const isGolero = j.posicion==='Golero'
+                            const baseBg = isLibre?'#3a3a3a':isGolero?'#A5D6A7':'#fff'
+                            const textColor = isLibre?'#888':'#1a1a1a'
+                            const cell = {background:baseBg,padding:'13px 20px',borderBottom:'1px solid #F0F0EC',fontSize:13.5,color:textColor,display:'flex',alignItems:'center'}
+                            return (
+                              <Fragment key={j.id}>
+                                <div style={{...cell,fontWeight:800,fontSize:15}}>{j.numero||'—'}</div>
+                                <div style={{...cell,fontWeight:700,fontStyle:isLibre?'italic':undefined,textTransform:isLibre?undefined:'uppercase',whiteSpace:'nowrap'}}>{j.nombre}</div>
+                                <div style={{...cell,fontSize:12}}>{j.posicion||'Jugador'}</div>
+                                <div style={cell}>{j.talleCamiseta}{(j.cantCamiseta||1)>1?<span style={{color:'#8a8a82',fontSize:11,marginLeft:4}}>×{j.cantCamiseta}</span>:null}</div>
+                                <div style={cell}>{j.talleShort}{(j.cantShort||1)>1?<span style={{color:'#8a8a82',fontSize:11,marginLeft:4}}>×{j.cantShort}</span>:null}</div>
+                                <div style={{...cell,gap:6,justifyContent:'flex-end',cursor:'default'}}>
+                                  <button onClick={e=>{e.stopPropagation();setPlantelForm({...j,cantCamiseta:j.cantCamiseta||1,cantShort:j.cantShort||1});setPlantelModal(true)}} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button>
+                                  <button onClick={e=>{e.stopPropagation();deletePlantelJugador(j.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'#C2473D',fontSize:16,fontWeight:700,padding:'2px 4px'}}>×</button>
+                                </div>
+                              </Fragment>
+                            )
+                          })}
+                        </div>
+                      </div>
+                      <div style={{display:'flex',flexDirection:'column',gap:12,flexShrink:0}}>
+                        <div className="card" style={{padding:'16px 20px',minWidth:200}}>
+                          <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:12,textAlign:'center'}}>TALLES CAMISETA</div>
+                          {tallesCam.map(([t,q]) => <BarFila key={t} talle={t} qty={q} max={maxCam} campo="talleCamiseta"/>)}
+                        </div>
+                        <div className="card" style={{padding:'16px 20px',minWidth:200}}>
+                          <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:12,textAlign:'center'}}>TALLES SHORT</div>
+                          {tallesSht.map(([t,q]) => <BarFila key={t} talle={t} qty={q} max={maxSht} campo="talleShort"/>)}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()
             }
           </div>
         )}
@@ -2581,10 +2626,10 @@ tfoot td{padding:9px 12px;font-weight:700}
             const [mb,yb] = b.split('/').map(Number)
             return ya!==yb ? ya-yb : ma-mb
           })
-          const datosPorMes = mesesOrdenados.map(mesKey => {
-            const [mm, yyyy] = mesKey.split('/')
-            const mesNombre = `${MESES_ES[Number(mm)]||mm} ${yyyy}`
-            const repsDelMes = mesesMap[mesKey]
+          const mesActualKey = (() => { const p = today().split('/'); return p[1]+'/'+p[2] })()
+          const mesMostrado = (resumenMesSel && mesesMap[resumenMesSel]) ? resumenMesSel : (mesesMap[mesActualKey] ? mesActualKey : mesesOrdenados[mesesOrdenados.length-1])
+          const calcMes = mesKey => {
+            const repsDelMes = mesesMap[mesKey] || []
             const jugMapMes = {}
             ;(db.plantel||[]).filter(p=>p.nombre?.trim().toLowerCase()!=='libre').forEach(p => {
               jugMapMes[p.nombre.trim()] = {numero:p.numero||'—', nombre:p.nombre.trim()}
@@ -2599,58 +2644,101 @@ tfoot td{padding:9px 12px;font-weight:700}
             const totCam = filas.reduce((s,f)=>s+f.cam,0)
             const totSht = filas.reduce((s,f)=>s+f.sht,0)
             const totDesc = filas.reduce((s,f)=>s+f.desc,0)
-            return {mesKey, mesNombre, filas, totCam, totSht, totDesc}
-          })
-          const totGenCam = datosPorMes.reduce((s,m)=>s+m.totCam,0)
-          const totGenSht = datosPorMes.reduce((s,m)=>s+m.totSht,0)
-          const totGenDesc = datosPorMes.reduce((s,m)=>s+m.totDesc,0)
+            return {filas, totCam, totSht, totDesc}
+          }
+          const {filas, totCam, totSht, totDesc} = mesMostrado ? calcMes(mesMostrado) : {filas:[],totCam:0,totSht:0,totDesc:0}
+          const [mmMostrado, yyyyMostrado] = (mesMostrado||'').split('/')
+          const mesNombreMostrado = mesMostrado ? `${MESES_ES[Number(mmMostrado)]||mmMostrado} ${yyyyMostrado}` : ''
           return (
             <div className="modal-backdrop" onClick={()=>setRepResumen(null)}>
               <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:600,width:'96%'}}>
                 <div className="modal-header">
-                  <div className="modal-title">Resumen de descuentos por jugador</div>
+                  <div className="modal-title">Descuentos — {mesNombreMostrado}</div>
                   <button className="modal-close" onClick={()=>setRepResumen(null)}>×</button>
                 </div>
-                <div className="modal-body" style={{maxHeight:'65vh',overflowY:'auto',padding:0}}>
-                  {datosPorMes.length === 0
+                <div className="modal-body" style={{padding:0}}>
+                  {mesesOrdenados.length === 0
                     ? <div style={{textAlign:'center',color:'#8a8a82',padding:'32px 0'}}>Sin reposiciones "vs." registradas.</div>
-                    : datosPorMes.map(({mesNombre, filas, totCam, totSht, totDesc}) => (
-                      <div key={mesNombre} style={{marginBottom:0}}>
-                        <div style={{padding:'10px 20px',background:'#F0F0EC',fontWeight:700,fontSize:12,letterSpacing:'.04em',color:'#5a5a52'}}>{mesNombre.toUpperCase()}</div>
+                    : <>
+                      {mesesOrdenados.length > 1 && (
+                        <div style={{display:'flex',gap:6,flexWrap:'wrap',padding:'10px 16px',borderBottom:'1px solid #ECECE8',background:'#F8F8F4'}}>
+                          {mesesOrdenados.map(key => {
+                            const [mm,yyyy] = key.split('/')
+                            const label = `${MESES_ES[Number(mm)]||mm} ${yyyy}`
+                            const activo = key === mesMostrado
+                            return (
+                              <button key={key} onClick={e=>{e.stopPropagation();setResumenMesSel(key)}}
+                                style={{padding:'5px 12px',borderRadius:20,border:'1.5px solid',fontSize:12,fontWeight:700,cursor:'pointer',
+                                  borderColor: activo?'#121212':'#D0D0CC',
+                                  background: activo?'#121212':'#fff',
+                                  color: activo?'#f2cb12':'#5a5a52'}}>
+                                {label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+                      <div style={{maxHeight:'55vh',overflowY:'auto'}}>
                         <div style={{display:'grid',gridTemplateColumns:'40px 1fr 60px 60px 90px',background:'#121212',color:'#f2cb12',fontWeight:700,fontSize:10,letterSpacing:'.04em'}}>
                           {['Nº','NOMBRE','CAM.','SHT.','DESCUENTO'].map((h,i)=>(
                             <div key={i} style={{padding:'7px 12px',textAlign:i>=2?'right':'left'}}>{h}</div>
                           ))}
                         </div>
-                        {filas.filter(f=>f.cam>0||f.sht>0).map(f=>(
-                          <div key={f.nombre} style={{display:'grid',gridTemplateColumns:'40px 1fr 60px 60px 90px',borderBottom:'1px solid #F0F0EC'}}>
-                            <div style={{padding:'9px 12px',fontWeight:800,fontSize:13,color:'#8a8a82'}}>{f.numero}</div>
-                            <div style={{padding:'9px 12px',fontWeight:600,fontSize:13,textTransform:'uppercase'}}>{f.nombre}</div>
-                            <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:13}}>{f.cam||'—'}</div>
-                            <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:13}}>{f.sht||'—'}</div>
-                            <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:13,fontWeight:700}}>$ {f.desc.toLocaleString('es-UY')}</div>
-                          </div>
-                        ))}
-                        <div style={{display:'grid',gridTemplateColumns:'40px 1fr 60px 60px 90px',background:'#F8F8F4',borderBottom:'2px solid #121212'}}>
-                          <div style={{padding:'9px 12px',gridColumn:'1/3',fontWeight:700,fontSize:12,color:'#5a5a52'}}>TOTAL MES</div>
+                        {filas.filter(f=>f.cam>0||f.sht>0).length === 0
+                          ? <div style={{textAlign:'center',color:'#8a8a82',padding:'28px 0',fontSize:13}}>Sin descuentos este mes.</div>
+                          : filas.filter(f=>f.cam>0||f.sht>0).map(f=>(
+                            <div key={f.nombre} style={{display:'grid',gridTemplateColumns:'40px 1fr 60px 60px 90px',borderBottom:'1px solid #F0F0EC'}}>
+                              <div style={{padding:'9px 12px',fontWeight:800,fontSize:13,color:'#8a8a82'}}>{f.numero}</div>
+                              <div style={{padding:'9px 12px',fontWeight:600,fontSize:13,textTransform:'uppercase'}}>{f.nombre}</div>
+                              <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:13}}>{f.cam||'—'}</div>
+                              <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:13}}>{f.sht||'—'}</div>
+                              <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:13,fontWeight:700}}>$ {f.desc.toLocaleString('es-UY')}</div>
+                            </div>
+                          ))
+                        }
+                        <div style={{display:'grid',gridTemplateColumns:'40px 1fr 60px 60px 90px',background:'#121212',color:'#f2cb12'}}>
+                          <div style={{padding:'9px 12px',gridColumn:'1/3',fontWeight:700,fontSize:12,letterSpacing:'.04em'}}>TOTAL</div>
                           <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13}}>{totCam}</div>
                           <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13}}>{totSht}</div>
                           <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13}}>$ {totDesc.toLocaleString('es-UY')}</div>
                         </div>
                       </div>
-                    ))
+                    </>
                   }
-                  {datosPorMes.length > 1 && (
-                    <div style={{display:'grid',gridTemplateColumns:'40px 1fr 60px 60px 90px',background:'#121212',color:'#f2cb12'}}>
-                      <div style={{padding:'11px 12px',gridColumn:'1/3',fontWeight:700,fontSize:12,letterSpacing:'.04em'}}>TOTAL GENERAL</div>
-                      <div style={{padding:'11px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:14}}>{totGenCam}</div>
-                      <div style={{padding:'11px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:14}}>{totGenSht}</div>
-                      <div style={{padding:'11px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:14}}>$ {totGenDesc.toLocaleString('es-UY')}</div>
-                    </div>
-                  )}
                 </div>
                 <div className="modal-footer">
                   <button className="btn btn-ghost" onClick={()=>setRepResumen(null)}>Cerrar</button>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
+        {talleDetalle && (() => {
+          const esCam = talleDetalle.campo === 'talleCamiseta'
+          const lista = (db.plantel||[])
+            .filter(j => j.nombre.trim().toLowerCase() !== 'libre' && j[talleDetalle.campo] === talleDetalle.talle)
+            .sort((a,b) => (Number(a.numero)||0) - (Number(b.numero)||0))
+          return (
+            <div className="modal-backdrop" onClick={() => setTalleDetalle(null)}>
+              <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:380,width:'96%'}}>
+                <div className="modal-header">
+                  <div className="modal-title">{esCam ? 'Camiseta' : 'Short'} talle {talleDetalle.talle}</div>
+                  <button className="modal-close" onClick={() => setTalleDetalle(null)}>×</button>
+                </div>
+                <div className="modal-body" style={{padding:0}}>
+                  {lista.map(j => (
+                    <div key={j.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 20px',borderBottom:'1px solid #ECECE8',
+                      background: j.posicion === 'Golero' ? '#A5D6A7' : undefined}}>
+                      <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,width:28,flexShrink:0}}>{j.numero||'—'}</span>
+                      <span style={{fontWeight:700,fontSize:14,textTransform:'uppercase'}}>{j.nombre}</span>
+                      <span style={{marginLeft:'auto',fontSize:11,color:'#8a8a82'}}>{j.posicion||'Jugador'}</span>
+                    </div>
+                  ))}
+                  {lista.length === 0 && <div style={{padding:24,textAlign:'center',color:'#8a8a82'}}>Sin jugadores.</div>}
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-ghost" onClick={() => setTalleDetalle(null)}>Cerrar</button>
                 </div>
               </div>
             </div>
@@ -2698,11 +2786,23 @@ tfoot td{padding:9px 12px;font-weight:700}
                       {TALLES_ADULTO.map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
                   </div>
+                  <div className="form-group" style={{width:72}}>
+                    <label className="field-label">Cant.</label>
+                    <input className="field-input mono" type="number" min="1" max="99" value={plantelForm.cantCamiseta||1}
+                      onChange={e => setPlantelForm(p=>({...p,cantCamiseta:Math.max(1,parseInt(e.target.value)||1)}))}
+                      style={{textAlign:'center'}} />
+                  </div>
                   <div className="form-group" style={{flex:1}}>
                     <label className="field-label">Talle Short</label>
                     <select className="field-input" value={plantelForm.talleShort} onChange={e => setPlantelForm(p=>({...p,talleShort:e.target.value}))}>
                       {TALLES_ADULTO.map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
+                  </div>
+                  <div className="form-group" style={{width:72}}>
+                    <label className="field-label">Cant.</label>
+                    <input className="field-input mono" type="number" min="1" max="99" value={plantelForm.cantShort||1}
+                      onChange={e => setPlantelForm(p=>({...p,cantShort:Math.max(1,parseInt(e.target.value)||1)}))}
+                      style={{textAlign:'center'}} />
                   </div>
                 </div>
               </div>
@@ -3797,7 +3897,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                       <span style={{fontSize:12.5,color:'#8a8a82'}}>Jugadores con su talle de camiseta y short</span>
                       <div style={{display:'flex',gap:8}}>
                         {(db.plantel||[]).length > 0 && <button className="btn" onClick={downloadPlantelExcel} style={{fontSize:12.5}}>⬇ Excel</button>}
-                        <button className="btn btn-dark" onClick={() => { setPlantelForm({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',talleShort:'L'}); setPlantelModal(true) }}>+ Jugador</button>
+                        <button className="btn btn-dark" onClick={() => { setPlantelForm({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',cantCamiseta:1,talleShort:'L',cantShort:1}); setPlantelModal(true) }}>+ Jugador</button>
                       </div>
                     </div>
                     {(db.plantel||[]).length === 0
@@ -3822,10 +3922,10 @@ tfoot td{padding:9px 12px;font-weight:700}
                                   <div style={{...cell,fontWeight:800,fontSize:15}} {...rowEvents}>{j.numero||'—'}</div>
                                   <div style={{...cell,fontWeight:700,fontStyle:isLibre?'italic':undefined,textTransform:isLibre?undefined:'uppercase',whiteSpace:'nowrap'}} {...rowEvents}>{j.nombre}</div>
                                   <div style={{...cell,fontSize:12}} {...rowEvents}>{j.posicion||'Jugador'}</div>
-                                  <div style={cell} {...rowEvents}>{j.talleCamiseta}</div>
-                                  <div style={cell} {...rowEvents}>{j.talleShort}</div>
+                                  <div style={cell} {...rowEvents}>{j.talleCamiseta}{(j.cantCamiseta||1)>1?<span style={{color:'#8a8a82',fontSize:11,marginLeft:4}}>×{j.cantCamiseta}</span>:null}</div>
+                                  <div style={cell} {...rowEvents}>{j.talleShort}{(j.cantShort||1)>1?<span style={{color:'#8a8a82',fontSize:11,marginLeft:4}}>×{j.cantShort}</span>:null}</div>
                                   <div style={{...cell,gap:6,justifyContent:'flex-end',cursor:'default'}} onMouseEnter={rowEvents.onMouseEnter} onMouseLeave={rowEvents.onMouseLeave}>
-                                    <button onClick={e=>{e.stopPropagation();setPlantelForm({...j});setPlantelModal(true)}} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button>
+                                    <button onClick={e=>{e.stopPropagation();setPlantelForm({...j,cantCamiseta:j.cantCamiseta||1,cantShort:j.cantShort||1});setPlantelModal(true)}} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button>
                                     <button onClick={e=>{e.stopPropagation();deletePlantelJugador(j.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'#C2473D',fontSize:16,fontWeight:700,padding:'2px 4px'}}>×</button>
                                   </div>
                                 </Fragment>
@@ -4896,11 +4996,23 @@ tfoot td{padding:9px 12px;font-weight:700}
                     {TALLES_ADULTO.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>
+                <div className="form-group" style={{width:72}}>
+                  <label className="field-label">Cant.</label>
+                  <input className="field-input mono" type="number" min="1" max="99" value={plantelForm.cantCamiseta||1}
+                    onChange={e => setPlantelForm(p=>({...p,cantCamiseta:Math.max(1,parseInt(e.target.value)||1)}))}
+                    style={{textAlign:'center'}} />
+                </div>
                 <div className="form-group" style={{flex:1}}>
                   <label className="field-label">Talle Short</label>
                   <select className="field-input" value={plantelForm.talleShort} onChange={e => setPlantelForm(p=>({...p,talleShort:e.target.value}))}>
                     {TALLES_ADULTO.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
+                </div>
+                <div className="form-group" style={{width:72}}>
+                  <label className="field-label">Cant.</label>
+                  <input className="field-input mono" type="number" min="1" max="99" value={plantelForm.cantShort||1}
+                    onChange={e => setPlantelForm(p=>({...p,cantShort:Math.max(1,parseInt(e.target.value)||1)}))}
+                    style={{textAlign:'center'}} />
                 </div>
               </div>
             </div>
