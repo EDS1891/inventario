@@ -1612,44 +1612,44 @@ tfoot td{padding:9px 12px;font-weight:700}
     if (capturedLines.length === 0) { showToast('La entrega debe tener al menos un artículo.'); return }
     const delId = editDelivery.id
     const { receptor, persona, fecha, paga, obs } = editDelivery
-    setDb(s => {
-      const oldDel = s.deliveries.find(d => d.id === delId)
-      if (!oldDel) return s
-      const articles = s.articles.map(a => ({...a, sizes: a.sizes.map(z => ({...z}))}))
-      const findArt = (code, ubic) => {
-        let a = articles.find(x => String(x.code) === String(code) && (!ubic || String(x.ubic) === String(ubic)))
-        if (!a) a = articles.find(x => String(x.code) === String(code))
-        return a
-      }
-      // Paso 1: restaurar stock de la entrega original
-      oldDel.lines.forEach(l => {
-        const a = findArt(l.code, l.ubic)
-        if (!a) return
-        let z = a.sizes.find(x => x.talle === l.talle)
-        if (!z) { z = {talle: l.talle, qty: 0}; a.sizes.push(z) }
-        z.qty += l.qty
-      })
-      // Paso 2: descontar las cantidades nuevas
-      capturedLines.forEach(l => {
-        const a = findArt(l.code, l.ubic)
-        if (!a) return
-        let z = a.sizes.find(x => x.talle === l.talle)
-        if (!z) { z = {talle: l.talle, qty: 0}; a.sizes.push(z) }
-        z.qty = Math.max(0, z.qty - l.qty)
-      })
-      const updatedPaga = receptor === 'Protocolo' ? paga : null
-      const updatedMonto = receptor === 'Protocolo' && paga === 'si'
-        ? capturedLines.reduce((sum, l) => { const art = findArt(l.code, l.ubic); return sum + (art?.precio||0) * l.qty }, 0) * 0.5
-        : null
-      return {
-        ...s,
-        articles,
-        deliveries: s.deliveries.map(d => {
-          if (d.id !== delId) return d
-          return {...d, receptor, persona:persona.trim(), fecha, paga:updatedPaga, monto:updatedMonto, obs:obs?.trim()||undefined, lines:capturedLines}
-        })
-      }
+    const currentDel = db.deliveries.find(d => d.id === delId)
+    if (!currentDel) { showToast('Error: entrega no encontrada. Recargá la página.'); return }
+    const findArt = (arts, code, ubic) => {
+      let a = arts.find(x => String(x.code) === String(code) && (!ubic || String(x.ubic) === String(ubic)))
+      if (!a) a = arts.find(x => String(x.code) === String(code))
+      return a
+    }
+    const articles = db.articles.map(a => ({...a, sizes: a.sizes.map(z => ({...z}))}))
+    // Paso 1: restaurar stock de la entrega original
+    currentDel.lines.forEach(l => {
+      const a = findArt(articles, l.code, l.ubic)
+      if (!a) return
+      let z = a.sizes.find(x => x.talle === l.talle)
+      if (!z) { z = {talle: l.talle, qty: 0}; a.sizes.push(z) }
+      z.qty += l.qty
     })
+    // Paso 2: descontar las cantidades nuevas
+    capturedLines.forEach(l => {
+      const a = findArt(articles, l.code, l.ubic)
+      if (!a) return
+      let z = a.sizes.find(x => x.talle === l.talle)
+      if (!z) { z = {talle: l.talle, qty: 0}; a.sizes.push(z) }
+      z.qty = Math.max(0, z.qty - l.qty)
+    })
+    const updatedPaga = receptor === 'Protocolo' ? paga : null
+    const updatedMonto = receptor === 'Protocolo' && paga === 'si'
+      ? capturedLines.reduce((sum, l) => { const art = findArt(articles, l.code, l.ubic); return sum + (art?.precio||0) * l.qty }, 0) * 0.5
+      : null
+    const newDb = {
+      ...db,
+      articles,
+      deliveries: db.deliveries.map(d => {
+        if (d.id !== delId) return d
+        return {...d, receptor, persona:persona.trim(), fecha, paga:updatedPaga, monto:updatedMonto, obs:obs?.trim()||undefined, lines:capturedLines}
+      })
+    }
+    setDb(newDb)
+    saveToSupabase(newDb)
     setEditDelivery(null)
     showToast('Entrega actualizada.')
   }
