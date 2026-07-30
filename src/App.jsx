@@ -2690,8 +2690,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                             <div key={f.nombre} style={{display:'grid',gridTemplateColumns:'40px 1fr 60px 60px 90px',borderBottom:'1px solid #F0F0EC'}}>
                               <div style={{padding:'9px 12px',fontWeight:800,fontSize:13,color:'#8a8a82'}}>{f.numero}</div>
                               <div style={{padding:'9px 12px',fontWeight:600,fontSize:13,textTransform:'uppercase'}}>{f.nombre}</div>
-                              <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:13}}>{f.cam||'—'}</div>
-                              <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:13}}>{f.sht||'—'}</div>
+                              <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:13}}>{f.cam}</div>
+                              <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:13}}>{f.sht}</div>
                               <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:13,fontWeight:700}}>$ {f.desc.toLocaleString('es-UY')}</div>
                             </div>
                           ))
@@ -3785,6 +3785,13 @@ tfoot td{padding:9px 12px;font-weight:700}
                   const totalDinero  = totalEquipos * PRECIO_CAMISETA + totalShorts * PRECIO_SHORT
                   const totalCamTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
                   const totalShtTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
+                  const mesActualKeyAdmin = (() => { const p = today().split('/'); return p[1]+'/'+p[2] })()
+                  const mesNombreAdmin = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][Number(mesActualKeyAdmin.split('/')[0])]
+                  const esRepVsAdmin = r => /^reposici[oó]n\.?\s+vs/i.test((r.concepto||'').trim())
+                  const repsDelMesAdmin = (db.reposiciones||[]).filter(r => { if(!esRepVsAdmin(r)) return false; const p=(r.fechaPartido||r.fecha||'').split('/'); return p.length===3&&p[1]+'/'+p[2]===mesActualKeyAdmin })
+                  const totalEquiposMesAdmin = repsDelMesAdmin.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
+                  const totalShortsMesAdmin  = repsDelMesAdmin.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
+                  const totalDineroMesAdmin  = totalEquiposMesAdmin * PRECIO_CAMISETA + totalShortsMesAdmin * PRECIO_SHORT
                   return (
                     <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepDesglose('camisetas')}>
@@ -3811,9 +3818,9 @@ tfoot td{padding:9px 12px;font-weight:700}
                           </div>
                         </div>
                       </div>
-                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#f2cb12'}} onClick={()=>setRepResumen('ambos')}>
-                        <div className="kpi-label" style={{color:'#f2cb12'}}>TOTAL DESCUENTOS</div>
-                        <div className="kpi-value" style={{color:'#f2cb12'}}>$ {totalDinero.toLocaleString('es-UY')}</div>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#f2cb12'}} onClick={()=>{ setResumenMesSel(mesActualKeyAdmin); setRepResumen('ambos') }}>
+                        <div className="kpi-label" style={{color:'#f2cb12'}}>DESCUENTOS {mesNombreAdmin.toUpperCase()}</div>
+                        <div className="kpi-value" style={{color:'#f2cb12'}}>$ {totalDineroMesAdmin.toLocaleString('es-UY')}</div>
                         <div className="kpi-sub" style={{color:'#f2cb12'}}>ver detalle →</div>
                       </div>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepTab('plantel')}>
@@ -4611,8 +4618,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                         {f.fecha && <div style={{fontSize:11,fontWeight:700,color:'#121212',marginBottom:1}}>{f.fecha}</div>}
                         <div style={{fontWeight:500,fontSize:12,textTransform:'uppercase',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'#555'}}>{f.label}{f.torneo ? ` · ${f.torneo}` : ''}</div>
                       </div>
-                      <span style={{textAlign:'center',fontWeight:700,fontSize:13}}>{f.cam||'—'}</span>
-                      <span style={{textAlign:'center',fontWeight:700,fontSize:13}}>{f.sht||'—'}</span>
+                      <span style={{textAlign:'center',fontWeight:700,fontSize:13}}>{f.cam}</span>
+                      <span style={{textAlign:'center',fontWeight:700,fontSize:13}}>{f.sht}</span>
                       <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,fontWeight:600,textAlign:'right',whiteSpace:'nowrap'}}>$ {f.monto.toLocaleString('es-UY')}</span>
                     </div>
                   ))
@@ -4821,11 +4828,11 @@ tfoot td{padding:9px 12px;font-weight:700}
           return ya!==yb ? ya-yb : ma-mb
         })
 
-        const datosPorMes = mesesOrdenados.map(mesKey => {
-          const [mm, yyyy] = mesKey.split('/')
-          const mesNombre = `${MESES_ES[Number(mm)]||mm} ${yyyy}`
-          const repsDelMes = mesesMap[mesKey]
+        const mesActualKeyMod = (() => { const p = today().split('/'); return p[1]+'/'+p[2] })()
+        const mesMostradoAdmin = (resumenMesSel && mesesMap[resumenMesSel]) ? resumenMesSel : (mesesMap[mesActualKeyMod] ? mesActualKeyMod : mesesOrdenados[mesesOrdenados.length-1])
 
+        const calcMesAdmin = mesKey => {
+          const repsDelMes = mesesMap[mesKey] || []
           const jugMapMes = {}
           ;(db.plantel||[]).filter(p=>p.nombre?.trim().toLowerCase()!=='libre').forEach(p => {
             jugMapMes[p.nombre.trim()] = {numero:p.numero||'—', nombre:p.nombre.trim()}
@@ -4834,15 +4841,23 @@ tfoot td{padding:9px 12px;font-weight:700}
             if (!jugMapMes[j.nombre]) jugMapMes[j.nombre] = {numero:j.numero||'—', nombre:j.nombre}
           }))
           const jugsMes = Object.values(jugMapMes).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0))
-
           const getCam = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const dc=j.descuentoCamiseta!==undefined?j.descuentoCamiseta!==false:j.descuento!==false;return acc+(dc?Number(j.cantCamiseta)||0:0)},0)
           const getSht = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const ds=j.descuentoShort!==undefined?j.descuentoShort!==false:j.descuento!==false;return acc+(ds?Number(j.cantShort)||0:0)},0)
-
-          const filas = jugsMes.map(j=>({...j,cam:getCam(j.nombre),sht:getSht(j.nombre)}))
-            .map(f=>({...f,desc:f.cam*PRECIO_DESC_CAMISETA+f.sht*PRECIO_DESC_SHORT}))
+          const filas = jugsMes.map(j=>({...j,cam:getCam(j.nombre),sht:getSht(j.nombre)})).map(f=>({...f,desc:f.cam*PRECIO_DESC_CAMISETA+f.sht*PRECIO_DESC_SHORT}))
           const totCam = filas.reduce((s,f)=>s+f.cam,0)
           const totSht = filas.reduce((s,f)=>s+f.sht,0)
           const totDesc = filas.reduce((s,f)=>s+f.desc,0)
+          return {filas, totCam, totSht, totDesc}
+        }
+
+        const {filas: filasAdmin, totCam: totCamAdmin, totSht: totShtAdmin, totDesc: totDescAdmin} = mesMostradoAdmin ? calcMesAdmin(mesMostradoAdmin) : {filas:[],totCam:0,totSht:0,totDesc:0}
+        const [mmAdmin, yyyyAdmin] = (mesMostradoAdmin||'').split('/')
+        const mesNombreMod = mesMostradoAdmin ? `${MESES_ES[Number(mmAdmin)]||mmAdmin} ${yyyyAdmin}` : ''
+
+        const datosPorMes = mesesOrdenados.map(mesKey => {
+          const [mm, yyyy] = mesKey.split('/')
+          const mesNombre = `${MESES_ES[Number(mm)]||mm} ${yyyy}`
+          const {filas, totCam, totSht, totDesc} = calcMesAdmin(mesKey)
           return {mesKey, mesNombre, filas, totCam, totSht, totDesc}
         })
 
@@ -4899,19 +4914,32 @@ tfoot td{padding:9px 12px;font-weight:700}
           <div className="modal-backdrop" onClick={()=>setRepResumen(null)}>
             <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:580,width:'96%'}}>
               <div className="modal-header">
-                <div className="modal-title">Descuentos por jugador</div>
+                <div className="modal-title">Descuentos — {mesNombreMod}</div>
                 <button className="modal-close" onClick={()=>setRepResumen(null)}>×</button>
               </div>
-              <div className="modal-body" style={{padding:'0 0 8px',maxHeight:'72vh',overflowY:'auto'}}>
-                {mesesOrdenados.length === 0 && (
-                  <div style={{padding:32,textAlign:'center',color:'#888',fontSize:14}}>Sin datos</div>
-                )}
-                {datosPorMes.map(({mesKey, mesNombre, filas, totCam, totSht, totDesc}) => {
-                  return (
-                    <div key={mesKey}>
-                      <div style={{background:'#121212',color:'#f2cb12',fontWeight:700,fontSize:12,letterSpacing:'.06em',padding:'9px 14px',position:'sticky',top:0,zIndex:2}}>
-                        {mesNombre.toUpperCase()}
+              <div className="modal-body" style={{padding:0}}>
+                {mesesOrdenados.length === 0
+                  ? <div style={{padding:32,textAlign:'center',color:'#888',fontSize:14}}>Sin datos</div>
+                  : <>
+                    {mesesOrdenados.length > 1 && (
+                      <div style={{display:'flex',gap:6,flexWrap:'wrap',padding:'10px 16px',borderBottom:'1px solid #ECECE8',background:'#F8F8F4'}}>
+                        {mesesOrdenados.map(key => {
+                          const [mm,yyyy] = key.split('/')
+                          const label = `${MESES_ES[Number(mm)]||mm} ${yyyy}`
+                          const activo = key === mesMostradoAdmin
+                          return (
+                            <button key={key} onClick={e=>{e.stopPropagation();setResumenMesSel(key)}}
+                              style={{padding:'5px 12px',borderRadius:20,border:'1.5px solid',fontSize:12,fontWeight:700,cursor:'pointer',
+                                borderColor:activo?'#121212':'#D0D0CC',
+                                background:activo?'#121212':'#fff',
+                                color:activo?'#f2cb12':'#5a5a52'}}>
+                              {label}
+                            </button>
+                          )
+                        })}
                       </div>
+                    )}
+                    <div style={{maxHeight:'55vh',overflowY:'auto'}}>
                       <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
                         <thead>
                           <tr style={{background:'#2a2a2a',color:'#f2cb12'}}>
@@ -4922,28 +4950,31 @@ tfoot td{padding:9px 12px;font-weight:700}
                           </tr>
                         </thead>
                         <tbody>
-                          {filas.map((f,i)=>(
-                            <tr key={i} style={{borderBottom:'1px solid #F0F0EC',background:i%2===0?'#fff':'#FAFAF8'}}>
-                              <td style={{padding:'7px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
-                                <span style={{fontFamily:'IBM Plex Mono,monospace',color:'#121212',marginRight:8,fontSize:11}}>{f.numero}</span>
-                                {f.nombre}
-                              </td>
-                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.cam}</td>
-                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.sht}</td>
-                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,background:'#FFF8D6'}}>$ {f.desc.toLocaleString('es-UY')}</td>
-                            </tr>
-                          ))}
-                          <tr style={{background:'#F5F2E8',borderTop:'2px solid #E8E4D8'}}>
-                            <td style={{padding:'6px 12px',fontSize:11,fontWeight:700,letterSpacing:'.04em',color:'#555'}}>SUBTOTAL</td>
-                            <td style={{padding:'6px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#333'}}>{totCam||'—'}</td>
-                            <td style={{padding:'6px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#333'}}>{totSht||'—'}</td>
-                            <td style={{padding:'6px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>$ {totDesc.toLocaleString('es-UY')}</td>
+                          {filasAdmin.length === 0
+                            ? <tr><td colSpan={4} style={{padding:'28px 0',textAlign:'center',color:'#8a8a82',fontSize:13}}>Sin descuentos este mes.</td></tr>
+                            : filasAdmin.map((f,i)=>(
+                              <tr key={i} style={{borderBottom:'1px solid #F0F0EC',background:i%2===0?'#fff':'#FAFAF8'}}>
+                                <td style={{padding:'7px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
+                                  <span style={{fontFamily:'IBM Plex Mono,monospace',color:'#121212',marginRight:8,fontSize:11}}>{f.numero}</span>
+                                  {f.nombre}
+                                </td>
+                                <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.cam}</td>
+                                <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.sht}</td>
+                                <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,background:'#FFF8D6'}}>$ {f.desc.toLocaleString('es-UY')}</td>
+                              </tr>
+                            ))
+                          }
+                          <tr style={{background:'#121212'}}>
+                            <td style={{padding:'7px 12px',fontSize:11,fontWeight:700,letterSpacing:'.04em',color:'#f2cb12'}}>TOTAL</td>
+                            <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>{totCamAdmin}</td>
+                            <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>{totShtAdmin}</td>
+                            <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>$ {totDescAdmin.toLocaleString('es-UY')}</td>
                           </tr>
                         </tbody>
                       </table>
                     </div>
-                  )
-                })}
+                  </>
+                }
               </div>
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={()=>setRepResumen(null)}>Cerrar</button>
