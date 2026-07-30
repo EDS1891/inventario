@@ -2186,12 +2186,15 @@ tfoot td{padding:9px 12px;font-weight:700}
 
         {receptorTab === 'plantel' && (
           <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            <div style={{display:'flex',justifyContent:'flex-end'}}>
+              <button className="btn btn-dark" onClick={() => { setPlantelForm({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',talleShort:'L'}); setPlantelModal(true) }}>+ Jugador</button>
+            </div>
             {(db.plantel||[]).length === 0
               ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay jugadores en el plantel.</div>
               : (
                 <div className="card" style={{padding:0,overflow:'hidden',width:'max-content',maxWidth:'100%',overflowX:'auto'}}>
-                  <div style={{display:'grid',gridTemplateColumns:'50px max-content 80px 90px 90px'}}>
-                    {['Nº','NOMBRE','POSICIÓN','CAMISETA','SHORT'].map((h,i)=>(
+                  <div style={{display:'grid',gridTemplateColumns:'50px max-content 80px 90px 90px 60px'}}>
+                    {['Nº','NOMBRE','POSICIÓN','CAMISETA','SHORT',''].map((h,i)=>(
                       <div key={i} style={{padding:'11px 20px',background:'#121212',color:'#f2cb12',fontWeight:700,fontSize:11,letterSpacing:'.04em',whiteSpace:'nowrap'}}>{h}</div>
                     ))}
                     {(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => {
@@ -2207,6 +2210,10 @@ tfoot td{padding:9px 12px;font-weight:700}
                           <div style={{...cell,fontSize:12}}>{j.posicion||'Jugador'}</div>
                           <div style={cell}>{j.talleCamiseta}</div>
                           <div style={cell}>{j.talleShort}</div>
+                          <div style={{...cell,gap:6,justifyContent:'flex-end',cursor:'default'}}>
+                            <button onClick={e=>{e.stopPropagation();setPlantelForm({...j});setPlantelModal(true)}} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button>
+                            <button onClick={e=>{e.stopPropagation();deletePlantelJugador(j.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'#C2473D',fontSize:16,fontWeight:700,padding:'2px 4px'}}>×</button>
+                          </div>
                         </Fragment>
                       )
                     })}
@@ -2649,6 +2656,63 @@ tfoot td{padding:9px 12px;font-weight:700}
             </div>
           )
         })()}
+
+        {plantelModal && (
+          <div className="modal-backdrop" onClick={() => setPlantelModal(false)}>
+            <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <div className="modal-title">{plantelForm.id !== null ? 'Editar jugador' : 'Agregar jugador'}</div>
+                <button className="modal-close" onClick={() => setPlantelModal(false)}>×</button>
+              </div>
+              <div className="modal-body">
+                <div style={{display:'flex',gap:12}}>
+                  <div className="form-group" style={{width:80}}>
+                    <label className="field-label">Número</label>
+                    <input className="field-input mono" type="number" min="1" max="99" value={plantelForm.numero}
+                      onChange={e => setPlantelForm(p=>({...p,numero:e.target.value}))}
+                      placeholder="10" style={{textAlign:'center'}} />
+                  </div>
+                  <div className="form-group" style={{flex:1}}>
+                    <label className="field-label">Nombre completo</label>
+                    <input className="field-input" value={plantelForm.nombre}
+                      onChange={e => setPlantelForm(p=>({...p,nombre:e.target.value}))}
+                      placeholder="Ej. Maximiliano Olivera" autoFocus />
+                  </div>
+                </div>
+                <div style={{display:'flex',gap:8,marginTop:4}}>
+                  {['Jugador','Golero'].map(pos => (
+                    <button key={pos} type="button"
+                      onClick={() => setPlantelForm(p=>({...p,posicion:pos}))}
+                      style={{flex:1,padding:'8px 0',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:13,cursor:'pointer',
+                        borderColor: plantelForm.posicion===pos ? '#f2cb12' : '#ECECE8',
+                        background: plantelForm.posicion===pos ? '#FFF8D6' : '#fff',
+                        color: plantelForm.posicion===pos ? '#7a5800' : '#8a8a82'}}>
+                      {pos}
+                    </button>
+                  ))}
+                </div>
+                <div style={{display:'flex',gap:12,marginTop:4}}>
+                  <div className="form-group" style={{flex:1}}>
+                    <label className="field-label">Talle Camiseta</label>
+                    <select className="field-input" value={plantelForm.talleCamiseta} onChange={e => setPlantelForm(p=>({...p,talleCamiseta:e.target.value}))}>
+                      {TALLES_ADULTO.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group" style={{flex:1}}>
+                    <label className="field-label">Talle Short</label>
+                    <select className="field-input" value={plantelForm.talleShort} onChange={e => setPlantelForm(p=>({...p,talleShort:e.target.value}))}>
+                      {TALLES_ADULTO.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={() => setPlantelModal(false)}>Cancelar</button>
+                <button className="btn btn-dark" onClick={savePlantelJugador}>Guardar</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Toast */}
         {toast && (
