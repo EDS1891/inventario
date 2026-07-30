@@ -1608,33 +1608,45 @@ tfoot td{padding:9px 12px;font-weight:700}
   }
   const saveEditDelivery = () => {
     if (!editDelivery?.persona?.trim()) { showToast('El nombre no puede estar vacío.'); return }
-    const newLines = (editDelivery.lines || []).filter(l => l.qty > 0)
-    if (newLines.length === 0) { showToast('La entrega debe tener al menos un artículo.'); return }
+    const capturedLines = (editDelivery.lines || []).filter(l => l.qty > 0)
+    if (capturedLines.length === 0) { showToast('La entrega debe tener al menos un artículo.'); return }
+    const delId = editDelivery.id
+    const { receptor, persona, fecha, paga, obs } = editDelivery
     setDb(s => {
-      const oldDel = s.deliveries.find(d => d.id === editDelivery.id)
+      const oldDel = s.deliveries.find(d => d.id === delId)
+      if (!oldDel) return s
       const articles = s.articles.map(a => ({...a, sizes: a.sizes.map(z => ({...z}))}))
-      ;(oldDel?.lines || []).forEach(l => {
-        const newLine = (editDelivery.lines || []).find(x => x.code === l.code && x.talle === l.talle)
-        const newQty = newLine ? Math.max(0, newLine.qty) : 0
-        const diff = l.qty - newQty
-        if (diff === 0) return
-        let a = articles.find(x => x.code === l.code && (!l.ubic || x.ubic === l.ubic))
-        if (!a) a = articles.find(x => x.code === l.code)
+      const findArt = (code, ubic) => {
+        let a = articles.find(x => String(x.code) === String(code) && (!ubic || String(x.ubic) === String(ubic)))
+        if (!a) a = articles.find(x => String(x.code) === String(code))
+        return a
+      }
+      // Paso 1: restaurar stock de la entrega original
+      oldDel.lines.forEach(l => {
+        const a = findArt(l.code, l.ubic)
         if (!a) return
         let z = a.sizes.find(x => x.talle === l.talle)
         if (!z) { z = {talle: l.talle, qty: 0}; a.sizes.push(z) }
-        z.qty = Math.max(0, z.qty + diff)
+        z.qty += l.qty
       })
-      const updatedPaga = editDelivery.receptor === 'Protocolo' ? editDelivery.paga : null
-      const updatedMonto = editDelivery.receptor === 'Protocolo' && editDelivery.paga === 'si'
-        ? newLines.reduce((sum, l) => { const art = articles.find(a => a.code === l.code); return sum + (art?.precio||0) * l.qty }, 0) * 0.5
+      // Paso 2: descontar las cantidades nuevas
+      capturedLines.forEach(l => {
+        const a = findArt(l.code, l.ubic)
+        if (!a) return
+        let z = a.sizes.find(x => x.talle === l.talle)
+        if (!z) { z = {talle: l.talle, qty: 0}; a.sizes.push(z) }
+        z.qty = Math.max(0, z.qty - l.qty)
+      })
+      const updatedPaga = receptor === 'Protocolo' ? paga : null
+      const updatedMonto = receptor === 'Protocolo' && paga === 'si'
+        ? capturedLines.reduce((sum, l) => { const art = findArt(l.code, l.ubic); return sum + (art?.precio||0) * l.qty }, 0) * 0.5
         : null
       return {
         ...s,
         articles,
         deliveries: s.deliveries.map(d => {
-          if (d.id !== editDelivery.id) return d
-          return {...d, receptor:editDelivery.receptor, persona:editDelivery.persona.trim(), fecha:editDelivery.fecha, paga:updatedPaga, monto:updatedMonto, obs:editDelivery.obs?.trim()||undefined, lines:newLines}
+          if (d.id !== delId) return d
+          return {...d, receptor, persona:persona.trim(), fecha, paga:updatedPaga, monto:updatedMonto, obs:obs?.trim()||undefined, lines:capturedLines}
         })
       }
     })
