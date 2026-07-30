@@ -1608,14 +1608,36 @@ tfoot td{padding:9px 12px;font-weight:700}
   }
   const saveEditDelivery = () => {
     if (!editDelivery?.persona?.trim()) { showToast('El nombre no puede estar vacío.'); return }
-    setDb(s => ({...s, deliveries: s.deliveries.map(d => {
-      if (d.id !== editDelivery.id) return d
+    const newLines = (editDelivery.lines || []).filter(l => l.qty > 0)
+    if (newLines.length === 0) { showToast('La entrega debe tener al menos un artículo.'); return }
+    setDb(s => {
+      const oldDel = s.deliveries.find(d => d.id === editDelivery.id)
+      const articles = s.articles.map(a => ({...a, sizes: a.sizes.map(z => ({...z}))}))
+      ;(oldDel?.lines || []).forEach(l => {
+        const newLine = (editDelivery.lines || []).find(x => x.code === l.code && x.talle === l.talle)
+        const newQty = newLine ? Math.max(0, newLine.qty) : 0
+        const diff = l.qty - newQty
+        if (diff === 0) return
+        let a = articles.find(x => x.code === l.code && (!l.ubic || x.ubic === l.ubic))
+        if (!a) a = articles.find(x => x.code === l.code)
+        if (!a) return
+        let z = a.sizes.find(x => x.talle === l.talle)
+        if (!z) { z = {talle: l.talle, qty: 0}; a.sizes.push(z) }
+        z.qty = Math.max(0, z.qty + diff)
+      })
       const updatedPaga = editDelivery.receptor === 'Protocolo' ? editDelivery.paga : null
       const updatedMonto = editDelivery.receptor === 'Protocolo' && editDelivery.paga === 'si'
-        ? d.lines.reduce((s,l) => { const art=db.articles.find(a=>a.code===l.code); return s+(art?.precio||0)*l.qty }, 0) * 0.5
+        ? newLines.reduce((sum, l) => { const art = articles.find(a => a.code === l.code); return sum + (art?.precio||0) * l.qty }, 0) * 0.5
         : null
-      return {...d, receptor:editDelivery.receptor, persona:editDelivery.persona.trim(), fecha:editDelivery.fecha, paga:updatedPaga, monto:updatedMonto, obs:editDelivery.obs?.trim()||undefined}
-    })}))
+      return {
+        ...s,
+        articles,
+        deliveries: s.deliveries.map(d => {
+          if (d.id !== editDelivery.id) return d
+          return {...d, receptor:editDelivery.receptor, persona:editDelivery.persona.trim(), fecha:editDelivery.fecha, paga:updatedPaga, monto:updatedMonto, obs:editDelivery.obs?.trim()||undefined, lines:newLines}
+        })
+      }
+    })
     setEditDelivery(null)
     showToast('Entrega actualizada.')
   }
@@ -3681,7 +3703,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 {!isSoloVista && st === 'pendiente_separar' && (
                   <button className="btn btn-ghost" onClick={() => openPrintWindow(buildPedidoHtml(d.lines, d.persona, d.receptor, d.disciplina, d.fecha))}>🖨 Reimprimir</button>
                 )}
-                {!isSoloVista && st !== 'pendiente_separar' && <button className="btn" onClick={() => { setEditDelivery({id:d.id,persona:d.persona,fecha:d.fecha,paga:d.paga,obs:d.obs||'',receptor:d.receptor}); setSelectedDeliveryId(null) }}>✎ Editar</button>}
+                {!isSoloVista && st !== 'pendiente_separar' && <button className="btn" onClick={() => { setEditDelivery({id:d.id,persona:d.persona,fecha:d.fecha,paga:d.paga,obs:d.obs||'',receptor:d.receptor,lines:d.lines.map(l=>({...l}))}); setSelectedDeliveryId(null) }}>✎ Editar</button>}
                 {!isSoloVista && <button className="btn btn-red" onClick={() => { setSelectedDeliveryId(null); askDeleteDelivery(d.id) }}>Eliminar entrega</button>}
               </div>
             </div>
@@ -3692,12 +3714,12 @@ tfoot td{padding:9px 12px;font-weight:700}
       {/* Modal: Editar entrega */}
       {editDelivery && (
         <div className="modal-backdrop" onClick={() => setEditDelivery(null)}>
-          <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <div className="modal-title">Editar entrega</div>
               <button className="modal-close" onClick={() => setEditDelivery(null)}>×</button>
             </div>
-            <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:14}}>
+            <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:14,maxHeight:'70vh',overflowY:'auto'}}>
               <div className="form-group">
                 <label className="field-label">Nombre</label>
                 <input className="field-input" value={editDelivery.persona} autoFocus
@@ -3735,6 +3757,26 @@ tfoot td{padding:9px 12px;font-weight:700}
                 <textarea className="field-input" value={editDelivery.obs||''} onChange={e => setEditDelivery(p => ({...p, obs:e.target.value}))}
                   placeholder="Ej. Entrega para partido del sábado" rows={2}
                   style={{resize:'vertical',minHeight:60,fontFamily:'inherit',fontSize:14}} />
+              </div>
+              <div className="form-group">
+                <label className="field-label">Artículos entregados <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(poner 0 para eliminar)</span></label>
+                <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                  {(editDelivery.lines||[]).map((l,i) => (
+                    <div key={i} style={{display:'flex',alignItems:'center',gap:10,background:'#F8F8F4',borderRadius:6,padding:'8px 12px'}}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:600,fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.name||l.code}</div>
+                        <div style={{fontSize:12,color:'#8a8a82'}}>Talle {l.talle}</div>
+                      </div>
+                      <input type="number" min="0" value={l.qty}
+                        style={{width:64,textAlign:'center',padding:'5px 8px',borderRadius:6,border:'1.5px solid #E0E0DA',fontSize:14,fontWeight:700}}
+                        onChange={e => {
+                          const qty = Math.max(0, parseInt(e.target.value)||0)
+                          setEditDelivery(p => ({...p, lines: p.lines.map((x,j) => j===i ? {...x,qty} : x)}))
+                        }} />
+                      <span style={{fontSize:12,color:'#8a8a82',minWidth:12}}>u.</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
             <div className="modal-footer">
