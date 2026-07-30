@@ -1399,16 +1399,34 @@ ${rowsHtml}
     if (!jugadores.length) { showToast('Ingresá al menos una cantidad.'); return }
     const tieneFecha = TORNEOS_CON_FECHA.includes(repForm.torneo)
     const notifica = currentUser?.role === 'receptor_reposiciones'
-    const pushAlerta = (s, tipo, concepto) => notifica
-      ? [{id:Date.now(), tipo, concepto, por:currentUser?.displayName||session, fecha:today()}, ...(s.repoAlertas||[])]
+    const pushAlerta = (s, tipo, concepto, detalle) => notifica
+      ? [{id:Date.now(), tipo, concepto, detalle, por:currentUser?.displayName||session, fecha:today()}, ...(s.repoAlertas||[])]
       : (s.repoAlertas||[])
     if (repForm.editId) {
-      setDb(s => ({...s, reposiciones:(s.reposiciones||[]).map(r => r.id===repForm.editId
-        ? {...r, concepto:repForm.concepto.trim(), torneo:repForm.torneo, descuento:repForm.descuento,
-            fechaTorneo: tieneFecha ? Number(repForm.fechaTorneo) : null,
-            fechaPartido: repForm.fechaPartido||null,
-            tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores}
-        : r), repoAlertas: pushAlerta(s, 'editar', repForm.concepto.trim())}))
+      setDb(s => {
+        const oldRep = (s.reposiciones||[]).find(r => r.id === repForm.editId)
+        const cambios = []
+        if (oldRep && oldRep.concepto !== repForm.concepto.trim()) cambios.push('cambió el nombre')
+        if (oldRep && oldRep.torneo !== repForm.torneo) cambios.push(`cambió el torneo a ${repForm.torneo}`)
+        if (oldRep) {
+          const diffCount = jugadores.filter(j => {
+            const old = (oldRep.jugadores||[]).find(x => x.nombre === j.nombre)
+            return !old || old.cantCamiseta !== j.cantCamiseta || old.cantShort !== j.cantShort
+          }).length + (oldRep.jugadores||[]).filter(j => !jugadores.find(x => x.nombre === j.nombre)).length
+          if (diffCount > 0) cambios.push(`modificó cantidades de ${diffCount} jugador${diffCount !== 1 ? 'es' : ''}`)
+        }
+        const detalle = cambios.length > 0 ? cambios.join(', ') : null
+        return {
+          ...s,
+          reposiciones: (s.reposiciones||[]).map(r => r.id===repForm.editId
+            ? {...r, concepto:repForm.concepto.trim(), torneo:repForm.torneo, descuento:repForm.descuento,
+                fechaTorneo: tieneFecha ? Number(repForm.fechaTorneo) : null,
+                fechaPartido: repForm.fechaPartido||null,
+                tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores}
+            : r),
+          repoAlertas: pushAlerta(s, 'editar', repForm.concepto.trim(), detalle)
+        }
+      })
       showToast('Reposición actualizada.')
     } else {
       setDb(s => {
@@ -1416,7 +1434,7 @@ ${rowsHtml}
           torneo:repForm.torneo, fechaTorneo: tieneFecha ? Number(repForm.fechaTorneo) : null, descuento:repForm.descuento,
           fechaPartido: repForm.fechaPartido||null,
           tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores }
-        return { ...s, reposiciones:[rep,...(s.reposiciones||[])], nextRep:s.nextRep+1, repoAlertas: pushAlerta(s, 'crear', rep.concepto) }
+        return { ...s, reposiciones:[rep,...(s.reposiciones||[])], nextRep:s.nextRep+1, repoAlertas: pushAlerta(s, 'crear', rep.concepto, null) }
       })
       showToast('Reposición registrada.')
     }
@@ -1426,7 +1444,7 @@ ${rowsHtml}
     setDb(s => {
       const rep = (s.reposiciones||[]).find(r=>r.id===id)
       const repoAlertas = currentUser?.role === 'receptor_reposiciones' && rep
-        ? [{id:Date.now(), tipo:'eliminar', concepto:rep.concepto, por:currentUser?.displayName||session, fecha:today()}, ...(s.repoAlertas||[])]
+        ? [{id:Date.now(), tipo:'eliminar', concepto:rep.concepto, detalle:null, por:currentUser?.displayName||session, fecha:today()}, ...(s.repoAlertas||[])]
         : (s.repoAlertas||[])
       return {...s, reposiciones:(s.reposiciones||[]).filter(r=>r.id!==id), repoAlertas}
     })
@@ -1655,8 +1673,15 @@ tfoot td{padding:9px 12px;font-weight:700}
   }
   const saveRepConcepto = () => {
     if (!repConceptoEdit?.trim()) { showToast('El concepto no puede estar vacío.'); return }
-    setDb(s => ({...s, reposiciones:(s.reposiciones||[]).map(r=>r.id===repDetail.id?{...r,concepto:repConceptoEdit.trim()}:r)}))
-    setRepDetail(p => ({...p, concepto:repConceptoEdit.trim()}))
+    const nuevoConcepto = repConceptoEdit.trim()
+    setDb(s => {
+      const oldRep = (s.reposiciones||[]).find(r=>r.id===repDetail.id)
+      const repoAlertas = currentUser?.role === 'receptor_reposiciones' && oldRep && oldRep.concepto !== nuevoConcepto
+        ? [{id:Date.now(), tipo:'editar', concepto:nuevoConcepto, detalle:`cambió el nombre de «${oldRep.concepto}» a «${nuevoConcepto}»`, por:currentUser?.displayName||session, fecha:today()}, ...(s.repoAlertas||[])]
+        : (s.repoAlertas||[])
+      return {...s, reposiciones:(s.reposiciones||[]).map(r=>r.id===repDetail.id?{...r,concepto:nuevoConcepto}:r), repoAlertas}
+    })
+    setRepDetail(p => ({...p, concepto:nuevoConcepto}))
     setRepConceptoEdit(null)
     showToast('Concepto actualizado.')
   }
@@ -1928,36 +1953,104 @@ tfoot td{padding:9px 12px;font-weight:700}
     const historial  = myDeliveries.filter(d => (d.status||'aceptado') !== 'pendiente')
     const rCodeName  = db.articles.reduce((acc, a) => { acc[a.code] = a.name; return acc }, {})
     return (
-      <div style={{minHeight:'100dvh',background:'#F6F6F4',fontFamily:'Archivo,sans-serif'}}>
-        {/* Header */}
-        <div style={{background:'#121212',padding:'18px 24px',display:'flex',alignItems:'center',gap:16}}>
-          <img src="/escudo.png" alt="Peñarol" style={{height:44}} />
-          <div style={{flex:1}}>
-            <div style={{fontFamily:'Oswald,sans-serif',fontSize:14,color:'#f2cb12',letterSpacing:'.05em'}}>{currentUser?.role==='receptor' ? 'INDUMENTARIA CLUB ATLÉTICO PEÑAROL' : 'DEPÓSITO · INDUMENTARIA'}</div>
-            <div style={{fontSize:13,color:'#fff',marginTop:2}}>Hola, <b>{currentUser?.displayName || session}</b></div>
-          </div>
-          <button onClick={() => window.location.reload()} style={{background:'#2a2a2a',border:'1px solid #3a3a3a',color:'#ccc',borderRadius:8,padding:'8px 14px',cursor:'pointer',fontSize:13,marginRight:8}}>↺</button>
-          <button onClick={doLogout} style={{background:'#2a2a2a',border:'1px solid #3a3a3a',color:'#ccc',borderRadius:8,padding:'8px 14px',cursor:'pointer',fontSize:13}}>Cerrar sesión</button>
-        </div>
+      <div className="app-shell">
+        <div className={`mobile-overlay${sidebarOpen?' open':''}`} onClick={() => setSidebarOpen(false)} />
 
-        {isReceptorReposiciones && (
-          <div style={{maxWidth:680,margin:'0 auto',padding:'16px 16px 0'}}>
-            <div style={{display:'flex',gap:6,borderBottom:'2px solid #ECECE8'}}>
-              {[['entregas','Mis entregas'],['reposiciones','Reposiciones']].map(([k,l]) => (
-                <button key={k} onClick={() => setReceptorTab(k)} style={{padding:'7px 18px',border:'none',background:'none',fontWeight:700,fontSize:13,cursor:'pointer',borderBottom:receptorTab===k?'2px solid #f2cb12':'2px solid transparent',marginBottom:-2,color:receptorTab===k?'#121212':'#8a8a82'}}>
-                  {l}
-                </button>
-              ))}
+        <aside className={`sidebar${sidebarOpen?' open':''}`}>
+          <div className="sidebar-logo">
+            <img src="/escudo_marca.png" alt="Club Atlético Peñarol" />
+            <div className="sidebar-logo-text">
+              <div className="name">CLUB ATLÉTICO PEÑAROL</div>
+              <div className="sub">INDUMENTARIA</div>
             </div>
           </div>
-        )}
+          <nav className="sidebar-nav">
+            <button className={`nav-item${receptorTab==='entregas'?' active':''}`} onClick={() => { setReceptorTab('entregas'); setSidebarOpen(false) }}>
+              <span className="nav-dot" />MIS ENTREGAS
+            </button>
+            {isReceptorReposiciones && (
+              <button className={`nav-item${receptorTab==='reposiciones'?' active':''}`} onClick={() => { setReceptorTab('reposiciones'); setSidebarOpen(false) }}>
+                <span className="nav-dot" />REPOSICIONES
+              </button>
+            )}
+            <button className={`nav-item${receptorTab==='plantel'?' active':''}`} onClick={() => { setReceptorTab('plantel'); setSidebarOpen(false) }}>
+              <span className="nav-dot" />PLANTEL
+            </button>
+          </nav>
+          <div style={{flex:1}} />
+          <div className="sidebar-user" style={{flexDirection:'column',gap:10}}>
+            <div style={{display:'flex',alignItems:'center',gap:11,minWidth:0}}>
+              <div className="user-avatar">{ini(currentUser?.displayName||session||'')}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div className="user-name" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{currentUser?.displayName||session}</div>
+                <div className="user-role">{ROLE_LABELS[currentUser?.role]||currentUser?.role}</div>
+              </div>
+            </div>
+            <div style={{display:'flex',justifyContent:'flex-end',gap:2}}>
+              <button title="Sincronizar" onClick={() => saveToSupabase(db).then(ok => showToast(ok ? 'Datos sincronizados.' : 'Error al sincronizar.'))} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 6px'}}>↺</button>
+              <button title="Cerrar sesión" onClick={doLogout} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 6px'}}>⏻</button>
+            </div>
+          </div>
+        </aside>
+
+        <div className="main-area">
+          <header className="topbar">
+            <button className="hamburger" onClick={() => setSidebarOpen(o=>!o)} aria-label="Menú">
+              <span/><span/><span/>
+            </button>
+            <div className="topbar-title">
+              {{'entregas':'MIS ENTREGAS','reposiciones':'REPOSICIONES','plantel':'PLANTEL'}[receptorTab]}
+            </div>
+          </header>
+          <div className="content">
 
         {receptorTab === 'reposiciones' && isReceptorReposiciones && (
-          <div style={{maxWidth:680,margin:'0 auto',padding:'20px 16px',display:'flex',flexDirection:'column',gap:12}}>
-            <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed',alignSelf:'flex-start'}}>+ Nueva reposición</button>
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            {(() => {
+              const descCam = j => j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
+              const descSht = j => j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
+              const totalCamTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
+              const totalShtTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
+              const totalEquipos  = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
+              const totalShorts   = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
+              const totalDinero   = totalEquipos * PRECIO_CAMISETA + totalShorts * PRECIO_SHORT
+              return (
+                <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
+                  <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepDesglose('camisetas')}>
+                    <div className="kpi-label">CAMISETAS ENVIADAS</div>
+                    <div className="kpi-value">{totalCamTodas}</div>
+                    <div className="kpi-sub">en todas las entregas →</div>
+                  </div>
+                  <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepDesglose('shorts')}>
+                    <div className="kpi-label">SHORTS ENVIADOS</div>
+                    <div className="kpi-value">{totalShtTodas}</div>
+                    <div className="kpi-sub">en todas las entregas →</div>
+                  </div>
+                  <div className="kpi-card" style={{alignSelf:'flex-start',cursor:'pointer',background:'#D6D6D0',border:'1px solid #121212'}} onClick={()=>setRepResumen('ambos')}>
+                    <div className="kpi-label">INDUMENTARIA A DESCONTAR</div>
+                    <div style={{display:'flex',alignItems:'flex-end',gap:24,marginTop:6}}>
+                      <div><div className="kpi-value">{totalEquipos}</div><div className="kpi-sub">camisetas →</div></div>
+                      <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/>
+                      <div><div className="kpi-value">{totalShorts}</div><div className="kpi-sub">shorts →</div></div>
+                    </div>
+                  </div>
+                  <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#f2cb12'}} onClick={()=>setRepResumen('ambos')}>
+                    <div className="kpi-label" style={{color:'#f2cb12'}}>TOTAL DESCUENTOS</div>
+                    <div className="kpi-value" style={{color:'#f2cb12'}}>$ {totalDinero.toLocaleString('es-UY')}</div>
+                    <div className="kpi-sub" style={{color:'#f2cb12'}}>ver detalle →</div>
+                  </div>
+                  <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setReceptorTab('plantel')}>
+                    <div className="kpi-label">PLANTEL</div>
+                    <div className="kpi-value">{(db.plantel||[]).filter(j=>j.nombre.trim().toLowerCase()!=='libre').length}</div>
+                    <div className="kpi-sub">jugadores registrados →</div>
+                  </div>
+                  <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed',alignSelf:'flex-start'}}>+ Nueva reposición</button>
+                </div>
+              )
+            })()}
             {!(db.plantel||[]).length && (
               <div style={{fontSize:13,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:8,padding:'10px 14px'}}>
-                Todavía no hay plantel cargado, no se pueden registrar reposiciones.
+                Configurá el plantel primero para poder registrar reposiciones.
               </div>
             )}
             {(db.reposiciones||[]).length === 0
@@ -2020,7 +2113,7 @@ tfoot td{padding:9px 12px;font-weight:700}
         )}
 
         {receptorTab === 'entregas' && (
-        <div style={{maxWidth:680,margin:'0 auto',padding:'28px 16px',display:'flex',flexDirection:'column',gap:28}}>
+        <div style={{maxWidth:680,display:'flex',flexDirection:'column',gap:28}}>
 
           {/* Pendientes */}
           <div>
@@ -2089,6 +2182,39 @@ tfoot td{padding:9px 12px;font-weight:700}
             })}
           </div>
         </div>
+        )}
+
+        {receptorTab === 'plantel' && (
+          <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            {(db.plantel||[]).length === 0
+              ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay jugadores en el plantel.</div>
+              : (
+                <div className="card" style={{padding:0,overflow:'hidden',width:'max-content',maxWidth:'100%',overflowX:'auto'}}>
+                  <div style={{display:'grid',gridTemplateColumns:'50px max-content 80px 90px 90px'}}>
+                    {['Nº','NOMBRE','POSICIÓN','CAMISETA','SHORT'].map((h,i)=>(
+                      <div key={i} style={{padding:'11px 20px',background:'#121212',color:'#f2cb12',fontWeight:700,fontSize:11,letterSpacing:'.04em',whiteSpace:'nowrap'}}>{h}</div>
+                    ))}
+                    {(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => {
+                      const isLibre = j.nombre.trim().toLowerCase()==='libre'
+                      const isGolero = j.posicion==='Golero'
+                      const baseBg = isLibre?'#3a3a3a':isGolero?'#A5D6A7':'#fff'
+                      const textColor = isLibre?'#888':'#1a1a1a'
+                      const cell = {background:baseBg,padding:'13px 20px',borderBottom:'1px solid #F0F0EC',fontSize:13.5,color:textColor,display:'flex',alignItems:'center'}
+                      return (
+                        <Fragment key={j.id}>
+                          <div style={{...cell,fontWeight:800,fontSize:15}}>{j.numero||'—'}</div>
+                          <div style={{...cell,fontWeight:700,fontStyle:isLibre?'italic':undefined,textTransform:isLibre?undefined:'uppercase',whiteSpace:'nowrap'}}>{j.nombre}</div>
+                          <div style={{...cell,fontSize:12}}>{j.posicion||'Jugador'}</div>
+                          <div style={cell}>{j.talleCamiseta}</div>
+                          <div style={cell}>{j.talleShort}</div>
+                        </Fragment>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            }
+          </div>
         )}
 
         {/* Rechazar modal */}
@@ -2355,6 +2481,175 @@ tfoot td{padding:9px 12px;font-weight:700}
           </div>
         )}
 
+        {/* Modal: Desglose camisetas/shorts enviados por tipo (receptor) */}
+        {repDesglose && (() => {
+          const esCam = repDesglose === 'camisetas'
+          const titulo = esCam ? 'Camisetas enviadas por tipo' : 'Shorts enviados por tipo'
+          const desglose = {}
+          ;(db.reposiciones||[]).forEach(r => {
+            ;(r.jugadores||[]).forEach(j => {
+              const tipo = j.tipoCamiseta || '(sin tipo)'
+              const qty = esCam ? (Number(j.cantCamiseta)||0) : (Number(j.cantShort)||0)
+              if (qty > 0) desglose[tipo] = (desglose[tipo]||0) + qty
+            })
+          })
+          const filas = Object.entries(desglose).sort((a,b)=>b[1]-a[1])
+          const totalGeneral = filas.reduce((s,[,v])=>s+v,0)
+          const jugTipos = [...REP_TIPOS_JUGADOR]
+          const golTipos = [...REP_TIPOS_GOLERO]
+          const filasJug = filas.filter(([t])=>jugTipos.includes(t))
+          const filasGol = filas.filter(([t])=>golTipos.includes(t))
+          const filasOtros = filas.filter(([t])=>!jugTipos.includes(t)&&!golTipos.includes(t))
+          const TIPO_COLORS = {
+            'TRADICIONAL': {bg:'repeating-linear-gradient(45deg,#f2cb12,#f2cb12 28px,#121212 28px,#121212 56px)', color:'#fff', badge:true},
+            'AMARILLA':    {bg:'#f2cb12', color:'#121212'},
+            'VERDE':       {bg:'#2d6a4f', color:'#fff'},
+            'NEGRO':       {bg:'#2a2a2a', color:'#fff'},
+            'NARANJA':     {bg:'#EA580C', color:'#121212'},
+            'CREMA':       {bg:'#F5ECD7', color:'#121212'},
+          }
+          const renderFila = ([tipo, qty]) => {
+            const c = TIPO_COLORS[tipo] || {bg:'#F5F5F0', color:'#121212'}
+            return (
+              <div key={tipo} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 16px',borderRadius:8,marginBottom:6,background:c.bg}}>
+                {c.badge
+                  ? <span style={{fontWeight:700,fontSize:13,color:'#fff',background:'#121212',padding:'3px 10px',borderRadius:20}}>{tipo}</span>
+                  : <span style={{fontWeight:700,fontSize:14,color:c.color}}>{tipo}</span>
+                }
+                {c.badge
+                  ? <span style={{fontFamily:'Oswald,sans-serif',fontSize:22,color:'#121212',background:'#f2cb12',padding:'2px 14px',borderRadius:20}}>{qty}</span>
+                  : <span style={{fontFamily:'Oswald,sans-serif',fontSize:22,color:c.color}}>{qty}</span>
+                }
+              </div>
+            )
+          }
+          return (
+            <div className="modal-backdrop" onClick={()=>setRepDesglose(null)}>
+              <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:400,width:'96%'}}>
+                <div className="modal-header">
+                  <div className="modal-title">{titulo}</div>
+                  <button className="modal-close" onClick={()=>setRepDesglose(null)}>×</button>
+                </div>
+                <div className="modal-body">
+                  {filasJug.length > 0 && <>
+                    <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginBottom:4}}>JUGADORES</div>
+                    {filasJug.map(renderFila)}
+                  </>}
+                  {filasGol.length > 0 && <>
+                    <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginTop:16,marginBottom:4}}>GOLEROS</div>
+                    {filasGol.map(renderFila)}
+                  </>}
+                  {filasOtros.length > 0 && <>
+                    <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginTop:16,marginBottom:4}}>OTROS</div>
+                    {filasOtros.map(renderFila)}
+                  </>}
+                  {filas.length === 0 && <div style={{textAlign:'center',color:'#8a8a82',padding:'24px 0'}}>Sin datos.</div>}
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:16,paddingTop:12,borderTop:'2px solid #121212'}}>
+                    <span style={{fontWeight:700,fontSize:13}}>TOTAL</span>
+                    <span style={{fontFamily:'Oswald,sans-serif',fontSize:26}}>{totalGeneral}</span>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-ghost" onClick={()=>setRepDesglose(null)}>Cerrar</button>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* Modal: Resumen descuentos por jugador (receptor) */}
+        {repResumen && (() => {
+          const MESES_ES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+          const esRep = r => /^reposici[oó]n\.?\s+vs/i.test((r.concepto||'').trim())
+          const repsValidas = (db.reposiciones||[]).filter(esRep)
+          const mesesMap = {}
+          repsValidas.forEach(r => {
+            const p = (r.fechaPartido||r.fecha||'').split('/')
+            const key = p.length===3 ? p[1]+'/'+p[2] : (r.fechaPartido||r.fecha)||'?'
+            if (!mesesMap[key]) mesesMap[key] = []
+            mesesMap[key].push(r)
+          })
+          const mesesOrdenados = Object.keys(mesesMap).sort((a,b)=>{
+            const [ma,ya] = a.split('/').map(Number)
+            const [mb,yb] = b.split('/').map(Number)
+            return ya!==yb ? ya-yb : ma-mb
+          })
+          const datosPorMes = mesesOrdenados.map(mesKey => {
+            const [mm, yyyy] = mesKey.split('/')
+            const mesNombre = `${MESES_ES[Number(mm)]||mm} ${yyyy}`
+            const repsDelMes = mesesMap[mesKey]
+            const jugMapMes = {}
+            ;(db.plantel||[]).filter(p=>p.nombre?.trim().toLowerCase()!=='libre').forEach(p => {
+              jugMapMes[p.nombre.trim()] = {numero:p.numero||'—', nombre:p.nombre.trim()}
+            })
+            repsDelMes.forEach(r => (r.jugadores||[]).forEach(j => {
+              if (!jugMapMes[j.nombre]) jugMapMes[j.nombre] = {numero:j.numero||'—', nombre:j.nombre}
+            }))
+            const jugsMes = Object.values(jugMapMes).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0))
+            const getCam = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const dc=j.descuentoCamiseta!==undefined?j.descuentoCamiseta!==false:j.descuento!==false;return acc+(dc?Number(j.cantCamiseta)||0:0)},0)
+            const getSht = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const ds=j.descuentoShort!==undefined?j.descuentoShort!==false:j.descuento!==false;return acc+(ds?Number(j.cantShort)||0:0)},0)
+            const filas = jugsMes.map(j=>({...j,cam:getCam(j.nombre),sht:getSht(j.nombre)})).map(f=>({...f,desc:f.cam*PRECIO_DESC_CAMISETA+f.sht*PRECIO_DESC_SHORT}))
+            const totCam = filas.reduce((s,f)=>s+f.cam,0)
+            const totSht = filas.reduce((s,f)=>s+f.sht,0)
+            const totDesc = filas.reduce((s,f)=>s+f.desc,0)
+            return {mesKey, mesNombre, filas, totCam, totSht, totDesc}
+          })
+          const totGenCam = datosPorMes.reduce((s,m)=>s+m.totCam,0)
+          const totGenSht = datosPorMes.reduce((s,m)=>s+m.totSht,0)
+          const totGenDesc = datosPorMes.reduce((s,m)=>s+m.totDesc,0)
+          return (
+            <div className="modal-backdrop" onClick={()=>setRepResumen(null)}>
+              <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:600,width:'96%'}}>
+                <div className="modal-header">
+                  <div className="modal-title">Resumen de descuentos por jugador</div>
+                  <button className="modal-close" onClick={()=>setRepResumen(null)}>×</button>
+                </div>
+                <div className="modal-body" style={{maxHeight:'65vh',overflowY:'auto',padding:0}}>
+                  {datosPorMes.length === 0
+                    ? <div style={{textAlign:'center',color:'#8a8a82',padding:'32px 0'}}>Sin reposiciones "vs." registradas.</div>
+                    : datosPorMes.map(({mesNombre, filas, totCam, totSht, totDesc}) => (
+                      <div key={mesNombre} style={{marginBottom:0}}>
+                        <div style={{padding:'10px 20px',background:'#F0F0EC',fontWeight:700,fontSize:12,letterSpacing:'.04em',color:'#5a5a52'}}>{mesNombre.toUpperCase()}</div>
+                        <div style={{display:'grid',gridTemplateColumns:'40px 1fr 60px 60px 90px',background:'#121212',color:'#f2cb12',fontWeight:700,fontSize:10,letterSpacing:'.04em'}}>
+                          {['Nº','NOMBRE','CAM.','SHT.','DESCUENTO'].map((h,i)=>(
+                            <div key={i} style={{padding:'7px 12px',textAlign:i>=2?'right':'left'}}>{h}</div>
+                          ))}
+                        </div>
+                        {filas.filter(f=>f.cam>0||f.sht>0).map(f=>(
+                          <div key={f.nombre} style={{display:'grid',gridTemplateColumns:'40px 1fr 60px 60px 90px',borderBottom:'1px solid #F0F0EC'}}>
+                            <div style={{padding:'9px 12px',fontWeight:800,fontSize:13,color:'#8a8a82'}}>{f.numero}</div>
+                            <div style={{padding:'9px 12px',fontWeight:600,fontSize:13,textTransform:'uppercase'}}>{f.nombre}</div>
+                            <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:13}}>{f.cam||'—'}</div>
+                            <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:13}}>{f.sht||'—'}</div>
+                            <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:13,fontWeight:700}}>$ {f.desc.toLocaleString('es-UY')}</div>
+                          </div>
+                        ))}
+                        <div style={{display:'grid',gridTemplateColumns:'40px 1fr 60px 60px 90px',background:'#F8F8F4',borderBottom:'2px solid #121212'}}>
+                          <div style={{padding:'9px 12px',gridColumn:'1/3',fontWeight:700,fontSize:12,color:'#5a5a52'}}>TOTAL MES</div>
+                          <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13}}>{totCam}</div>
+                          <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13}}>{totSht}</div>
+                          <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13}}>$ {totDesc.toLocaleString('es-UY')}</div>
+                        </div>
+                      </div>
+                    ))
+                  }
+                  {datosPorMes.length > 1 && (
+                    <div style={{display:'grid',gridTemplateColumns:'40px 1fr 60px 60px 90px',background:'#121212',color:'#f2cb12'}}>
+                      <div style={{padding:'11px 12px',gridColumn:'1/3',fontWeight:700,fontSize:12,letterSpacing:'.04em'}}>TOTAL GENERAL</div>
+                      <div style={{padding:'11px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:14}}>{totGenCam}</div>
+                      <div style={{padding:'11px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:14}}>{totGenSht}</div>
+                      <div style={{padding:'11px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:14}}>$ {totGenDesc.toLocaleString('es-UY')}</div>
+                    </div>
+                  )}
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-ghost" onClick={()=>setRepResumen(null)}>Cerrar</button>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
         {/* Toast */}
         {toast && (
           <div className="toast">
@@ -2362,6 +2657,8 @@ tfoot td{padding:9px 12px;font-weight:700}
             {toast}
           </div>
         )}
+        </div>
+        </div>
       </div>
     )
   }
@@ -2523,16 +2820,22 @@ tfoot td{padding:9px 12px;font-weight:700}
                       <span className="badge" style={{background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B'}}>{(db.repoAlertas||[]).length}</span>
                       <button className="back-link" style={{color:'#B45309',margin:0}} onClick={() => goView('reposiciones')}>Ver →</button>
                     </div>
-                    {(db.repoAlertas||[]).map(a => (
-                      <div key={a.id} className="table-row" style={{gridTemplateColumns:'34px 1fr auto'}}>
-                        <div className="avatar" style={{background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B',fontSize:13,fontWeight:800}}>!</div>
-                        <div style={{minWidth:0}}>
-                          <div style={{fontWeight:600,fontSize:13.5,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{a.concepto}</div>
-                          <div style={{fontSize:11.5,color:'#8a8a82'}}>{a.por} · {a.tipo==='crear'?'Creó':a.tipo==='editar'?'Editó':'Eliminó'}</div>
+                    {(db.repoAlertas||[]).map(a => {
+                      const verbo = a.tipo==='crear' ? 'agregó' : a.tipo==='editar' ? 'editó' : 'eliminó'
+                      const accion = a.detalle || `${verbo} la reposición`
+                      return (
+                        <div key={a.id} className="table-row" style={{gridTemplateColumns:'34px 1fr auto'}}>
+                          <div className="avatar" style={{background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B',fontSize:13,fontWeight:800}}>!</div>
+                          <div style={{minWidth:0}}>
+                            <div style={{fontWeight:600,fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                              {a.por} {verbo} «{a.concepto}»
+                            </div>
+                            <div style={{fontSize:11.5,color:'#8a8a82',marginTop:1}}>{accion}</div>
+                          </div>
+                          <div style={{textAlign:'right',flexShrink:0,fontSize:11,color:'#8a8a82',whiteSpace:'nowrap',marginLeft:8}}>{a.fecha}</div>
                         </div>
-                        <div style={{textAlign:'right',flexShrink:0,fontSize:11,color:'#8a8a82'}}>{a.fecha}</div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
                 <div className="card">
