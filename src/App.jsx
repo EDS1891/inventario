@@ -375,7 +375,7 @@ export default function App() {
   const byCode = (code) => db.articles.find(a => a.code === code)
   const curCode = () => selectedCode || ''
 
-  const goView = (v) => { setView(v); setSearch(''); setSidebarOpen(false) }
+  const goView = (v) => { setView(v); setSearch(''); setDelFilterPersona(''); setSidebarOpen(false) }
   const openDetail = (code) => { setSelectedCode(code); setView('detalle'); setSidebarOpen(false) }
 
   // ---- Entregas / Devoluciones ----
@@ -2910,7 +2910,14 @@ tfoot td{padding:9px 12px;font-weight:700}
           <div className="topbar-spacer" />
           <div className="search-box">
             <span className="search-icon" />
-            <input value={search} onChange={e => { setSearch(e.target.value); if((view==='panel'||view==='detalle')&&e.target.value) setView('inventario') }} placeholder="Buscar artículo…" />
+            <input
+              value={view==='entregas' ? delFilterPersona : search}
+              onChange={e => {
+                if (view==='entregas') { setDelFilterPersona(e.target.value) }
+                else { setSearch(e.target.value); if((view==='panel'||view==='detalle')&&e.target.value) setView('inventario') }
+              }}
+              placeholder={view==='entregas' ? 'Buscar integrante…' : 'Buscar artículo…'}
+            />
           </div>
           {!isSoloVista && <button className="btn btn-ghost" onClick={openArticulo}>+<span className="btn-label"> Artículo</span></button>}
           {!isSoloVista && <button className="btn btn-ghost" onClick={openDevolucion}>↩<span className="btn-label"> Dev.</span></button>}
@@ -3300,7 +3307,6 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <button key={r} className={`chip${delFilterReceptor===r?' active':''}`} onClick={() => { setDelFilterReceptor(r); setDelFilterDisciplina(''); setDelFilterPaga('') }}>{r}</button>
                   ))}
                 </div>
-                <input className="field-input" style={{width:200,flexShrink:0}} placeholder="Buscar integrante…" value={delFilterPersona} onChange={e => setDelFilterPersona(e.target.value)} />
               </div>
               {delFilterReceptor==='Deportes Anexos' && deportesAnexosDisciplinas.length > 0 && (
                 <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:12}}>
