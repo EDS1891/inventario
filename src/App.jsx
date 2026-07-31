@@ -4282,6 +4282,14 @@ tfoot td{padding:9px 12px;font-weight:700}
                           }
                         })
                       })
+                      ;(db.descExtras||[]).forEach(e => {
+                        const nombre = e.jugadorNombre?.trim()
+                        if (!nombre) return
+                        const qty = e.cantidad || 1
+                        if (!counts[nombre]) counts[nombre] = {total:0, monto:0}
+                        counts[nombre].total += qty
+                        counts[nombre].monto += e.precio * qty
+                      })
                       return Object.entries(counts).sort((a,b) => b[1].total-a[1].total).slice(0,15)
                     })()
                     return (
