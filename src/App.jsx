@@ -224,7 +224,7 @@ export default function App() {
   const [receptorTab, setReceptorTab] = useState('entregas')
   const [toast, setToast] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [depositosOpen, setDepositosOpen] = useState(true)
+  const [depositosOpen, setDepositosOpen] = useState(false)
   const [reposicionesOpen, setReposicionesOpen] = useState(false)
   const [session, setSession] = useState(() => localStorage.getItem(SESSION_KEY) || null)
   const [loginView, setLoginView] = useState('login')
