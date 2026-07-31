@@ -26,6 +26,22 @@ const ROLE_LABELS = { admin:'Admin', 'solo-vista':'Solo Vista', receptor:'Recept
 const ROLE_OPTIONS = [['admin','Administrador'],['solo-vista','Solo Vista'],['receptor','Receptor'],['receptor_reposiciones','Receptor + Reposiciones']]
 const PRECIO_DESC_CAMISETA = 1930
 const PRECIO_DESC_SHORT = 1030
+const EXTRAS_PRENDAS = [
+  {nombre:'Campera Concentración',precio:2245},
+  {nombre:'Pantalón Concentración',precio:1660},
+  {nombre:'Remera Concentración',precio:1210},
+  {nombre:'Remera Entrenamiento',precio:1166},
+  {nombre:'Buzo Entrenamiento',precio:1660},
+  {nombre:'Campera de Lluvia',precio:2470},
+  {nombre:'Short Entrenamiento',precio:1030},
+  {nombre:'Pantalón Entrenamiento',precio:1660},
+  {nombre:'Calza Corta',precio:1210},
+  {nombre:'Calza Larga',precio:1810},
+  {nombre:'Remera Térmica Manga Corta',precio:1120},
+  {nombre:'Remera Térmica Manga Larga',precio:1320},
+  {nombre:'Gorro Lana',precio:820},
+  {nombre:'Gorro Visera',precio:820},
+]
 
 const DEFAULT_USERS = [
   { username:'compras', password:'peniarol1891', role:'admin', displayName:'Compras Peñarol', status:'aprobado' },
@@ -34,7 +50,7 @@ const DEFAULT_USERS = [
   { username:'rferrari@capenarol.com.uy', password:'Temporal2026', role:'receptor', displayName:'Rodrigo Ferrari', status:'aprobado' },
   { username:'clauria@capenarol.com.uy', password:'Temporal2026', role:'receptor', displayName:'Camilo Lauria', status:'aprobado' },
 ]
-const EMPTY_DB = { articles:[], deliveries:[], movimientos:[], nextId:1, nextDel:1, nextMov:1, nextRep:1, users: DEFAULT_USERS, camisetasUtileria:[], reposiciones:[], plantel:[], repoAlertas:[] }
+const EMPTY_DB = { articles:[], deliveries:[], movimientos:[], nextId:1, nextDel:1, nextMov:1, nextRep:1, users: DEFAULT_USERS, camisetasUtileria:[], reposiciones:[], plantel:[], repoAlertas:[], descExtras:[] }
 const COMPETICIONES = ['CAMPEONATO URUGUAYO','CONMEBOL','COPA LIBERTADORES FEMENINA','COPA LIBERTADORES FÚTBOL SALA','COPA INTERCONTINENTAL SUB 20']
 const MODELOS_JUGADOR = ['TRADICIONAL','GRIS','AMARILLA','DORADA','NEGRA Y DORADA','NEGRA Y AMARILLA','AMARILLA FLÚO']
 const MODELOS_GOLERO  = ['VERDE','NARANJA','NEGRO','GRIS','ROSADO','CREMA','AMARILLO FLÚO','AMARILLO']
@@ -48,7 +64,7 @@ async function loadFromSupabase() {
     supabase.from('deposito_state').select('*').eq('id', 1).single(),
     supabase.from('deposito_state').select('deliveries').eq('id', 2).single(),
     supabase.from('deposito_state').select('articles,deliveries,movimientos,next_del').eq('id', 3).single(),
-    supabase.from('deposito_state').select('deliveries').eq('id', 4).single(),
+    supabase.from('deposito_state').select('deliveries,articles').eq('id', 4).single(),
   ])
   if (error || !data) { console.error('[Supabase] Error cargando datos:', error?.message, error?.code, error?.details); return null }
   let users = (usersRow?.deliveries?.length > 0 && usersRow.deliveries[0]?.username)
@@ -92,6 +108,7 @@ async function loadFromSupabase() {
     nextRep: utiRow?.next_del || 1,
     plantel: utiRow?.movimientos || [],
     repoAlertas: alertasRow?.deliveries || [],
+    descExtras: alertasRow?.articles || [],
   }
 }
 
@@ -121,6 +138,7 @@ async function saveToSupabase(db) {
     supabase.from('deposito_state').upsert({
       id: 4,
       deliveries: db.repoAlertas || [],
+      articles: db.descExtras || [],
       updated_at: new Date().toISOString(),
     }),
   ])
@@ -198,6 +216,8 @@ export default function App() {
   const [repTab, setRepTab] = useState('reposiciones')
   const [plantelForm, setPlantelForm] = useState({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',cantCamiseta:1,talleShort:'L',cantShort:1})
   const [plantelModal, setPlantelModal] = useState(false)
+  const [descExtraModal, setDescExtraModal] = useState(false)
+  const [descExtraForm, setDescExtraForm] = useState({jugadorNombre:'',jugadorNumero:'',articulo:'',precio:0,cantidad:1,fecha:''})
   const [selectedPlantelId, setSelectedPlantelId] = useState(null)
   const [plantelHoverRow, setPlantelHoverRow] = useState(null)
   const [rechazarModal, setRechazarModal] = useState({ delId: null, motivo: '' })
@@ -1258,9 +1278,10 @@ ${rowsHtml}
     tallesBajo:  a.sizes.filter(s => (s.min||0) > 0 && s.qty < s.min).length,
   }))
 
-  // Talles duplicados: mismo código+talle en más de una ubicación
+  // Talles duplicados: mismo código+talle en más de una ubicación, con stock > 0
   const codeTalleCounts = {}
   articles.forEach(a => a.sizes.forEach(s => {
+    if ((s.qty||0) === 0) return
     const k = a.code + ':' + s.talle
     codeTalleCounts[k] = (codeTalleCounts[k]||0)+1
   }))
@@ -1271,6 +1292,7 @@ ${rowsHtml}
     const entries = articles.filter(a => a.code === code)
     const talleUbics = {}
     entries.forEach(a => a.sizes.forEach(s => {
+      if ((s.qty||0) === 0) return
       if(!talleUbics[s.talle]) talleUbics[s.talle] = []
       talleUbics[s.talle].push(a.ubic || '—')
     }))
@@ -1686,6 +1708,17 @@ tfoot td{padding:9px 12px;font-weight:700}
     setRepConceptoEdit(null)
     showToast('Concepto actualizado.')
   }
+  const saveDescExtra = () => {
+    if (!descExtraForm.jugadorNombre || !descExtraForm.articulo) { showToast('Seleccioná jugador y prenda.'); return }
+    const fecha = descExtraForm.fecha || today()
+    setDb(s => ({...s, descExtras:[...(s.descExtras||[]), {...descExtraForm, fecha, id:Date.now()}]}))
+    setDescExtraModal(false)
+    showToast('Descuento adicional registrado.')
+  }
+  const deleteDescExtra = (id) => {
+    setDb(s => ({...s, descExtras:(s.descExtras||[]).filter(e=>e.id!==id)}))
+    showToast('Descuento eliminado.')
+  }
   const savePlantelJugador = () => {
     if (!plantelForm.nombre.trim()) { showToast('Ingresá el nombre del jugador.'); return }
     setDb(s => {
@@ -2004,15 +2037,14 @@ tfoot td{padding:9px 12px;font-weight:700}
               const totalShorts   = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
               const totalDinero   = totalEquipos * PRECIO_CAMISETA + totalShorts * PRECIO_SHORT
               const mesActualKey  = (() => { const p = today().split('/'); return p[1]+'/'+p[2] })()
-              const esRepVs = r => /^reposici[oó]n\.?\s+vs/i.test((r.concepto||'').trim())
               const repsDelMesActual = (db.reposiciones||[]).filter(r => {
-                if (!esRepVs(r)) return false
                 const p = (r.fechaPartido||r.fecha||'').split('/')
                 return p.length===3 && p[1]+'/'+p[2] === mesActualKey
               })
               const totalEquiposMes = repsDelMesActual.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
               const totalShortsMes  = repsDelMesActual.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
-              const totalDineroMes  = totalEquiposMes * PRECIO_CAMISETA + totalShortsMes * PRECIO_SHORT
+              const totalExtrasMes  = (db.descExtras||[]).filter(e=>{ const p=e.fecha.split('/'); return p.length===3&&p[1]+'/'+p[2]===mesActualKey }).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
+              const totalDineroMes  = totalEquiposMes * PRECIO_CAMISETA + totalShortsMes * PRECIO_SHORT + totalExtrasMes
               return (
                 <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
                   <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepDesglose('camisetas')}>
@@ -2052,6 +2084,44 @@ tfoot td{padding:9px 12px;font-weight:700}
                 Configurá el plantel primero para poder registrar reposiciones.
               </div>
             )}
+            {/* Descuentos adicionales */}
+            <div className="card" style={{padding:0,overflow:'hidden'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 16px',borderBottom:'1px solid #ECECE8',background:'#F8F8F4'}}>
+                <div style={{fontWeight:700,fontSize:12,letterSpacing:'.04em',color:'#121212'}}>DESCUENTOS ADICIONALES</div>
+                <button className="btn btn-dark" style={{padding:'5px 12px',fontSize:12}} onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',articulo:'',precio:0,cantidad:1,fecha:''});setDescExtraModal(true)}}>+ Descuento</button>
+              </div>
+              {(db.descExtras||[]).length === 0
+                ? <div style={{padding:'18px',textAlign:'center',color:'#8a8a82',fontSize:13}}>Sin descuentos adicionales registrados.</div>
+                : <div style={{overflowX:'auto'}}>
+                    <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                      <thead>
+                        <tr style={{background:'#F8F8F4',borderBottom:'1px solid #ECECE8'}}>
+                          <th style={{padding:'6px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>FECHA</th>
+                          <th style={{padding:'6px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>JUGADOR</th>
+                          <th style={{padding:'6px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>PRENDA</th>
+                          <th style={{padding:'6px 12px',textAlign:'center',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>CANT.</th>
+                          <th style={{padding:'6px 12px',textAlign:'right',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>TOTAL</th>
+                          <th style={{padding:'6px 12px'}}></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...(db.descExtras||[])].sort((a,b)=>{ const [da,ma,ya]=a.fecha.split('/'); const [db2,mb,yb]=b.fecha.split('/'); return (yb-ya)||((mb-ma)||(db2-da)) }).map((e,i)=>(
+                          <tr key={e.id} style={{borderBottom:'1px solid #F0F0EC',background:i%2===0?'#fff':'#FAFAF8'}}>
+                            <td style={{padding:'7px 12px',fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>{e.fecha}</td>
+                            <td style={{padding:'7px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
+                              <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#8a8a82',marginRight:6}}>{e.jugadorNumero}</span>{e.jugadorNombre}
+                            </td>
+                            <td style={{padding:'7px 12px'}}>{e.articulo}</td>
+                            <td style={{padding:'7px 12px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace'}}>{e.cantidad}</td>
+                            <td style={{padding:'7px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</td>
+                            <td style={{padding:'7px 12px',textAlign:'right'}}><button onClick={()=>deleteDescExtra(e.id)} style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:16,lineHeight:1}}>×</button></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+              }
+            </div>
             {(db.reposiciones||[]).length === 0
               ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay reposiciones registradas aún.</div>
               : (() => {
@@ -2597,11 +2667,60 @@ tfoot td{padding:9px 12px;font-weight:700}
           )
         })()}
 
+        {/* Modal: Descuento adicional (receptor) */}
+        {descExtraModal && (
+          <div className="modal-backdrop" onClick={()=>setDescExtraModal(false)}>
+            <div className="modal modal-sm" onClick={e=>e.stopPropagation()}>
+              <div className="modal-header">
+                <div className="modal-title">Descuento adicional</div>
+                <button className="modal-close" onClick={()=>setDescExtraModal(false)}>×</button>
+              </div>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label className="field-label">Fecha</label>
+                  <input className="field-input" type="text" placeholder={today()} value={descExtraForm.fecha} onChange={e=>setDescExtraForm(p=>({...p,fecha:e.target.value}))} />
+                </div>
+                <div className="form-group">
+                  <label className="field-label">Jugador</label>
+                  <select className="field-input" value={descExtraForm.jugadorNombre} onChange={e=>{const j=(db.plantel||[]).find(p=>p.nombre===e.target.value);setDescExtraForm(p=>({...p,jugadorNombre:e.target.value,jugadorNumero:j?.numero||''}))}}>
+                    <option value="">Seleccionar jugador…</option>
+                    {(db.plantel||[]).filter(j=>j.nombre?.trim().toLowerCase()!=='libre').sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j=>(<option key={j.id} value={j.nombre}>{j.numero} — {j.nombre}</option>))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="field-label">Prenda</label>
+                  <select className="field-input" value={descExtraForm.articulo} onChange={e=>{const p=EXTRAS_PRENDAS.find(p=>p.nombre===e.target.value);setDescExtraForm(f=>({...f,articulo:e.target.value,precio:p?.precio||0}))}}>
+                    <option value="">Seleccionar prenda…</option>
+                    {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre} — $ {p.precio.toLocaleString('es-UY')}</option>))}
+                  </select>
+                </div>
+                <div style={{display:'flex',gap:12}}>
+                  <div className="form-group" style={{flex:1}}>
+                    <label className="field-label">Precio unitario</label>
+                    <input className="field-input mono" type="number" value={descExtraForm.precio} readOnly style={{background:'#F5F5F0',color:'#5a5a52'}} />
+                  </div>
+                  <div className="form-group" style={{width:80}}>
+                    <label className="field-label">Cant.</label>
+                    <input className="field-input mono" type="number" min="1" value={descExtraForm.cantidad} onChange={e=>setDescExtraForm(p=>({...p,cantidad:Math.max(1,parseInt(e.target.value)||1)}))} style={{textAlign:'center'}} />
+                  </div>
+                </div>
+                {descExtraForm.precio>0 && (
+                  <div style={{textAlign:'right',fontWeight:700,fontSize:14,fontFamily:'IBM Plex Mono,monospace',color:'#121212'}}>
+                    Total: $ {(descExtraForm.precio*(descExtraForm.cantidad||1)).toLocaleString('es-UY')}
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={()=>setDescExtraModal(false)}>Cancelar</button>
+                <button className="btn btn-dark" onClick={saveDescExtra}>Guardar</button>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Modal: Resumen descuentos por jugador (receptor) */}
         {repResumen && (() => {
           const MESES_ES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-          const esRep = r => /^reposici[oó]n\.?\s+vs/i.test((r.concepto||'').trim())
-          const repsValidas = (db.reposiciones||[]).filter(esRep)
+          const repsValidas = db.reposiciones||[]
           const mesesMap = {}
           repsValidas.forEach(r => {
             const p = (r.fechaPartido||r.fecha||'').split('/')
@@ -2618,6 +2737,7 @@ tfoot td{padding:9px 12px;font-weight:700}
           const mesMostrado = (resumenMesSel && mesesMap[resumenMesSel]) ? resumenMesSel : (mesesMap[mesActualKey] ? mesActualKey : mesesOrdenados[mesesOrdenados.length-1])
           const calcMes = mesKey => {
             const repsDelMes = mesesMap[mesKey] || []
+            const extrasDelMes = (db.descExtras||[]).filter(e => { const p=e.fecha.split('/'); return p.length===3&&p[1]+'/'+p[2]===mesKey })
             const jugMapMes = {}
             ;(db.plantel||[]).filter(p=>p.nombre?.trim().toLowerCase()!=='libre').forEach(p => {
               jugMapMes[p.nombre.trim()] = {numero:p.numero||'—', nombre:p.nombre.trim()}
@@ -2625,10 +2745,12 @@ tfoot td{padding:9px 12px;font-weight:700}
             repsDelMes.forEach(r => (r.jugadores||[]).forEach(j => {
               if (!jugMapMes[j.nombre]) jugMapMes[j.nombre] = {numero:j.numero||'—', nombre:j.nombre}
             }))
+            extrasDelMes.forEach(e => { if (!jugMapMes[e.jugadorNombre]) jugMapMes[e.jugadorNombre] = {numero:e.jugadorNumero||'—', nombre:e.jugadorNombre} })
             const jugsMes = Object.values(jugMapMes).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0))
             const getCam = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const dc=j.descuentoCamiseta!==undefined?j.descuentoCamiseta!==false:j.descuento!==false;return acc+(dc?Number(j.cantCamiseta)||0:0)},0)
             const getSht = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const ds=j.descuentoShort!==undefined?j.descuentoShort!==false:j.descuento!==false;return acc+(ds?Number(j.cantShort)||0:0)},0)
-            const filas = jugsMes.map(j=>({...j,cam:getCam(j.nombre),sht:getSht(j.nombre)})).map(f=>({...f,desc:f.cam*PRECIO_DESC_CAMISETA+f.sht*PRECIO_DESC_SHORT}))
+            const getExtras = nombre => extrasDelMes.filter(e=>e.jugadorNombre===nombre).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
+            const filas = jugsMes.map(j=>({...j,cam:getCam(j.nombre),sht:getSht(j.nombre)})).map(f=>({...f,desc:f.cam*PRECIO_DESC_CAMISETA+f.sht*PRECIO_DESC_SHORT+getExtras(f.nombre)}))
             const totCam = filas.reduce((s,f)=>s+f.cam,0)
             const totSht = filas.reduce((s,f)=>s+f.sht,0)
             const totDesc = filas.reduce((s,f)=>s+f.desc,0)
@@ -3839,11 +3961,11 @@ tfoot td{padding:9px 12px;font-weight:700}
                   const totalShtTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
                   const mesActualKeyAdmin = (() => { const p = today().split('/'); return p[1]+'/'+p[2] })()
                   const mesNombreAdmin = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][Number(mesActualKeyAdmin.split('/')[0])]
-                  const esRepVsAdmin = r => /^reposici[oó]n\.?\s+vs/i.test((r.concepto||'').trim())
-                  const repsDelMesAdmin = (db.reposiciones||[]).filter(r => { if(!esRepVsAdmin(r)) return false; const p=(r.fechaPartido||r.fecha||'').split('/'); return p.length===3&&p[1]+'/'+p[2]===mesActualKeyAdmin })
+                  const repsDelMesAdmin = (db.reposiciones||[]).filter(r => { const p=(r.fechaPartido||r.fecha||'').split('/'); return p.length===3&&p[1]+'/'+p[2]===mesActualKeyAdmin })
                   const totalEquiposMesAdmin = repsDelMesAdmin.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
                   const totalShortsMesAdmin  = repsDelMesAdmin.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
-                  const totalDineroMesAdmin  = totalEquiposMesAdmin * PRECIO_CAMISETA + totalShortsMesAdmin * PRECIO_SHORT
+                  const totalExtrasMesAdmin  = (db.descExtras||[]).filter(e=>{ const p=e.fecha.split('/'); return p.length===3&&p[1]+'/'+p[2]===mesActualKeyAdmin }).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
+                  const totalDineroMesAdmin  = totalEquiposMesAdmin * PRECIO_CAMISETA + totalShortsMesAdmin * PRECIO_SHORT + totalExtrasMesAdmin
                   return (
                     <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepDesglose('camisetas')}>
@@ -3889,6 +4011,44 @@ tfoot td{padding:9px 12px;font-weight:700}
                     Configurá el <button onClick={()=>setRepTab('plantel')} style={{background:'none',border:'none',fontWeight:700,color:'#7a5800',cursor:'pointer',padding:0,textDecoration:'underline'}}>plantel</button> primero para poder registrar reposiciones.
                   </div>
                 )}
+                {/* Descuentos adicionales */}
+                <div className="card" style={{padding:0,overflow:'hidden'}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 16px',borderBottom:'1px solid #ECECE8',background:'#F8F8F4'}}>
+                    <div style={{fontWeight:700,fontSize:12,letterSpacing:'.04em',color:'#121212'}}>DESCUENTOS ADICIONALES</div>
+                    <button className="btn btn-dark" style={{padding:'5px 12px',fontSize:12}} onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',articulo:'',precio:0,cantidad:1,fecha:''});setDescExtraModal(true)}}>+ Descuento</button>
+                  </div>
+                  {(db.descExtras||[]).length === 0
+                    ? <div style={{padding:'18px',textAlign:'center',color:'#8a8a82',fontSize:13}}>Sin descuentos adicionales registrados.</div>
+                    : <div style={{overflowX:'auto'}}>
+                        <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                          <thead>
+                            <tr style={{background:'#F8F8F4',borderBottom:'1px solid #ECECE8'}}>
+                              <th style={{padding:'6px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>FECHA</th>
+                              <th style={{padding:'6px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>JUGADOR</th>
+                              <th style={{padding:'6px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>PRENDA</th>
+                              <th style={{padding:'6px 12px',textAlign:'center',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>CANT.</th>
+                              <th style={{padding:'6px 12px',textAlign:'right',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>TOTAL</th>
+                              <th style={{padding:'6px 12px'}}></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {[...(db.descExtras||[])].sort((a,b)=>{ const [da,ma,ya]=a.fecha.split('/'); const [db2,mb,yb]=b.fecha.split('/'); return (yb-ya)||((mb-ma)||(db2-da)) }).map((e,i)=>(
+                              <tr key={e.id} style={{borderBottom:'1px solid #F0F0EC',background:i%2===0?'#fff':'#FAFAF8'}}>
+                                <td style={{padding:'7px 12px',fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>{e.fecha}</td>
+                                <td style={{padding:'7px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
+                                  <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#8a8a82',marginRight:6}}>{e.jugadorNumero}</span>{e.jugadorNombre}
+                                </td>
+                                <td style={{padding:'7px 12px'}}>{e.articulo}</td>
+                                <td style={{padding:'7px 12px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace'}}>{e.cantidad}</td>
+                                <td style={{padding:'7px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</td>
+                                <td style={{padding:'7px 12px',textAlign:'right'}}><button onClick={()=>deleteDescExtra(e.id)} style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:16,lineHeight:1}}>×</button></td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                  }
+                </div>
                 {(db.reposiciones||[]).length === 0
                   ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay reposiciones registradas aún.</div>
                   : (() => {
@@ -4860,11 +5020,60 @@ tfoot td{padding:9px 12px;font-weight:700}
         )
       })()}
 
+      {/* Modal: Descuento adicional (admin) */}
+      {descExtraModal && (
+        <div className="modal-backdrop" onClick={()=>setDescExtraModal(false)}>
+          <div className="modal modal-sm" onClick={e=>e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">Descuento adicional</div>
+              <button className="modal-close" onClick={()=>setDescExtraModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="field-label">Fecha</label>
+                <input className="field-input" type="text" placeholder={today()} value={descExtraForm.fecha} onChange={e=>setDescExtraForm(p=>({...p,fecha:e.target.value}))} />
+              </div>
+              <div className="form-group">
+                <label className="field-label">Jugador</label>
+                <select className="field-input" value={descExtraForm.jugadorNombre} onChange={e=>{const j=(db.plantel||[]).find(p=>p.nombre===e.target.value);setDescExtraForm(p=>({...p,jugadorNombre:e.target.value,jugadorNumero:j?.numero||''}))}}>
+                  <option value="">Seleccionar jugador…</option>
+                  {(db.plantel||[]).filter(j=>j.nombre?.trim().toLowerCase()!=='libre').sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j=>(<option key={j.id} value={j.nombre}>{j.numero} — {j.nombre}</option>))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="field-label">Prenda</label>
+                <select className="field-input" value={descExtraForm.articulo} onChange={e=>{const p=EXTRAS_PRENDAS.find(p=>p.nombre===e.target.value);setDescExtraForm(f=>({...f,articulo:e.target.value,precio:p?.precio||0}))}}>
+                  <option value="">Seleccionar prenda…</option>
+                  {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre} — $ {p.precio.toLocaleString('es-UY')}</option>))}
+                </select>
+              </div>
+              <div style={{display:'flex',gap:12}}>
+                <div className="form-group" style={{flex:1}}>
+                  <label className="field-label">Precio unitario</label>
+                  <input className="field-input mono" type="number" value={descExtraForm.precio} readOnly style={{background:'#F5F5F0',color:'#5a5a52'}} />
+                </div>
+                <div className="form-group" style={{width:80}}>
+                  <label className="field-label">Cant.</label>
+                  <input className="field-input mono" type="number" min="1" value={descExtraForm.cantidad} onChange={e=>setDescExtraForm(p=>({...p,cantidad:Math.max(1,parseInt(e.target.value)||1)}))} style={{textAlign:'center'}} />
+                </div>
+              </div>
+              {descExtraForm.precio>0 && (
+                <div style={{textAlign:'right',fontWeight:700,fontSize:14,fontFamily:'IBM Plex Mono,monospace',color:'#121212'}}>
+                  Total: $ {(descExtraForm.precio*(descExtraForm.cantidad||1)).toLocaleString('es-UY')}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={()=>setDescExtraModal(false)}>Cancelar</button>
+              <button className="btn btn-dark" onClick={saveDescExtra}>Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Modal: Resumen entregas por jugador por mes */}
       {repResumen && (() => {
         const MESES_ES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-        const esRep = r => /^reposici[oó]n\.?\s+vs/i.test((r.concepto||'').trim())
-        const repsValidas = (db.reposiciones||[]).filter(esRep)
+        const repsValidas = db.reposiciones||[]
 
         // Agrupar por mes (clave MM/YYYY)
         const mesesMap = {}
@@ -4885,6 +5094,7 @@ tfoot td{padding:9px 12px;font-weight:700}
 
         const calcMesAdmin = mesKey => {
           const repsDelMes = mesesMap[mesKey] || []
+          const extrasDelMes = (db.descExtras||[]).filter(e => { const p=e.fecha.split('/'); return p.length===3&&p[1]+'/'+p[2]===mesKey })
           const jugMapMes = {}
           ;(db.plantel||[]).filter(p=>p.nombre?.trim().toLowerCase()!=='libre').forEach(p => {
             jugMapMes[p.nombre.trim()] = {numero:p.numero||'—', nombre:p.nombre.trim()}
@@ -4892,10 +5102,12 @@ tfoot td{padding:9px 12px;font-weight:700}
           repsDelMes.forEach(r => (r.jugadores||[]).forEach(j => {
             if (!jugMapMes[j.nombre]) jugMapMes[j.nombre] = {numero:j.numero||'—', nombre:j.nombre}
           }))
+          extrasDelMes.forEach(e => { if (!jugMapMes[e.jugadorNombre]) jugMapMes[e.jugadorNombre] = {numero:e.jugadorNumero||'—', nombre:e.jugadorNombre} })
           const jugsMes = Object.values(jugMapMes).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0))
           const getCam = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const dc=j.descuentoCamiseta!==undefined?j.descuentoCamiseta!==false:j.descuento!==false;return acc+(dc?Number(j.cantCamiseta)||0:0)},0)
           const getSht = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const ds=j.descuentoShort!==undefined?j.descuentoShort!==false:j.descuento!==false;return acc+(ds?Number(j.cantShort)||0:0)},0)
-          const filas = jugsMes.map(j=>({...j,cam:getCam(j.nombre),sht:getSht(j.nombre)})).map(f=>({...f,desc:f.cam*PRECIO_DESC_CAMISETA+f.sht*PRECIO_DESC_SHORT}))
+          const getExtras = nombre => extrasDelMes.filter(e=>e.jugadorNombre===nombre).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
+          const filas = jugsMes.map(j=>({...j,cam:getCam(j.nombre),sht:getSht(j.nombre)})).map(f=>({...f,desc:f.cam*PRECIO_DESC_CAMISETA+f.sht*PRECIO_DESC_SHORT+getExtras(f.nombre)}))
           const totCam = filas.reduce((s,f)=>s+f.cam,0)
           const totSht = filas.reduce((s,f)=>s+f.sht,0)
           const totDesc = filas.reduce((s,f)=>s+f.desc,0)
