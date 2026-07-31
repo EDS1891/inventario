@@ -2720,7 +2720,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <label className="field-label">Prenda</label>
                     <select className="field-input" value={descExtraForm.articulo} onChange={e=>{const p=EXTRAS_PRENDAS.find(p=>p.nombre===e.target.value);setDescExtraForm(f=>({...f,articulo:e.target.value,precio:p?.precio||0}))}}>
                       <option value="">Seleccionar prenda…</option>
-                      {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre} — $ {p.precio.toLocaleString('es-UY')}</option>))}
+                      {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre}</option>))}
                     </select>
                   </div>
                   <div style={{display:'flex',gap:12}}>
@@ -2747,7 +2747,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                           value={pr.articulo}
                           onChange={e=>{const found=EXTRAS_PRENDAS.find(p=>p.nombre===e.target.value);setDescExtraForm(f=>({...f,prendas:f.prendas.map((p,j)=>j===i?{...p,articulo:e.target.value,precio:found?.precio||0}:p)}))}}>
                           <option value="">Seleccionar prenda…</option>
-                          {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre} — $ {p.precio.toLocaleString('es-UY')}</option>))}
+                          {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre}</option>))}
                         </select>
                         <input style={{width:52,padding:'6px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,textAlign:'center'}}
                           type="number" min="1" value={pr.cantidad}
@@ -5140,7 +5140,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   <label className="field-label">Prenda</label>
                   <select className="field-input" value={descExtraForm.articulo} onChange={e=>{const p=EXTRAS_PRENDAS.find(p=>p.nombre===e.target.value);setDescExtraForm(f=>({...f,articulo:e.target.value,precio:p?.precio||0}))}}>
                     <option value="">Seleccionar prenda…</option>
-                    {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre} — $ {p.precio.toLocaleString('es-UY')}</option>))}
+                    {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre}</option>))}
                   </select>
                 </div>
                 <div style={{display:'flex',gap:12}}>
@@ -5167,7 +5167,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                         value={pr.articulo}
                         onChange={e=>{const found=EXTRAS_PRENDAS.find(p=>p.nombre===e.target.value);setDescExtraForm(f=>({...f,prendas:f.prendas.map((p,j)=>j===i?{...p,articulo:e.target.value,precio:found?.precio||0}:p)}))}}>
                         <option value="">Seleccionar prenda…</option>
-                        {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre} — $ {p.precio.toLocaleString('es-UY')}</option>))}
+                        {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre}</option>))}
                       </select>
                       <input style={{width:52,padding:'6px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,textAlign:'center'}}
                         type="number" min="1" value={pr.cantidad}
