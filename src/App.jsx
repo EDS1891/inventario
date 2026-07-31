@@ -2050,6 +2050,7 @@ tfoot td{padding:9px 12px;font-weight:700}
               const totalShtTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
               const totalEquipos  = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
               const totalShorts   = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
+              const totalExtras   = (db.descExtras||[]).reduce((acc,e)=>acc+(e.cantidad||1),0)
               const totalDinero   = totalEquipos * PRECIO_CAMISETA + totalShorts * PRECIO_SHORT
               const mesActualKey  = (() => { const p = today().split('/'); return p[1]+'/'+p[2] })()
               const repsDelMesActual = (db.reposiciones||[]).filter(r => {
@@ -2078,6 +2079,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                       <div><div className="kpi-value">{totalEquipos}</div><div className="kpi-sub">camisetas →</div></div>
                       <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/>
                       <div><div className="kpi-value">{totalShorts}</div><div className="kpi-sub">shorts →</div></div>
+                      {totalExtras>0 && <><div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/><div><div className="kpi-value">{totalExtras}</div><div className="kpi-sub">extras →</div></div></>}
                     </div>
                   </div>
                   <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#f2cb12'}} onClick={()=>{ setResumenMesSel(mesActualKey); setRepResumen('ambos') }}>
@@ -4017,6 +4019,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   const descSht = j => j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
                   const totalEquipos = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
                   const totalShorts  = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
+                  const totalExtras  = (db.descExtras||[]).reduce((acc,e)=>acc+(e.cantidad||1),0)
                   const totalDinero  = totalEquipos * PRECIO_CAMISETA + totalShorts * PRECIO_SHORT
                   const totalCamTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
                   const totalShtTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
@@ -4051,6 +4054,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                             <div className="kpi-value">{totalShorts}</div>
                             <div className="kpi-sub">shorts →</div>
                           </div>
+                          {totalExtras>0 && <><div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/><div><div className="kpi-value">{totalExtras}</div><div className="kpi-sub">extras →</div></div></>}
                         </div>
                       </div>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#f2cb12'}} onClick={()=>{ setResumenMesSel(mesActualKeyAdmin); setRepResumen('ambos') }}>
