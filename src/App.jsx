@@ -2075,7 +2075,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <div className="kpi-sub">en todas las entregas →</div>
                   </div>
                   <div className="kpi-card" style={{alignSelf:'flex-start',cursor:'pointer',background:'#D6D6D0',border:'1px solid #121212'}} onClick={()=>setRepResumen('ambos')}>
-                    <div className="kpi-label">INDUMENTARIA A DESCONTAR</div>
+                    <div className="kpi-label">INDUMENTARIA A DESCONTAR {['','ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'][Number(mesActualKey.split('/')[0])]}</div>
                     <div style={{display:'flex',alignItems:'flex-end',gap:24,marginTop:6}}>
                       <div><div className="kpi-value">{totalEquipos}</div><div className="kpi-sub">camisetas →</div></div>
                       <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/>
@@ -4054,7 +4054,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                         <div className="kpi-sub">en todas las entregas →</div>
                       </div>
                       <div className="kpi-card" style={{alignSelf:'flex-start',cursor:'pointer',background:'#D6D6D0',border:'1px solid #121212'}} onClick={()=>setRepResumen('ambos')}>
-                        <div className="kpi-label">INDUMENTARIA A DESCONTAR</div>
+                        <div className="kpi-label">INDUMENTARIA A DESCONTAR {mesNombreAdmin.toUpperCase()}</div>
                         <div style={{display:'flex',alignItems:'flex-end',gap:24,marginTop:6}}>
                           <div>
                             <div className="kpi-value">{totalEquipos}</div>
