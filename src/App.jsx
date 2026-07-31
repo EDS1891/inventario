@@ -2637,16 +2637,64 @@ tfoot td{padding:9px 12px;font-weight:700}
           const {filas, totCam, totSht, totDesc} = mesMostrado ? calcMes(mesMostrado) : {filas:[],totCam:0,totSht:0,totDesc:0}
           const [mmMostrado, yyyyMostrado] = (mesMostrado||'').split('/')
           const mesNombreMostrado = mesMostrado ? `${MESES_ES[Number(mmMostrado)]||mmMostrado} ${yyyyMostrado}` : ''
+          const datosPorMes = mesesOrdenados.map(mesKey => {
+            const [mm, yyyy] = mesKey.split('/')
+            const mesNombre = `${MESES_ES[Number(mm)]||mm} ${yyyy}`
+            const {filas, totCam, totSht, totDesc} = calcMes(mesKey)
+            return {mesKey, mesNombre, filas, totCam, totSht, totDesc}
+          })
+          const exportResumenExcel = async () => {
+            const wb = new ExcelJS.Workbook()
+            const YELLOW   = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
+            const FILL_SUB = {type:'pattern',pattern:'solid',fgColor:{argb:'FFF5F2E8'}}
+            const FILL_WHT = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFFFF'}}
+            const F_BOLD   = {name:'Calibri',size:11,bold:true}
+            const F_NORM   = {name:'Calibri',size:11}
+            const CENTER   = {horizontal:'center',vertical:'middle'}
+            const BORDER   = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
+            const MONEY_FMT = '"$" #,##0'
+            const style = (cell,fill,font) => { cell.fill=fill; cell.font=font; cell.alignment=CENTER; cell.border=BORDER }
+            datosPorMes.forEach(({mesNombre, filas, totDesc}) => {
+              const nombreHoja = mesNombre.replace(/[\\/:*?"<>|[\]]/g,'-').slice(0,31) || 'Mes'
+              const ws = wb.addWorksheet(nombreHoja)
+              ws.columns = [{width:8.5},{width:24},{width:13},{width:10},{width:13}]
+              ws.mergeCells('A1:E1')
+              style(ws.getCell('A1'), YELLOW, F_BOLD); ws.getCell('A1').value = mesNombre.toUpperCase(); ws.getRow(1).height = 20
+              ;['Nº','JUGADOR','CAMISETAS','SHORTS','DESCUENTO'].forEach((h,i) => {
+                const c = ws.getRow(2).getCell(i+1); style(c, YELLOW, F_BOLD); c.value = h
+              })
+              ws.getRow(2).height = 20
+              filas.forEach((f,idx) => {
+                const r = ws.getRow(idx+3)
+                r.height = 18
+                ;[f.numero||'—', f.nombre, f.cam||0, f.sht||0, f.desc||0].forEach((v,i) => {
+                  const c = r.getCell(i+1); style(c, FILL_WHT, F_NORM); c.value = v
+                  if (i===4) c.numFmt = MONEY_FMT
+                })
+              })
+              const totN = filas.length + 3
+              ws.mergeCells(`A${totN}:D${totN}`)
+              ws.getRow(totN).height = 20
+              style(ws.getRow(totN).getCell(1), FILL_SUB, F_BOLD); ws.getRow(totN).getCell(1).value = 'TOTAL DESCUENTOS'
+              const totCell = ws.getRow(totN).getCell(5)
+              style(totCell, FILL_SUB, F_BOLD); totCell.value = totDesc; totCell.numFmt = MONEY_FMT
+            })
+            const buf = await wb.xlsx.writeBuffer()
+            const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a'); a.href=url; a.download='descuentos-mensuales-peniarol.xlsx'; a.click()
+            URL.revokeObjectURL(url)
+          }
           return (
             <div className="modal-backdrop" onClick={()=>setRepResumen(null)}>
-              <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:600,width:'96%'}}>
+              <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:580,width:'96%'}}>
                 <div className="modal-header">
                   <div className="modal-title">Descuentos — {mesNombreMostrado}</div>
                   <button className="modal-close" onClick={()=>setRepResumen(null)}>×</button>
                 </div>
                 <div className="modal-body" style={{padding:0}}>
                   {mesesOrdenados.length === 0
-                    ? <div style={{textAlign:'center',color:'#8a8a82',padding:'32px 0'}}>Sin reposiciones "vs." registradas.</div>
+                    ? <div style={{padding:32,textAlign:'center',color:'#888',fontSize:14}}>Sin datos</div>
                     : <>
                       {mesesOrdenados.length > 1 && (
                         <div style={{display:'flex',gap:6,flexWrap:'wrap',padding:'10px 16px',borderBottom:'1px solid #ECECE8',background:'#F8F8F4'}}>
@@ -2657,9 +2705,9 @@ tfoot td{padding:9px 12px;font-weight:700}
                             return (
                               <button key={key} onClick={e=>{e.stopPropagation();setResumenMesSel(key)}}
                                 style={{padding:'5px 12px',borderRadius:20,border:'1.5px solid',fontSize:12,fontWeight:700,cursor:'pointer',
-                                  borderColor: activo?'#121212':'#D0D0CC',
-                                  background: activo?'#121212':'#fff',
-                                  color: activo?'#f2cb12':'#5a5a52'}}>
+                                  borderColor:activo?'#121212':'#D0D0CC',
+                                  background:activo?'#121212':'#fff',
+                                  color:activo?'#f2cb12':'#5a5a52'}}>
                                 {label}
                               </button>
                             )
@@ -2667,35 +2715,45 @@ tfoot td{padding:9px 12px;font-weight:700}
                         </div>
                       )}
                       <div style={{maxHeight:'55vh',overflowY:'auto'}}>
-                        <div style={{display:'grid',gridTemplateColumns:'40px 1fr 60px 60px 90px',background:'#121212',color:'#f2cb12',fontWeight:700,fontSize:10,letterSpacing:'.04em'}}>
-                          {['Nº','NOMBRE','CAM.','SHT.','DESCUENTO'].map((h,i)=>(
-                            <div key={i} style={{padding:'7px 12px',textAlign:i>=2?'right':'left'}}>{h}</div>
-                          ))}
-                        </div>
-                        {filas.filter(f=>f.cam>0||f.sht>0).length === 0
-                          ? <div style={{textAlign:'center',color:'#8a8a82',padding:'28px 0',fontSize:13}}>Sin descuentos este mes.</div>
-                          : filas.filter(f=>f.cam>0||f.sht>0).map(f=>(
-                            <div key={f.nombre} style={{display:'grid',gridTemplateColumns:'40px 1fr 60px 60px 90px',borderBottom:'1px solid #F0F0EC'}}>
-                              <div style={{padding:'9px 12px',fontWeight:800,fontSize:13,color:'#8a8a82'}}>{f.numero}</div>
-                              <div style={{padding:'9px 12px',fontWeight:600,fontSize:13,textTransform:'uppercase'}}>{f.nombre}</div>
-                              <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:13}}>{f.cam}</div>
-                              <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:13}}>{f.sht}</div>
-                              <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:13,fontWeight:700}}>$ {f.desc.toLocaleString('es-UY')}</div>
-                            </div>
-                          ))
-                        }
-                        <div style={{display:'grid',gridTemplateColumns:'40px 1fr 60px 60px 90px',background:'#121212',color:'#f2cb12'}}>
-                          <div style={{padding:'9px 12px',gridColumn:'1/3',fontWeight:700,fontSize:12,letterSpacing:'.04em'}}>TOTAL</div>
-                          <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13}}>{totCam}</div>
-                          <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13}}>{totSht}</div>
-                          <div style={{padding:'9px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13}}>$ {totDesc.toLocaleString('es-UY')}</div>
-                        </div>
+                        <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                          <thead>
+                            <tr style={{background:'#2a2a2a',color:'#f2cb12'}}>
+                              <th style={{padding:'6px 12px',textAlign:'left',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>JUGADOR</th>
+                              <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>CAMISETAS</th>
+                              <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>SHORTS</th>
+                              <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>DESCUENTO</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filas.length === 0
+                              ? <tr><td colSpan={4} style={{padding:'28px 0',textAlign:'center',color:'#8a8a82',fontSize:13}}>Sin descuentos este mes.</td></tr>
+                              : filas.map((f,i)=>(
+                                <tr key={i} style={{borderBottom:'1px solid #F0F0EC',background:i%2===0?'#fff':'#FAFAF8'}}>
+                                  <td style={{padding:'7px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
+                                    <span style={{fontFamily:'IBM Plex Mono,monospace',color:'#121212',marginRight:8,fontSize:11}}>{f.numero}</span>
+                                    {f.nombre}
+                                  </td>
+                                  <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.cam}</td>
+                                  <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.sht}</td>
+                                  <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,background:'#FFF8D6'}}>$ {f.desc.toLocaleString('es-UY')}</td>
+                                </tr>
+                              ))
+                            }
+                            <tr style={{background:'#121212'}}>
+                              <td style={{padding:'7px 12px',fontSize:11,fontWeight:700,letterSpacing:'.04em',color:'#f2cb12'}}>TOTAL</td>
+                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>{totCam}</td>
+                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>{totSht}</td>
+                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>$ {totDesc.toLocaleString('es-UY')}</td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </>
                   }
                 </div>
                 <div className="modal-footer">
                   <button className="btn btn-ghost" onClick={()=>setRepResumen(null)}>Cerrar</button>
+                  <button className="btn btn-ghost" style={{border:'1px solid #2d6a4f',color:'#2d6a4f'}} disabled={mesesOrdenados.length===0} onClick={exportResumenExcel}>↓ Excel</button>
                 </div>
               </div>
             </div>
