@@ -1691,19 +1691,7 @@ tfoot td{padding:9px 12px;font-weight:700}
     setDb(s => {
       const list = s.plantel || []
       if (plantelForm.id !== null) {
-        const oldJugador = list.find(j => j.id === plantelForm.id)
-        const oldNombre = oldJugador?.nombre?.trim()
-        const newNombre = plantelForm.nombre.trim()
-        const nombreCambio = oldNombre && oldNombre !== newNombre
-        const reposiciones = nombreCambio
-          ? (s.reposiciones||[]).map(r => ({
-              ...r,
-              jugadores: (r.jugadores||[]).map(j =>
-                j.nombre?.trim() === oldNombre ? {...j, nombre: newNombre} : j
-              )
-            }))
-          : s.reposiciones
-        return {...s, plantel:list.map(j=>j.id===plantelForm.id?{...plantelForm}:j), reposiciones}
+        return {...s, plantel:list.map(j=>j.id===plantelForm.id?{...plantelForm}:j)}
       }
       const newId = list.length > 0 ? Math.max(...list.map(j=>j.id))+1 : 1
       return {...s, plantel:[...list, {...plantelForm, id:newId}]}
