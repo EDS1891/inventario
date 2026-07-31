@@ -5264,7 +5264,7 @@ tfoot td{padding:9px 12px;font-weight:700}
               const r = ws.getRow(idx+3)
               r.height = 18
               ;[f.numero||'—', f.nombre, f.cam||0, f.sht||0, f.extras||0, f.desc||0].forEach((v,i) => {
-                const c = r.getCell(i+1); style(c, FILL_WHT, F_NORM); c.value = v
+                const c = r.getCell(i+1); style(c, i===5?FILL_GRAY:FILL_WHT, i===5?F_BOLD:F_NORM); c.value = v
                 if (i===4||i===5) c.numFmt = MONEY_FMT
               })
             })
