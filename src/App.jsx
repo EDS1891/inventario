@@ -1711,9 +1711,14 @@ tfoot td{padding:9px 12px;font-weight:700}
   const saveDescExtra = () => {
     if (!descExtraForm.jugadorNombre || !descExtraForm.articulo) { showToast('Seleccioná jugador y prenda.'); return }
     const fecha = descExtraForm.fecha || today()
-    setDb(s => ({...s, descExtras:[...(s.descExtras||[]), {...descExtraForm, fecha, id:Date.now()}]}))
+    if (descExtraForm.id) {
+      setDb(s => ({...s, descExtras:(s.descExtras||[]).map(e=>e.id===descExtraForm.id?{...descExtraForm,fecha}:e)}))
+      showToast('Descuento actualizado.')
+    } else {
+      setDb(s => ({...s, descExtras:[...(s.descExtras||[]), {...descExtraForm, fecha, id:Date.now()}]}))
+      showToast('Descuento adicional registrado.')
+    }
     setDescExtraModal(false)
-    showToast('Descuento adicional registrado.')
   }
   const deleteDescExtra = (id) => {
     setDb(s => ({...s, descExtras:(s.descExtras||[]).filter(e=>e.id!==id)}))
@@ -1995,6 +2000,11 @@ tfoot td{padding:9px 12px;font-weight:700}
                 <span className="nav-dot" />REPOSICIONES
               </button>
             )}
+            {isReceptorReposiciones && (
+              <button className={`nav-item${receptorTab==='extras'?' active':''}`} onClick={() => { setReceptorTab('extras'); setSidebarOpen(false) }}>
+                <span className="nav-dot" />DESC. EXTRAS{(db.descExtras||[]).length>0?` (${(db.descExtras||[]).length})`:''}
+              </button>
+            )}
             <button className={`nav-item${receptorTab==='plantel'?' active':''}`} onClick={() => { setReceptorTab('plantel'); setSidebarOpen(false) }}>
               <span className="nav-dot" />PLANTEL
             </button>
@@ -2216,6 +2226,51 @@ tfoot td{padding:9px 12px;font-weight:700}
             })}
           </div>
         </div>
+        )}
+
+        {receptorTab === 'extras' && isReceptorReposiciones && (
+          <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <div style={{fontSize:13,color:'#8a8a82'}}>{(db.descExtras||[]).length} descuentos adicionales registrados</div>
+              <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',articulo:'',precio:0,cantidad:1,fecha:''});setDescExtraModal(true)}}>+ Descuento</button>
+            </div>
+            {(db.descExtras||[]).length === 0
+              ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>Sin descuentos adicionales registrados.</div>
+              : <div className="card" style={{padding:0,overflow:'hidden'}}>
+                  <div style={{overflowX:'auto'}}>
+                    <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                      <thead>
+                        <tr style={{background:'#2a2a2a',color:'#f2cb12'}}>
+                          <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>FECHA</th>
+                          <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>JUGADOR</th>
+                          <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>PRENDA</th>
+                          <th style={{padding:'7px 12px',textAlign:'center',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>CANT.</th>
+                          <th style={{padding:'7px 12px',textAlign:'right',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>TOTAL</th>
+                          <th style={{padding:'7px 12px'}}></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...(db.descExtras||[])].sort((a,b)=>{const[da,ma,ya]=a.fecha.split('/');const[db2,mb,yb]=b.fecha.split('/');return(yb-ya)||((mb-ma)||(db2-da))}).map((e,i)=>(
+                          <tr key={e.id} style={{borderBottom:'1px solid #F0F0EC',background:i%2===0?'#fff':'#FAFAF8'}}>
+                            <td style={{padding:'7px 12px',fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>{e.fecha}</td>
+                            <td style={{padding:'7px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
+                              <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#8a8a82',marginRight:6}}>{e.jugadorNumero}</span>{e.jugadorNombre}
+                            </td>
+                            <td style={{padding:'7px 12px'}}>{e.articulo}</td>
+                            <td style={{padding:'7px 12px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace'}}>{e.cantidad}</td>
+                            <td style={{padding:'7px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</td>
+                            <td style={{padding:'7px 6px',textAlign:'right',whiteSpace:'nowrap'}}>
+                              <button onClick={()=>{setDescExtraForm({...e});setDescExtraModal(true)}} title="Editar" style={{background:'none',border:'none',cursor:'pointer',color:'#5a5a50',fontSize:14,padding:'2px 6px'}}>✎</button>
+                              <button onClick={()=>deleteDescExtra(e.id)} title="Eliminar" style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:16,padding:'2px 6px',lineHeight:1}}>×</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+            }
+          </div>
         )}
 
         {receptorTab === 'plantel' && (
@@ -3911,9 +3966,9 @@ tfoot td{padding:9px 12px;font-weight:700}
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               {/* Tabs */}
               <div style={{display:'flex',gap:6,borderBottom:'2px solid #ECECE8',paddingBottom:0}}>
-                {[['reposiciones','REPOSICIONES'],['plantel','PLANTEL']].map(([k,l]) => (
+                {[['reposiciones','REPOSICIONES'],['extras','EXTRAS'],['plantel','PLANTEL']].map(([k,l]) => (
                   <button key={k} onClick={() => setRepTab(k)} style={{padding:'7px 18px',border:'none',background:'none',fontWeight:700,fontSize:13,cursor:'pointer',borderBottom:repTab===k?'2px solid #f2cb12':'2px solid transparent',marginBottom:-2,color:repTab===k?'#121212':'#8a8a82'}}>
-                    {l}{k==='plantel'&&(db.plantel||[]).length>0?` (${(db.plantel||[]).filter(j=>j.nombre.trim().toLowerCase()!=='libre').length})`:''}
+                    {l}{k==='plantel'&&(db.plantel||[]).length>0?` (${(db.plantel||[]).filter(j=>j.nombre.trim().toLowerCase()!=='libre').length})`:''}{k==='extras'&&(db.descExtras||[]).length>0?` (${(db.descExtras||[]).length})`:''}
                   </button>
                 ))}
               </div>
@@ -4040,6 +4095,52 @@ tfoot td{padding:9px 12px;font-weight:700}
                   })()
                 }
               </>)}
+
+              {/* Tab: Extras */}
+              {repTab === 'extras' && (
+                <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <div style={{fontSize:13,color:'#8a8a82'}}>{(db.descExtras||[]).length} descuentos adicionales registrados</div>
+                    <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',articulo:'',precio:0,cantidad:1,fecha:''});setDescExtraModal(true)}}>+ Descuento</button>
+                  </div>
+                  {(db.descExtras||[]).length === 0
+                    ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>Sin descuentos adicionales registrados.</div>
+                    : <div className="card" style={{padding:0,overflow:'hidden'}}>
+                        <div style={{overflowX:'auto'}}>
+                          <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                            <thead>
+                              <tr style={{background:'#2a2a2a',color:'#f2cb12'}}>
+                                <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>FECHA</th>
+                                <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>JUGADOR</th>
+                                <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>PRENDA</th>
+                                <th style={{padding:'7px 12px',textAlign:'center',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>CANT.</th>
+                                <th style={{padding:'7px 12px',textAlign:'right',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>TOTAL</th>
+                                <th style={{padding:'7px 12px'}}></th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {[...(db.descExtras||[])].sort((a,b)=>{const[da,ma,ya]=a.fecha.split('/');const[db2,mb,yb]=b.fecha.split('/');return(yb-ya)||((mb-ma)||(db2-da))}).map((e,i)=>(
+                                <tr key={e.id} style={{borderBottom:'1px solid #F0F0EC',background:i%2===0?'#fff':'#FAFAF8'}}>
+                                  <td style={{padding:'7px 12px',fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>{e.fecha}</td>
+                                  <td style={{padding:'7px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
+                                    <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#8a8a82',marginRight:6}}>{e.jugadorNumero}</span>{e.jugadorNombre}
+                                  </td>
+                                  <td style={{padding:'7px 12px'}}>{e.articulo}</td>
+                                  <td style={{padding:'7px 12px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace'}}>{e.cantidad}</td>
+                                  <td style={{padding:'7px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</td>
+                                  <td style={{padding:'7px 6px',textAlign:'right',whiteSpace:'nowrap'}}>
+                                    <button onClick={()=>{setDescExtraForm({...e});setDescExtraModal(true)}} title="Editar" style={{background:'none',border:'none',cursor:'pointer',color:'#5a5a50',fontSize:14,padding:'2px 6px'}}>✎</button>
+                                    <button onClick={()=>deleteDescExtra(e.id)} title="Eliminar" style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:16,padding:'2px 6px',lineHeight:1}}>×</button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                  }
+                </div>
+              )}
 
               {/* Tab: Plantel */}
               {repTab === 'plantel' && (<>
