@@ -3100,7 +3100,7 @@ tfoot td{padding:9px 12px;font-weight:700}
           })}
           {/* Grupo REPOSICIÓN CAMISETAS */}
           {(() => { const isGrpActive = view==='reposiciones'; return (
-            <button className={`nav-item${isGrpActive?' active':''}`} onClick={() => { if(!isGrpActive){ goView('reposiciones'); setRepTab('reposiciones') } setReposicionesOpen(o=>!o) }}>
+            <button className={`nav-item${isGrpActive?' active':''}`} onClick={() => setReposicionesOpen(o=>!o)}>
               <span className="nav-dot" />
               REPOSICIÓN CAMISETAS
               <span style={{marginLeft:'auto',fontSize:10,opacity:0.6}}>{reposicionesOpen ? '▾' : '▸'}</span>
