@@ -225,6 +225,7 @@ export default function App() {
   const [toast, setToast] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [depositosOpen, setDepositosOpen] = useState(true)
+  const [reposicionesOpen, setReposicionesOpen] = useState(false)
   const [session, setSession] = useState(() => localStorage.getItem(SESSION_KEY) || null)
   const [loginView, setLoginView] = useState('login')
   const [loginForm, setLoginForm] = useState({ user:'', pass:'', err:'' })
@@ -395,7 +396,7 @@ export default function App() {
   const byCode = (code) => db.articles.find(a => a.code === code)
   const curCode = () => selectedCode || ''
 
-  const goView = (v) => { setView(v); setSearch(''); setDelFilterPersona(''); setSidebarOpen(false) }
+  const goView = (v) => { setView(v); setSearch(''); setDelFilterPersona(''); setSidebarOpen(false); if(v==='reposiciones') setReposicionesOpen(true) }
   const openDetail = (code) => { setSelectedCode(code); setView('detalle'); setSidebarOpen(false) }
 
   // ---- Entregas / Devoluciones ----
@@ -3097,8 +3098,26 @@ tfoot td{padding:9px 12px;font-weight:700}
               </button>
             )
           })}
+          {/* Grupo REPOSICIÓN CAMISETAS */}
+          {(() => { const isGrpActive = view==='reposiciones'; return (
+            <button className={`nav-item${isGrpActive?' active':''}`} onClick={() => { if(!isGrpActive){ goView('reposiciones'); setRepTab('reposiciones') } setReposicionesOpen(o=>!o) }}>
+              <span className="nav-dot" />
+              REPOSICIÓN CAMISETAS
+              <span style={{marginLeft:'auto',fontSize:10,opacity:0.6}}>{reposicionesOpen ? '▾' : '▸'}</span>
+            </button>
+          )})()}
+          {reposicionesOpen && [
+            ['reposiciones','REPOSICIONES'],
+            ['extras','EXTRAS'],
+            ['plantel',`PLANTEL${(db.plantel||[]).filter(j=>j.nombre?.trim().toLowerCase()!=='libre').length>0?' ('+((db.plantel||[]).filter(j=>j.nombre?.trim().toLowerCase()!=='libre').length)+')':''}`],
+          ].map(([k,l]) => (
+            <button key={k} className={`nav-item nav-item-sub${view==='reposiciones'&&repTab===k?' active':''}`} onClick={() => { goView('reposiciones'); setRepTab(k); setSidebarOpen(false) }}>
+              <span className="nav-dot" />
+              {l}
+            </button>
+          ))}
           {/* Items top-level */}
-          {[['reposiciones','REPOSICIÓN CAMISETAS'],['contrato-puma','CONTRATO PUMA'],['usuarios-reg','USUARIOS REGISTRADOS']].map(([key,label]) => {
+          {[['contrato-puma','CONTRATO PUMA'],['usuarios-reg','USUARIOS REGISTRADOS']].map(([key,label]) => {
             const isActive = view===key
             return (
               <button key={key} className={`nav-item${isActive?' active':''}`} onClick={() => goView(key)}>
@@ -4003,14 +4022,6 @@ tfoot td{padding:9px 12px;font-weight:700}
           {/* REPOSICIÓN CAMISETAS */}
           {view === 'reposiciones' && (
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
-              {/* Tabs */}
-              <div style={{display:'flex',gap:6,borderBottom:'2px solid #ECECE8',paddingBottom:0}}>
-                {[['reposiciones','REPOSICIONES'],['extras','EXTRAS'],['plantel','PLANTEL']].map(([k,l]) => (
-                  <button key={k} onClick={() => setRepTab(k)} style={{padding:'7px 18px',border:'none',background:'none',fontWeight:700,fontSize:13,cursor:'pointer',borderBottom:repTab===k?'2px solid #f2cb12':'2px solid transparent',marginBottom:-2,color:repTab===k?'#121212':'#8a8a82'}}>
-                    {l}{k==='plantel'&&(db.plantel||[]).length>0?` (${(db.plantel||[]).filter(j=>j.nombre.trim().toLowerCase()!=='libre').length})`:''}{k==='extras'&&(db.descExtras||[]).length>0?` (${(db.descExtras||[]).length})`:''}
-                  </button>
-                ))}
-              </div>
 
               {/* Tab: Reposiciones */}
               {repTab === 'reposiciones' && (<>
