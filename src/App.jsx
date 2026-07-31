@@ -2079,7 +2079,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                       <div><div className="kpi-value">{totalEquipos}</div><div className="kpi-sub">camisetas →</div></div>
                       <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/>
                       <div><div className="kpi-value">{totalShorts}</div><div className="kpi-sub">shorts →</div></div>
-                      {totalExtras>0 && <><div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/><div><div className="kpi-value">{totalExtras}</div><div className="kpi-sub">extras →</div></div></>}
+                      <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/><div><div className="kpi-value">{totalExtras}</div><div className="kpi-sub">extras →</div></div>
                     </div>
                   </div>
                   <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#f2cb12'}} onClick={()=>{ setResumenMesSel(mesActualKey); setRepResumen('ambos') }}>
@@ -4054,7 +4054,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                             <div className="kpi-value">{totalShorts}</div>
                             <div className="kpi-sub">shorts →</div>
                           </div>
-                          {totalExtras>0 && <><div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/><div><div className="kpi-value">{totalExtras}</div><div className="kpi-sub">extras →</div></div></>}
+                          <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/><div><div className="kpi-value">{totalExtras}</div><div className="kpi-sub">extras →</div></div>
                         </div>
                       </div>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#f2cb12'}} onClick={()=>{ setResumenMesSel(mesActualKeyAdmin); setRepResumen('ambos') }}>
