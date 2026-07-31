@@ -2075,7 +2075,10 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <div className="kpi-value">{(db.plantel||[]).filter(j=>j.nombre.trim().toLowerCase()!=='libre').length}</div>
                     <div className="kpi-sub">jugadores registrados →</div>
                   </div>
-                  <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed',alignSelf:'flex-start'}}>+ Nueva reposición</button>
+                  <div style={{display:'flex',flexDirection:'column',gap:8,alignSelf:'flex-start'}}>
+                    <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed'}}>+ Nueva reposición</button>
+                    <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',articulo:'',precio:0,cantidad:1,fecha:''});setDescExtraModal(true)}}>+ Descuento</button>
+                  </div>
                 </div>
               )
             })()}
@@ -2084,44 +2087,6 @@ tfoot td{padding:9px 12px;font-weight:700}
                 Configurá el plantel primero para poder registrar reposiciones.
               </div>
             )}
-            {/* Descuentos adicionales */}
-            <div className="card" style={{padding:0,overflow:'hidden'}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 16px',borderBottom:'1px solid #ECECE8',background:'#F8F8F4'}}>
-                <div style={{fontWeight:700,fontSize:12,letterSpacing:'.04em',color:'#121212'}}>DESCUENTOS ADICIONALES</div>
-                <button className="btn btn-dark" style={{padding:'5px 12px',fontSize:12}} onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',articulo:'',precio:0,cantidad:1,fecha:''});setDescExtraModal(true)}}>+ Descuento</button>
-              </div>
-              {(db.descExtras||[]).length === 0
-                ? <div style={{padding:'18px',textAlign:'center',color:'#8a8a82',fontSize:13}}>Sin descuentos adicionales registrados.</div>
-                : <div style={{overflowX:'auto'}}>
-                    <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
-                      <thead>
-                        <tr style={{background:'#F8F8F4',borderBottom:'1px solid #ECECE8'}}>
-                          <th style={{padding:'6px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>FECHA</th>
-                          <th style={{padding:'6px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>JUGADOR</th>
-                          <th style={{padding:'6px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>PRENDA</th>
-                          <th style={{padding:'6px 12px',textAlign:'center',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>CANT.</th>
-                          <th style={{padding:'6px 12px',textAlign:'right',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>TOTAL</th>
-                          <th style={{padding:'6px 12px'}}></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[...(db.descExtras||[])].sort((a,b)=>{ const [da,ma,ya]=a.fecha.split('/'); const [db2,mb,yb]=b.fecha.split('/'); return (yb-ya)||((mb-ma)||(db2-da)) }).map((e,i)=>(
-                          <tr key={e.id} style={{borderBottom:'1px solid #F0F0EC',background:i%2===0?'#fff':'#FAFAF8'}}>
-                            <td style={{padding:'7px 12px',fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>{e.fecha}</td>
-                            <td style={{padding:'7px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
-                              <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#8a8a82',marginRight:6}}>{e.jugadorNumero}</span>{e.jugadorNombre}
-                            </td>
-                            <td style={{padding:'7px 12px'}}>{e.articulo}</td>
-                            <td style={{padding:'7px 12px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace'}}>{e.cantidad}</td>
-                            <td style={{padding:'7px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</td>
-                            <td style={{padding:'7px 12px',textAlign:'right'}}><button onClick={()=>deleteDescExtra(e.id)} style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:16,lineHeight:1}}>×</button></td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-              }
-            </div>
             {(db.reposiciones||[]).length === 0
               ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay reposiciones registradas aún.</div>
               : (() => {
@@ -2750,20 +2715,21 @@ tfoot td{padding:9px 12px;font-weight:700}
             const getCam = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const dc=j.descuentoCamiseta!==undefined?j.descuentoCamiseta!==false:j.descuento!==false;return acc+(dc?Number(j.cantCamiseta)||0:0)},0)
             const getSht = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const ds=j.descuentoShort!==undefined?j.descuentoShort!==false:j.descuento!==false;return acc+(ds?Number(j.cantShort)||0:0)},0)
             const getExtras = nombre => extrasDelMes.filter(e=>e.jugadorNombre===nombre).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
-            const filas = jugsMes.map(j=>({...j,cam:getCam(j.nombre),sht:getSht(j.nombre)})).map(f=>({...f,desc:f.cam*PRECIO_DESC_CAMISETA+f.sht*PRECIO_DESC_SHORT+getExtras(f.nombre)}))
+            const filas = jugsMes.map(j=>({...j,cam:getCam(j.nombre),sht:getSht(j.nombre),extras:getExtras(j.nombre)})).map(f=>({...f,desc:f.cam*PRECIO_DESC_CAMISETA+f.sht*PRECIO_DESC_SHORT+f.extras}))
             const totCam = filas.reduce((s,f)=>s+f.cam,0)
             const totSht = filas.reduce((s,f)=>s+f.sht,0)
+            const totExtras = filas.reduce((s,f)=>s+f.extras,0)
             const totDesc = filas.reduce((s,f)=>s+f.desc,0)
-            return {filas, totCam, totSht, totDesc}
+            return {filas, totCam, totSht, totExtras, totDesc}
           }
-          const {filas, totCam, totSht, totDesc} = mesMostrado ? calcMes(mesMostrado) : {filas:[],totCam:0,totSht:0,totDesc:0}
+          const {filas, totCam, totSht, totExtras, totDesc} = mesMostrado ? calcMes(mesMostrado) : {filas:[],totCam:0,totSht:0,totExtras:0,totDesc:0}
           const [mmMostrado, yyyyMostrado] = (mesMostrado||'').split('/')
           const mesNombreMostrado = mesMostrado ? `${MESES_ES[Number(mmMostrado)]||mmMostrado} ${yyyyMostrado}` : ''
           const datosPorMes = mesesOrdenados.map(mesKey => {
             const [mm, yyyy] = mesKey.split('/')
             const mesNombre = `${MESES_ES[Number(mm)]||mm} ${yyyy}`
-            const {filas, totCam, totSht, totDesc} = calcMes(mesKey)
-            return {mesKey, mesNombre, filas, totCam, totSht, totDesc}
+            const {filas, totCam, totSht, totExtras, totDesc} = calcMes(mesKey)
+            return {mesKey, mesNombre, filas, totCam, totSht, totExtras, totDesc}
           })
           const exportResumenExcel = async () => {
             const wb = new ExcelJS.Workbook()
@@ -2779,26 +2745,26 @@ tfoot td{padding:9px 12px;font-weight:700}
             datosPorMes.forEach(({mesNombre, filas, totDesc}) => {
               const nombreHoja = mesNombre.replace(/[\\/:*?"<>|[\]]/g,'-').slice(0,31) || 'Mes'
               const ws = wb.addWorksheet(nombreHoja)
-              ws.columns = [{width:8.5},{width:24},{width:13},{width:10},{width:13}]
-              ws.mergeCells('A1:E1')
+              ws.columns = [{width:8.5},{width:24},{width:13},{width:10},{width:13},{width:13}]
+              ws.mergeCells('A1:F1')
               style(ws.getCell('A1'), YELLOW, F_BOLD); ws.getCell('A1').value = mesNombre.toUpperCase(); ws.getRow(1).height = 20
-              ;['Nº','JUGADOR','CAMISETAS','SHORTS','DESCUENTO'].forEach((h,i) => {
+              ;['Nº','JUGADOR','CAMISETAS','SHORTS','EXTRAS','DESCUENTO'].forEach((h,i) => {
                 const c = ws.getRow(2).getCell(i+1); style(c, YELLOW, F_BOLD); c.value = h
               })
               ws.getRow(2).height = 20
               filas.forEach((f,idx) => {
                 const r = ws.getRow(idx+3)
                 r.height = 18
-                ;[f.numero||'—', f.nombre, f.cam||0, f.sht||0, f.desc||0].forEach((v,i) => {
+                ;[f.numero||'—', f.nombre, f.cam||0, f.sht||0, f.extras||0, f.desc||0].forEach((v,i) => {
                   const c = r.getCell(i+1); style(c, FILL_WHT, F_NORM); c.value = v
-                  if (i===4) c.numFmt = MONEY_FMT
+                  if (i===4||i===5) c.numFmt = MONEY_FMT
                 })
               })
               const totN = filas.length + 3
-              ws.mergeCells(`A${totN}:D${totN}`)
+              ws.mergeCells(`A${totN}:E${totN}`)
               ws.getRow(totN).height = 20
               style(ws.getRow(totN).getCell(1), FILL_SUB, F_BOLD); ws.getRow(totN).getCell(1).value = 'TOTAL DESCUENTOS'
-              const totCell = ws.getRow(totN).getCell(5)
+              const totCell = ws.getRow(totN).getCell(6)
               style(totCell, FILL_SUB, F_BOLD); totCell.value = totDesc; totCell.numFmt = MONEY_FMT
             })
             const buf = await wb.xlsx.writeBuffer()
@@ -2843,12 +2809,13 @@ tfoot td{padding:9px 12px;font-weight:700}
                               <th style={{padding:'6px 12px',textAlign:'left',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>JUGADOR</th>
                               <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>CAMISETAS</th>
                               <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>SHORTS</th>
+                              <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>EXTRAS</th>
                               <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>DESCUENTO</th>
                             </tr>
                           </thead>
                           <tbody>
                             {filas.length === 0
-                              ? <tr><td colSpan={4} style={{padding:'28px 0',textAlign:'center',color:'#8a8a82',fontSize:13}}>Sin descuentos este mes.</td></tr>
+                              ? <tr><td colSpan={5} style={{padding:'28px 0',textAlign:'center',color:'#8a8a82',fontSize:13}}>Sin descuentos este mes.</td></tr>
                               : filas.map((f,i)=>(
                                 <tr key={i} style={{borderBottom:'1px solid #F0F0EC',background:i%2===0?'#fff':'#FAFAF8'}}>
                                   <td style={{padding:'7px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
@@ -2857,6 +2824,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                                   </td>
                                   <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.cam}</td>
                                   <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.sht}</td>
+                                  <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.extras>0?`$ ${f.extras.toLocaleString('es-UY')}`:'-'}</td>
                                   <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,background:'#FFF8D6'}}>$ {f.desc.toLocaleString('es-UY')}</td>
                                 </tr>
                               ))
@@ -2865,6 +2833,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                               <td style={{padding:'7px 12px',fontSize:11,fontWeight:700,letterSpacing:'.04em',color:'#f2cb12'}}>TOTAL</td>
                               <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>{totCam}</td>
                               <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>{totSht}</td>
+                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>{totExtras>0?`$ ${totExtras.toLocaleString('es-UY')}`:'-'}</td>
                               <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>$ {totDesc.toLocaleString('es-UY')}</td>
                             </tr>
                           </tbody>
@@ -4002,7 +3971,10 @@ tfoot td{padding:9px 12px;font-weight:700}
                         <div className="kpi-value">{(db.plantel||[]).filter(j=>j.nombre.trim().toLowerCase()!=='libre').length}</div>
                         <div className="kpi-sub">jugadores registrados →</div>
                       </div>
-                      <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed',alignSelf:'flex-start'}}>+ Nueva reposición</button>
+                      <div style={{display:'flex',flexDirection:'column',gap:8,alignSelf:'flex-start'}}>
+                        <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed'}}>+ Nueva reposición</button>
+                        <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',articulo:'',precio:0,cantidad:1,fecha:''});setDescExtraModal(true)}}>+ Descuento</button>
+                      </div>
                     </div>
                   )
                 })()}
@@ -4011,44 +3983,6 @@ tfoot td{padding:9px 12px;font-weight:700}
                     Configurá el <button onClick={()=>setRepTab('plantel')} style={{background:'none',border:'none',fontWeight:700,color:'#7a5800',cursor:'pointer',padding:0,textDecoration:'underline'}}>plantel</button> primero para poder registrar reposiciones.
                   </div>
                 )}
-                {/* Descuentos adicionales */}
-                <div className="card" style={{padding:0,overflow:'hidden'}}>
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 16px',borderBottom:'1px solid #ECECE8',background:'#F8F8F4'}}>
-                    <div style={{fontWeight:700,fontSize:12,letterSpacing:'.04em',color:'#121212'}}>DESCUENTOS ADICIONALES</div>
-                    <button className="btn btn-dark" style={{padding:'5px 12px',fontSize:12}} onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',articulo:'',precio:0,cantidad:1,fecha:''});setDescExtraModal(true)}}>+ Descuento</button>
-                  </div>
-                  {(db.descExtras||[]).length === 0
-                    ? <div style={{padding:'18px',textAlign:'center',color:'#8a8a82',fontSize:13}}>Sin descuentos adicionales registrados.</div>
-                    : <div style={{overflowX:'auto'}}>
-                        <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
-                          <thead>
-                            <tr style={{background:'#F8F8F4',borderBottom:'1px solid #ECECE8'}}>
-                              <th style={{padding:'6px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>FECHA</th>
-                              <th style={{padding:'6px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>JUGADOR</th>
-                              <th style={{padding:'6px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>PRENDA</th>
-                              <th style={{padding:'6px 12px',textAlign:'center',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>CANT.</th>
-                              <th style={{padding:'6px 12px',textAlign:'right',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>TOTAL</th>
-                              <th style={{padding:'6px 12px'}}></th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {[...(db.descExtras||[])].sort((a,b)=>{ const [da,ma,ya]=a.fecha.split('/'); const [db2,mb,yb]=b.fecha.split('/'); return (yb-ya)||((mb-ma)||(db2-da)) }).map((e,i)=>(
-                              <tr key={e.id} style={{borderBottom:'1px solid #F0F0EC',background:i%2===0?'#fff':'#FAFAF8'}}>
-                                <td style={{padding:'7px 12px',fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>{e.fecha}</td>
-                                <td style={{padding:'7px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
-                                  <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#8a8a82',marginRight:6}}>{e.jugadorNumero}</span>{e.jugadorNombre}
-                                </td>
-                                <td style={{padding:'7px 12px'}}>{e.articulo}</td>
-                                <td style={{padding:'7px 12px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace'}}>{e.cantidad}</td>
-                                <td style={{padding:'7px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</td>
-                                <td style={{padding:'7px 12px',textAlign:'right'}}><button onClick={()=>deleteDescExtra(e.id)} style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:16,lineHeight:1}}>×</button></td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                  }
-                </div>
                 {(db.reposiciones||[]).length === 0
                   ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay reposiciones registradas aún.</div>
                   : (() => {
@@ -5107,22 +5041,23 @@ tfoot td{padding:9px 12px;font-weight:700}
           const getCam = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const dc=j.descuentoCamiseta!==undefined?j.descuentoCamiseta!==false:j.descuento!==false;return acc+(dc?Number(j.cantCamiseta)||0:0)},0)
           const getSht = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const ds=j.descuentoShort!==undefined?j.descuentoShort!==false:j.descuento!==false;return acc+(ds?Number(j.cantShort)||0:0)},0)
           const getExtras = nombre => extrasDelMes.filter(e=>e.jugadorNombre===nombre).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
-          const filas = jugsMes.map(j=>({...j,cam:getCam(j.nombre),sht:getSht(j.nombre)})).map(f=>({...f,desc:f.cam*PRECIO_DESC_CAMISETA+f.sht*PRECIO_DESC_SHORT+getExtras(f.nombre)}))
+          const filas = jugsMes.map(j=>({...j,cam:getCam(j.nombre),sht:getSht(j.nombre),extras:getExtras(j.nombre)})).map(f=>({...f,desc:f.cam*PRECIO_DESC_CAMISETA+f.sht*PRECIO_DESC_SHORT+f.extras}))
           const totCam = filas.reduce((s,f)=>s+f.cam,0)
           const totSht = filas.reduce((s,f)=>s+f.sht,0)
+          const totExtras = filas.reduce((s,f)=>s+f.extras,0)
           const totDesc = filas.reduce((s,f)=>s+f.desc,0)
-          return {filas, totCam, totSht, totDesc}
+          return {filas, totCam, totSht, totExtras, totDesc}
         }
 
-        const {filas: filasAdmin, totCam: totCamAdmin, totSht: totShtAdmin, totDesc: totDescAdmin} = mesMostradoAdmin ? calcMesAdmin(mesMostradoAdmin) : {filas:[],totCam:0,totSht:0,totDesc:0}
+        const {filas: filasAdmin, totCam: totCamAdmin, totSht: totShtAdmin, totExtras: totExtrasAdmin, totDesc: totDescAdmin} = mesMostradoAdmin ? calcMesAdmin(mesMostradoAdmin) : {filas:[],totCam:0,totSht:0,totExtras:0,totDesc:0}
         const [mmAdmin, yyyyAdmin] = (mesMostradoAdmin||'').split('/')
         const mesNombreMod = mesMostradoAdmin ? `${MESES_ES[Number(mmAdmin)]||mmAdmin} ${yyyyAdmin}` : ''
 
         const datosPorMes = mesesOrdenados.map(mesKey => {
           const [mm, yyyy] = mesKey.split('/')
           const mesNombre = `${MESES_ES[Number(mm)]||mm} ${yyyy}`
-          const {filas, totCam, totSht, totDesc} = calcMesAdmin(mesKey)
-          return {mesKey, mesNombre, filas, totCam, totSht, totDesc}
+          const {filas, totCam, totSht, totExtras, totDesc} = calcMesAdmin(mesKey)
+          return {mesKey, mesNombre, filas, totCam, totSht, totExtras, totDesc}
         })
 
         const exportResumenExcel = async () => {
@@ -5140,12 +5075,12 @@ tfoot td{padding:9px 12px;font-weight:700}
           datosPorMes.forEach(({mesNombre, filas, totDesc}) => {
             const nombreHoja = mesNombre.replace(/[\\/:*?"<>|[\]]/g,'-').slice(0,31) || 'Mes'
             const ws = wb.addWorksheet(nombreHoja)
-            ws.columns = [{width:8.5},{width:24},{width:13},{width:10},{width:13}]
+            ws.columns = [{width:8.5},{width:24},{width:13},{width:10},{width:13},{width:13}]
 
-            ws.mergeCells('A1:E1')
+            ws.mergeCells('A1:F1')
             style(ws.getCell('A1'), YELLOW, F_BOLD); ws.getCell('A1').value = mesNombre.toUpperCase(); ws.getRow(1).height = 20
 
-            ;['Nº','JUGADOR','CAMISETAS','SHORTS','DESCUENTO'].forEach((h,i) => {
+            ;['Nº','JUGADOR','CAMISETAS','SHORTS','EXTRAS','DESCUENTO'].forEach((h,i) => {
               const c = ws.getRow(2).getCell(i+1); style(c, YELLOW, F_BOLD); c.value = h
             })
             ws.getRow(2).height = 20
@@ -5153,17 +5088,17 @@ tfoot td{padding:9px 12px;font-weight:700}
             filas.forEach((f,idx) => {
               const r = ws.getRow(idx+3)
               r.height = 18
-              ;[f.numero||'—', f.nombre, f.cam||0, f.sht||0, f.desc||0].forEach((v,i) => {
+              ;[f.numero||'—', f.nombre, f.cam||0, f.sht||0, f.extras||0, f.desc||0].forEach((v,i) => {
                 const c = r.getCell(i+1); style(c, FILL_WHT, F_NORM); c.value = v
-                if (i===4) c.numFmt = MONEY_FMT
+                if (i===4||i===5) c.numFmt = MONEY_FMT
               })
             })
 
             const totN = filas.length + 3
-            ws.mergeCells(`A${totN}:D${totN}`)
+            ws.mergeCells(`A${totN}:E${totN}`)
             ws.getRow(totN).height = 20
             style(ws.getRow(totN).getCell(1), FILL_SUB, F_BOLD); ws.getRow(totN).getCell(1).value = 'TOTAL DESCUENTOS'
-            const totCell = ws.getRow(totN).getCell(5)
+            const totCell = ws.getRow(totN).getCell(6)
             style(totCell, FILL_SUB, F_BOLD); totCell.value = totDesc; totCell.numFmt = MONEY_FMT
           })
 
@@ -5210,12 +5145,13 @@ tfoot td{padding:9px 12px;font-weight:700}
                             <th style={{padding:'6px 12px',textAlign:'left',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>JUGADOR</th>
                             <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>CAMISETAS</th>
                             <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>SHORTS</th>
+                            <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>EXTRAS</th>
                             <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>DESCUENTO</th>
                           </tr>
                         </thead>
                         <tbody>
                           {filasAdmin.length === 0
-                            ? <tr><td colSpan={4} style={{padding:'28px 0',textAlign:'center',color:'#8a8a82',fontSize:13}}>Sin descuentos este mes.</td></tr>
+                            ? <tr><td colSpan={5} style={{padding:'28px 0',textAlign:'center',color:'#8a8a82',fontSize:13}}>Sin descuentos este mes.</td></tr>
                             : filasAdmin.map((f,i)=>(
                               <tr key={i} style={{borderBottom:'1px solid #F0F0EC',background:i%2===0?'#fff':'#FAFAF8'}}>
                                 <td style={{padding:'7px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
@@ -5224,6 +5160,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                                 </td>
                                 <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.cam}</td>
                                 <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.sht}</td>
+                                <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.extras>0?`$ ${f.extras.toLocaleString('es-UY')}`:'-'}</td>
                                 <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,background:'#FFF8D6'}}>$ {f.desc.toLocaleString('es-UY')}</td>
                               </tr>
                             ))
@@ -5232,6 +5169,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                             <td style={{padding:'7px 12px',fontSize:11,fontWeight:700,letterSpacing:'.04em',color:'#f2cb12'}}>TOTAL</td>
                             <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>{totCamAdmin}</td>
                             <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>{totShtAdmin}</td>
+                            <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>{totExtrasAdmin>0?`$ ${totExtrasAdmin.toLocaleString('es-UY')}`:'-'}</td>
                             <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>$ {totDescAdmin.toLocaleString('es-UY')}</td>
                           </tr>
                         </tbody>
