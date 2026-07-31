@@ -1709,14 +1709,19 @@ tfoot td{padding:9px 12px;font-weight:700}
     showToast('Concepto actualizado.')
   }
   const saveDescExtra = () => {
-    if (!descExtraForm.jugadorNombre || !descExtraForm.articulo) { showToast('Seleccioná jugador y prenda.'); return }
+    if (!descExtraForm.jugadorNombre) { showToast('Seleccioná un jugador.'); return }
     const fecha = descExtraForm.fecha || today()
     if (descExtraForm.id) {
+      if (!descExtraForm.articulo) { showToast('Seleccioná una prenda.'); return }
       setDb(s => ({...s, descExtras:(s.descExtras||[]).map(e=>e.id===descExtraForm.id?{...descExtraForm,fecha}:e)}))
       showToast('Descuento actualizado.')
     } else {
-      setDb(s => ({...s, descExtras:[...(s.descExtras||[]), {...descExtraForm, fecha, id:Date.now()}]}))
-      showToast('Descuento adicional registrado.')
+      const validas = (descExtraForm.prendas||[]).filter(p=>p.articulo&&p.precio>0)
+      if (!validas.length) { showToast('Seleccioná al menos una prenda.'); return }
+      const base = Date.now()
+      const nuevos = validas.map((p,i)=>({id:base+i,fecha,jugadorNombre:descExtraForm.jugadorNombre,jugadorNumero:descExtraForm.jugadorNumero,articulo:p.articulo,precio:p.precio,cantidad:p.cantidad||1}))
+      setDb(s => ({...s, descExtras:[...(s.descExtras||[]), ...nuevos]}))
+      showToast(nuevos.length>1?`${nuevos.length} descuentos registrados.`:'Descuento adicional registrado.')
     }
     setDescExtraModal(false)
   }
@@ -2087,7 +2092,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   </div>
                   <div style={{display:'flex',flexDirection:'column',gap:8,alignSelf:'flex-start'}}>
                     <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed'}}>+ Nueva reposición</button>
-                    <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',articulo:'',precio:0,cantidad:1,fecha:''});setDescExtraModal(true)}}>+ Descuento</button>
+                    <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',fecha:'',prendas:[{articulo:'',precio:0,cantidad:1}]});setDescExtraModal(true)}}>+ Descuento</button>
                   </div>
                 </div>
               )
@@ -2232,7 +2237,7 @@ tfoot td{padding:9px 12px;font-weight:700}
           <div style={{display:'flex',flexDirection:'column',gap:12}}>
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <div style={{fontSize:13,color:'#8a8a82'}}>{(db.descExtras||[]).length} descuentos adicionales registrados</div>
-              <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',articulo:'',precio:0,cantidad:1,fecha:''});setDescExtraModal(true)}}>+ Descuento</button>
+              <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',fecha:'',prendas:[{articulo:'',precio:0,cantidad:1}]});setDescExtraModal(true)}}>+ Descuento</button>
             </div>
             {(db.descExtras||[]).length === 0
               ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>Sin descuentos adicionales registrados.</div>
@@ -2692,7 +2697,7 @@ tfoot td{padding:9px 12px;font-weight:700}
           <div className="modal-backdrop" onClick={()=>setDescExtraModal(false)}>
             <div className="modal modal-sm" onClick={e=>e.stopPropagation()}>
               <div className="modal-header">
-                <div className="modal-title">Descuento adicional</div>
+                <div className="modal-title">{descExtraForm.id?'Editar descuento':'Descuento adicional'}</div>
                 <button className="modal-close" onClick={()=>setDescExtraModal(false)}>×</button>
               </div>
               <div className="modal-body">
@@ -2707,28 +2712,60 @@ tfoot td{padding:9px 12px;font-weight:700}
                     {(db.plantel||[]).filter(j=>j.nombre?.trim().toLowerCase()!=='libre').sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j=>(<option key={j.id} value={j.nombre}>{j.numero} — {j.nombre}</option>))}
                   </select>
                 </div>
-                <div className="form-group">
-                  <label className="field-label">Prenda</label>
-                  <select className="field-input" value={descExtraForm.articulo} onChange={e=>{const p=EXTRAS_PRENDAS.find(p=>p.nombre===e.target.value);setDescExtraForm(f=>({...f,articulo:e.target.value,precio:p?.precio||0}))}}>
-                    <option value="">Seleccionar prenda…</option>
-                    {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre} — $ {p.precio.toLocaleString('es-UY')}</option>))}
-                  </select>
-                </div>
-                <div style={{display:'flex',gap:12}}>
-                  <div className="form-group" style={{flex:1}}>
-                    <label className="field-label">Precio unitario</label>
-                    <input className="field-input mono" type="number" value={descExtraForm.precio} readOnly style={{background:'#F5F5F0',color:'#5a5a52'}} />
+                {descExtraForm.id ? (<>
+                  <div className="form-group">
+                    <label className="field-label">Prenda</label>
+                    <select className="field-input" value={descExtraForm.articulo} onChange={e=>{const p=EXTRAS_PRENDAS.find(p=>p.nombre===e.target.value);setDescExtraForm(f=>({...f,articulo:e.target.value,precio:p?.precio||0}))}}>
+                      <option value="">Seleccionar prenda…</option>
+                      {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre} — $ {p.precio.toLocaleString('es-UY')}</option>))}
+                    </select>
                   </div>
-                  <div className="form-group" style={{width:80}}>
-                    <label className="field-label">Cant.</label>
-                    <input className="field-input mono" type="number" min="1" value={descExtraForm.cantidad} onChange={e=>setDescExtraForm(p=>({...p,cantidad:Math.max(1,parseInt(e.target.value)||1)}))} style={{textAlign:'center'}} />
+                  <div style={{display:'flex',gap:12}}>
+                    <div className="form-group" style={{flex:1}}>
+                      <label className="field-label">Precio unitario</label>
+                      <input className="field-input mono" type="number" value={descExtraForm.precio} readOnly style={{background:'#F5F5F0',color:'#5a5a52'}} />
+                    </div>
+                    <div className="form-group" style={{width:80}}>
+                      <label className="field-label">Cant.</label>
+                      <input className="field-input mono" type="number" min="1" value={descExtraForm.cantidad} onChange={e=>setDescExtraForm(p=>({...p,cantidad:Math.max(1,parseInt(e.target.value)||1)}))} style={{textAlign:'center'}} />
+                    </div>
                   </div>
-                </div>
-                {descExtraForm.precio>0 && (
-                  <div style={{textAlign:'right',fontWeight:700,fontSize:14,fontFamily:'IBM Plex Mono,monospace',color:'#121212'}}>
-                    Total: $ {(descExtraForm.precio*(descExtraForm.cantidad||1)).toLocaleString('es-UY')}
+                  {descExtraForm.precio>0 && (
+                    <div style={{textAlign:'right',fontWeight:700,fontSize:14,fontFamily:'IBM Plex Mono,monospace',color:'#121212'}}>
+                      Total: $ {(descExtraForm.precio*(descExtraForm.cantidad||1)).toLocaleString('es-UY')}
+                    </div>
+                  )}
+                </>) : (<>
+                  <div style={{borderTop:'1px solid #ECECE8',marginTop:4,paddingTop:12}}>
+                    <div style={{fontSize:11,fontWeight:700,letterSpacing:'.04em',color:'#8a8a82',marginBottom:8}}>PRENDAS</div>
+                    {(descExtraForm.prendas||[]).map((pr,i)=>(
+                      <div key={i} style={{display:'flex',gap:8,alignItems:'center',marginBottom:8}}>
+                        <select style={{flex:1,padding:'6px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,background:'#fff'}}
+                          value={pr.articulo}
+                          onChange={e=>{const found=EXTRAS_PRENDAS.find(p=>p.nombre===e.target.value);setDescExtraForm(f=>({...f,prendas:f.prendas.map((p,j)=>j===i?{...p,articulo:e.target.value,precio:found?.precio||0}:p)}))}}>
+                          <option value="">Seleccionar prenda…</option>
+                          {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre} — $ {p.precio.toLocaleString('es-UY')}</option>))}
+                        </select>
+                        <input style={{width:52,padding:'6px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,textAlign:'center'}}
+                          type="number" min="1" value={pr.cantidad}
+                          onChange={e=>setDescExtraForm(f=>({...f,prendas:f.prendas.map((p,j)=>j===i?{...p,cantidad:Math.max(1,parseInt(e.target.value)||1)}:p)}))} />
+                        {(descExtraForm.prendas||[]).length>1 && (
+                          <button onClick={()=>setDescExtraForm(f=>({...f,prendas:f.prendas.filter((_,j)=>j!==i)}))}
+                            style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:18,lineHeight:1,padding:'0 4px',flexShrink:0}}>×</button>
+                        )}
+                      </div>
+                    ))}
+                    <button onClick={()=>setDescExtraForm(f=>({...f,prendas:[...(f.prendas||[]),{articulo:'',precio:0,cantidad:1}]}))}
+                      style={{fontSize:12,color:'#5a5a52',background:'none',border:'1px dashed #ccc',borderRadius:6,padding:'5px 12px',cursor:'pointer',width:'100%',marginTop:2}}>
+                      + Agregar prenda
+                    </button>
                   </div>
-                )}
+                  {(descExtraForm.prendas||[]).some(p=>p.precio>0) && (
+                    <div style={{textAlign:'right',fontWeight:700,fontSize:14,fontFamily:'IBM Plex Mono,monospace',color:'#121212',marginTop:10}}>
+                      Total: $ {(descExtraForm.prendas||[]).reduce((s,p)=>s+p.precio*(p.cantidad||1),0).toLocaleString('es-UY')}
+                    </div>
+                  )}
+                </>)}
               </div>
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={()=>setDescExtraModal(false)}>Cancelar</button>
@@ -4028,7 +4065,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                       </div>
                       <div style={{display:'flex',flexDirection:'column',gap:8,alignSelf:'flex-start'}}>
                         <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed'}}>+ Nueva reposición</button>
-                        <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',articulo:'',precio:0,cantidad:1,fecha:''});setDescExtraModal(true)}}>+ Descuento</button>
+                        <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',fecha:'',prendas:[{articulo:'',precio:0,cantidad:1}]});setDescExtraModal(true)}}>+ Descuento</button>
                       </div>
                     </div>
                   )
@@ -4101,7 +4138,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 <div style={{display:'flex',flexDirection:'column',gap:12}}>
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                     <div style={{fontSize:13,color:'#8a8a82'}}>{(db.descExtras||[]).length} descuentos adicionales registrados</div>
-                    <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',articulo:'',precio:0,cantidad:1,fecha:''});setDescExtraModal(true)}}>+ Descuento</button>
+                    <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',fecha:'',prendas:[{articulo:'',precio:0,cantidad:1}]});setDescExtraModal(true)}}>+ Descuento</button>
                   </div>
                   {(db.descExtras||[]).length === 0
                     ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>Sin descuentos adicionales registrados.</div>
@@ -5060,7 +5097,7 @@ tfoot td{padding:9px 12px;font-weight:700}
         <div className="modal-backdrop" onClick={()=>setDescExtraModal(false)}>
           <div className="modal modal-sm" onClick={e=>e.stopPropagation()}>
             <div className="modal-header">
-              <div className="modal-title">Descuento adicional</div>
+              <div className="modal-title">{descExtraForm.id?'Editar descuento':'Descuento adicional'}</div>
               <button className="modal-close" onClick={()=>setDescExtraModal(false)}>×</button>
             </div>
             <div className="modal-body">
@@ -5075,28 +5112,60 @@ tfoot td{padding:9px 12px;font-weight:700}
                   {(db.plantel||[]).filter(j=>j.nombre?.trim().toLowerCase()!=='libre').sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j=>(<option key={j.id} value={j.nombre}>{j.numero} — {j.nombre}</option>))}
                 </select>
               </div>
-              <div className="form-group">
-                <label className="field-label">Prenda</label>
-                <select className="field-input" value={descExtraForm.articulo} onChange={e=>{const p=EXTRAS_PRENDAS.find(p=>p.nombre===e.target.value);setDescExtraForm(f=>({...f,articulo:e.target.value,precio:p?.precio||0}))}}>
-                  <option value="">Seleccionar prenda…</option>
-                  {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre} — $ {p.precio.toLocaleString('es-UY')}</option>))}
-                </select>
-              </div>
-              <div style={{display:'flex',gap:12}}>
-                <div className="form-group" style={{flex:1}}>
-                  <label className="field-label">Precio unitario</label>
-                  <input className="field-input mono" type="number" value={descExtraForm.precio} readOnly style={{background:'#F5F5F0',color:'#5a5a52'}} />
+              {descExtraForm.id ? (<>
+                <div className="form-group">
+                  <label className="field-label">Prenda</label>
+                  <select className="field-input" value={descExtraForm.articulo} onChange={e=>{const p=EXTRAS_PRENDAS.find(p=>p.nombre===e.target.value);setDescExtraForm(f=>({...f,articulo:e.target.value,precio:p?.precio||0}))}}>
+                    <option value="">Seleccionar prenda…</option>
+                    {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre} — $ {p.precio.toLocaleString('es-UY')}</option>))}
+                  </select>
                 </div>
-                <div className="form-group" style={{width:80}}>
-                  <label className="field-label">Cant.</label>
-                  <input className="field-input mono" type="number" min="1" value={descExtraForm.cantidad} onChange={e=>setDescExtraForm(p=>({...p,cantidad:Math.max(1,parseInt(e.target.value)||1)}))} style={{textAlign:'center'}} />
+                <div style={{display:'flex',gap:12}}>
+                  <div className="form-group" style={{flex:1}}>
+                    <label className="field-label">Precio unitario</label>
+                    <input className="field-input mono" type="number" value={descExtraForm.precio} readOnly style={{background:'#F5F5F0',color:'#5a5a52'}} />
+                  </div>
+                  <div className="form-group" style={{width:80}}>
+                    <label className="field-label">Cant.</label>
+                    <input className="field-input mono" type="number" min="1" value={descExtraForm.cantidad} onChange={e=>setDescExtraForm(p=>({...p,cantidad:Math.max(1,parseInt(e.target.value)||1)}))} style={{textAlign:'center'}} />
+                  </div>
                 </div>
-              </div>
-              {descExtraForm.precio>0 && (
-                <div style={{textAlign:'right',fontWeight:700,fontSize:14,fontFamily:'IBM Plex Mono,monospace',color:'#121212'}}>
-                  Total: $ {(descExtraForm.precio*(descExtraForm.cantidad||1)).toLocaleString('es-UY')}
+                {descExtraForm.precio>0 && (
+                  <div style={{textAlign:'right',fontWeight:700,fontSize:14,fontFamily:'IBM Plex Mono,monospace',color:'#121212'}}>
+                    Total: $ {(descExtraForm.precio*(descExtraForm.cantidad||1)).toLocaleString('es-UY')}
+                  </div>
+                )}
+              </>) : (<>
+                <div style={{borderTop:'1px solid #ECECE8',marginTop:4,paddingTop:12}}>
+                  <div style={{fontSize:11,fontWeight:700,letterSpacing:'.04em',color:'#8a8a82',marginBottom:8}}>PRENDAS</div>
+                  {(descExtraForm.prendas||[]).map((pr,i)=>(
+                    <div key={i} style={{display:'flex',gap:8,alignItems:'center',marginBottom:8}}>
+                      <select style={{flex:1,padding:'6px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,background:'#fff'}}
+                        value={pr.articulo}
+                        onChange={e=>{const found=EXTRAS_PRENDAS.find(p=>p.nombre===e.target.value);setDescExtraForm(f=>({...f,prendas:f.prendas.map((p,j)=>j===i?{...p,articulo:e.target.value,precio:found?.precio||0}:p)}))}}>
+                        <option value="">Seleccionar prenda…</option>
+                        {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre} — $ {p.precio.toLocaleString('es-UY')}</option>))}
+                      </select>
+                      <input style={{width:52,padding:'6px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,textAlign:'center'}}
+                        type="number" min="1" value={pr.cantidad}
+                        onChange={e=>setDescExtraForm(f=>({...f,prendas:f.prendas.map((p,j)=>j===i?{...p,cantidad:Math.max(1,parseInt(e.target.value)||1)}:p)}))} />
+                      {(descExtraForm.prendas||[]).length>1 && (
+                        <button onClick={()=>setDescExtraForm(f=>({...f,prendas:f.prendas.filter((_,j)=>j!==i)}))}
+                          style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:18,lineHeight:1,padding:'0 4px',flexShrink:0}}>×</button>
+                      )}
+                    </div>
+                  ))}
+                  <button onClick={()=>setDescExtraForm(f=>({...f,prendas:[...(f.prendas||[]),{articulo:'',precio:0,cantidad:1}]}))}
+                    style={{fontSize:12,color:'#5a5a52',background:'none',border:'1px dashed #ccc',borderRadius:6,padding:'5px 12px',cursor:'pointer',width:'100%',marginTop:2}}>
+                    + Agregar prenda
+                  </button>
                 </div>
-              )}
+                {(descExtraForm.prendas||[]).some(p=>p.precio>0) && (
+                  <div style={{textAlign:'right',fontWeight:700,fontSize:14,fontFamily:'IBM Plex Mono,monospace',color:'#121212',marginTop:10}}>
+                    Total: $ {(descExtraForm.prendas||[]).reduce((s,p)=>s+p.precio*(p.cantidad||1),0).toLocaleString('es-UY')}
+                  </div>
+                )}
+              </>)}
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={()=>setDescExtraModal(false)}>Cancelar</button>
