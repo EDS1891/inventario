@@ -2850,7 +2850,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 const r = ws.getRow(idx+3)
                 r.height = 18
                 ;[f.numero||'—', f.nombre, f.cam||0, f.sht||0, f.extras||0, f.desc||0].forEach((v,i) => {
-                  const c = r.getCell(i+1); style(c, FILL_WHT, F_NORM); c.value = v
+                  const c = r.getCell(i+1); style(c, i===5?FILL_GRAY:FILL_WHT, i===5?F_BOLD:F_NORM); c.value = v
                   if (i===4||i===5) c.numFmt = MONEY_FMT
                 })
               })
@@ -5239,6 +5239,7 @@ tfoot td{padding:9px 12px;font-weight:700}
           const YELLOW   = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
           const FILL_SUB = {type:'pattern',pattern:'solid',fgColor:{argb:'FFF5F2E8'}}
           const FILL_WHT = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFFFF'}}
+          const FILL_GRAY= {type:'pattern',pattern:'solid',fgColor:{argb:'FFD9D9D9'}}
           const F_BOLD   = {name:'Calibri',size:11,bold:true}
           const F_NORM   = {name:'Calibri',size:11}
           const CENTER   = {horizontal:'center',vertical:'middle'}
