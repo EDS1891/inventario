@@ -3107,8 +3107,8 @@ tfoot td{padding:9px 12px;font-weight:700}
             </button>
           )})()}
           {reposicionesOpen && [
-            ['reposiciones','REPOSICIONES'],
-            ['extras','EXTRAS'],
+            ['reposiciones','REPOSICIONES Y DESCUENTOS'],
+            ['extras','DESCUENTOS EXTRA'],
             ['plantel',`PLANTEL${(db.plantel||[]).filter(j=>j.nombre?.trim().toLowerCase()!=='libre').length>0?' ('+((db.plantel||[]).filter(j=>j.nombre?.trim().toLowerCase()!=='libre').length)+')':''}`],
           ].map(([k,l]) => (
             <button key={k} className={`nav-item nav-item-sub${view==='reposiciones'&&repTab===k?' active':''}`} onClick={() => { goView('reposiciones'); setRepTab(k); setSidebarOpen(false) }}>
