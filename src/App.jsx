@@ -4151,9 +4151,39 @@ tfoot td{padding:9px 12px;font-weight:700}
               {/* Tab: Extras */}
               {repTab === 'extras' && (
                 <div style={{display:'flex',flexDirection:'column',gap:12}}>
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <div style={{fontSize:13,color:'#8a8a82'}}>{(db.descExtras||[]).length} descuentos adicionales registrados</div>
-                    <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',fecha:'',prendas:[{articulo:'',precio:0,cantidad:1}]});setDescExtraModal(true)}}>+ Descuento</button>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:12,alignItems:'flex-start'}}>
+                    <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepDesglose('camisetas')}>
+                      <div className="kpi-label">CAMISETAS ENVIADAS</div>
+                      <div className="kpi-value">{totalCamTodas}</div>
+                      <div className="kpi-sub">en todas las entregas →</div>
+                    </div>
+                    <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepDesglose('shorts')}>
+                      <div className="kpi-label">SHORTS ENVIADOS</div>
+                      <div className="kpi-value">{totalShtTodas}</div>
+                      <div className="kpi-sub">en todas las entregas →</div>
+                    </div>
+                    <div className="kpi-card" style={{alignSelf:'flex-start',cursor:'pointer',background:'#D6D6D0',border:'1px solid #121212'}} onClick={()=>setRepResumen('ambos')}>
+                      <div className="kpi-label">INDUMENTARIA A DESCONTAR {mesNombreAdmin.toUpperCase()}</div>
+                      <div style={{display:'flex',alignItems:'flex-end',gap:24,marginTop:6}}>
+                        <div><div className="kpi-value">{totalEquipos}</div><div className="kpi-sub">camisetas →</div></div>
+                        <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/>
+                        <div><div className="kpi-value">{totalShorts}</div><div className="kpi-sub">shorts →</div></div>
+                        <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/><div><div className="kpi-value">{totalExtras}</div><div className="kpi-sub">extras →</div></div>
+                      </div>
+                    </div>
+                    <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#f2cb12'}} onClick={()=>{ setResumenMesSel(mesActualKeyAdmin); setRepResumen('ambos') }}>
+                      <div className="kpi-label" style={{color:'#f2cb12'}}>DESCUENTOS {mesNombreAdmin.toUpperCase()}</div>
+                      <div className="kpi-value" style={{color:'#f2cb12'}}>$ {totalDineroMesAdmin.toLocaleString('es-UY')}</div>
+                      <div className="kpi-sub" style={{color:'#f2cb12'}}>ver detalle →</div>
+                    </div>
+                    <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepTab('plantel')}>
+                      <div className="kpi-label">PLANTEL</div>
+                      <div className="kpi-value">{(db.plantel||[]).filter(j=>j.nombre.trim().toLowerCase()!=='libre').length}</div>
+                      <div className="kpi-sub">jugadores registrados →</div>
+                    </div>
+                    <div style={{display:'flex',flexDirection:'column',gap:8,alignSelf:'flex-start'}}>
+                      <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',fecha:'',prendas:[{articulo:'',precio:0,cantidad:1}]});setDescExtraModal(true)}}>+ Descuento</button>
+                    </div>
                   </div>
                   {(db.descExtras||[]).length === 0
                     ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>Sin descuentos adicionales registrados.</div>
@@ -4902,6 +4932,8 @@ tfoot td{padding:9px 12px;font-weight:700}
         const totCam = filas.reduce((s,f)=>s+f.cam,0)
         const totSht = filas.reduce((s,f)=>s+f.sht,0)
         const totMonto = filas.reduce((s,f)=>s+f.monto,0)
+        const extrasJug = (db.descExtras||[]).filter(e => e.jugadorNombre?.trim().toLowerCase() === nombre.toLowerCase())
+        const totExtrasItems = extrasJug.reduce((s,e) => s + e.precio*(e.cantidad||1), 0)
         return (
           <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setRankingDetalle(null)}>
             <div style={{background:'#fff',borderRadius:12,padding:28,minWidth:360,maxWidth:500,boxShadow:'0 8px 32px rgba(0,0,0,0.18)',maxHeight:'80vh',display:'flex',flexDirection:'column'}} onClick={e=>e.stopPropagation()}>
@@ -4938,6 +4970,24 @@ tfoot td{padding:9px 12px;font-weight:700}
                 <span style={{textAlign:'center',fontWeight:700,fontSize:14,background:'#f2cb12',borderRadius:20,padding:'2px 6px'}}>{totSht}</span>
                 <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,textAlign:'right',whiteSpace:'nowrap'}}>$ {totMonto.toLocaleString('es-UY')}</span>
               </div>
+              {extrasJug.length > 0 && (<>
+                <div style={{fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',paddingTop:12,paddingBottom:4,borderBottom:'2px solid #ECECE8',marginTop:8}}>DESCUENTOS EXTRA</div>
+                <div style={{overflowY:'auto',maxHeight:160}}>
+                  {extrasJug.map((e,i) => (
+                    <div key={i} style={{display:'grid',gridTemplateColumns:'1fr auto',gap:'0 10px',alignItems:'center',padding:'6px 0',borderBottom:'1px solid #ECECE8'}}>
+                      <div>
+                        {e.fecha && <div style={{fontSize:11,fontWeight:700,color:'#121212',marginBottom:1}}>{e.fecha}</div>}
+                        <div style={{fontWeight:500,fontSize:12,color:'#555',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{e.articulo}{(e.cantidad||1)>1?` × ${e.cantidad}`:''}</div>
+                      </div>
+                      <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,fontWeight:600,textAlign:'right',whiteSpace:'nowrap'}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0 0',borderTop:'2px solid #121212',marginTop:4}}>
+                  <span style={{fontWeight:700,fontSize:12}}>TOTAL EXTRAS</span>
+                  <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,whiteSpace:'nowrap'}}>$ {totExtrasItems.toLocaleString('es-UY')}</span>
+                </div>
+              </>)}
               <button onClick={()=>setRankingDetalle(null)} style={{marginTop:16,width:'100%',padding:'9px 0',border:'1px solid #D0D0CC',borderRadius:8,background:'#fff',cursor:'pointer',fontSize:13,color:'#666'}}>Cerrar</button>
             </div>
           </div>
