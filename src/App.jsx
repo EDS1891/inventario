@@ -2788,12 +2788,13 @@ tfoot td{padding:9px 12px;font-weight:700}
             if (!mesesMap[key]) mesesMap[key] = []
             mesesMap[key].push(r)
           })
+          const mesActualKey = (() => { const p = today().split('/'); return p[1]+'/'+p[2] })()
+          if (!mesesMap[mesActualKey]) mesesMap[mesActualKey] = []
           const mesesOrdenados = Object.keys(mesesMap).sort((a,b)=>{
             const [ma,ya] = a.split('/').map(Number)
             const [mb,yb] = b.split('/').map(Number)
             return ya!==yb ? ya-yb : ma-mb
           })
-          const mesActualKey = (() => { const p = today().split('/'); return p[1]+'/'+p[2] })()
           const mesMostrado = (resumenMesSel && mesesMap[resumenMesSel]) ? resumenMesSel : (mesesMap[mesActualKey] ? mesActualKey : mesesOrdenados[mesesOrdenados.length-1])
           const calcMes = mesKey => {
             const repsDelMes = mesesMap[mesKey] || []
@@ -3452,9 +3453,10 @@ tfoot td{padding:9px 12px;font-weight:700}
                   {/* Stock por ubicación */}
                   <div style={{padding:'18px 24px'}}>
                     {(() => {
+                      const visibleEntries = detail.entries.filter(e => e.sizes.reduce((s, z) => s + z.qty, 0) > 0)
                       const ubicCounts = {}
-                      detail.entries.forEach(e => { ubicCounts[e.ubic] = (ubicCounts[e.ubic]||0) + 1 })
-                      return detail.entries.map((entry, idx) => {
+                      visibleEntries.forEach(e => { ubicCounts[e.ubic] = (ubicCounts[e.ubic]||0) + 1 })
+                      return visibleEntries.map((entry, idx) => {
                       const entryTot = entry.sizes.reduce((s, z) => s + z.qty, 0)
                       const hasDup = ubicCounts[entry.ubic] > 1
                       return (
@@ -4149,7 +4151,22 @@ tfoot td{padding:9px 12px;font-weight:700}
               </>)}
 
               {/* Tab: Extras */}
-              {repTab === 'extras' && (
+              {repTab === 'extras' && (() => {
+                  const descCam = j => j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
+                  const descSht = j => j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
+                  const totalEquipos = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
+                  const totalShorts  = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
+                  const totalExtras  = (db.descExtras||[]).reduce((acc,e)=>acc+(e.cantidad||1),0)
+                  const totalCamTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
+                  const totalShtTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
+                  const mesActualKeyAdmin = (() => { const p = today().split('/'); return p[1]+'/'+p[2] })()
+                  const mesNombreAdmin = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][Number(mesActualKeyAdmin.split('/')[0])]
+                  const repsDelMesAdmin = (db.reposiciones||[]).filter(r => { const p=(r.fechaPartido||r.fecha||'').split('/'); return p.length===3&&p[1]+'/'+p[2]===mesActualKeyAdmin })
+                  const totalEquiposMesAdmin = repsDelMesAdmin.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
+                  const totalShortsMesAdmin  = repsDelMesAdmin.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
+                  const totalExtrasMesAdmin  = (db.descExtras||[]).filter(e=>{ const p=e.fecha.split('/'); return p.length===3&&p[1]+'/'+p[2]===mesActualKeyAdmin }).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
+                  const totalDineroMesAdmin  = totalEquiposMesAdmin * PRECIO_CAMISETA + totalShortsMesAdmin * PRECIO_SHORT + totalExtrasMesAdmin
+                  return (
                 <div style={{display:'flex',flexDirection:'column',gap:12}}>
                   <div style={{display:'flex',flexWrap:'wrap',gap:12,alignItems:'flex-start'}}>
                     <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepDesglose('camisetas')}>
@@ -4222,7 +4239,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                       </div>
                   }
                 </div>
-              )}
+              )
+              })()}
 
               {/* Tab: Plantel */}
               {repTab === 'plantel' && (<>
@@ -5260,13 +5278,13 @@ tfoot td{padding:9px 12px;font-weight:700}
           if (!mesesMap[key]) mesesMap[key] = []
           mesesMap[key].push(r)
         })
+        const mesActualKeyMod = (() => { const p = today().split('/'); return p[1]+'/'+p[2] })()
+        if (!mesesMap[mesActualKeyMod]) mesesMap[mesActualKeyMod] = []
         const mesesOrdenados = Object.keys(mesesMap).sort((a,b)=>{
           const [ma,ya] = a.split('/').map(Number)
           const [mb,yb] = b.split('/').map(Number)
           return ya!==yb ? ya-yb : ma-mb
         })
-
-        const mesActualKeyMod = (() => { const p = today().split('/'); return p[1]+'/'+p[2] })()
         const mesMostradoAdmin = (resumenMesSel && mesesMap[resumenMesSel]) ? resumenMesSel : (mesesMap[mesActualKeyMod] ? mesActualKeyMod : mesesOrdenados[mesesOrdenados.length-1])
 
         const calcMesAdmin = mesKey => {
