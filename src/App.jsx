@@ -1204,7 +1204,7 @@ ${rowsHtml}
   const catTotal = cat => Object.values(byCodeMap).filter(v => v.cat === cat).reduce((s, v) => s + v.qty, 0)
 
   const kpis = {
-    articulos: new Set(articles.map(a => a.code)).size,
+    articulos: new Set(articles.filter(a => total(a) > 0).map(a => a.code)).size,
     unidades: fmt(articles.reduce((s,a) => s + total(a), 0)),
     valorStock: articles.reduce((s,a) => s + (a.precio||0) * total(a), 0),
     entrenamiento: fmt(catTotal('Entrenamiento')),
