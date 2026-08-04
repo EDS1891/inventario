@@ -2914,9 +2914,9 @@ tfoot td{padding:9px 12px;font-weight:700}
                               ? <tr><td colSpan={5} style={{padding:'28px 0',textAlign:'center',color:'#8a8a82',fontSize:13}}>Sin descuentos este mes.</td></tr>
                               : filas.map((f,i)=>(
                                 <tr key={i} style={{borderBottom:'1px solid #F0F0EC',background:i%2===0?'#fff':'#FAFAF8'}}>
-                                  <td style={{padding:'7px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
+                                  <td style={{padding:'7px 12px',fontWeight:500,whiteSpace:'nowrap',cursor:'pointer'}} onClick={()=>setRankingDetalle(f.nombre)}>
                                     <span style={{fontFamily:'IBM Plex Mono,monospace',color:'#121212',marginRight:8,fontSize:11}}>{f.numero}</span>
-                                    {f.nombre}
+                                    <span style={{textDecoration:'underline',textDecorationStyle:'dotted',textUnderlineOffset:3}}>{f.nombre}</span>
                                   </td>
                                   <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.cam}</td>
                                   <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.sht}</td>
@@ -4953,40 +4953,54 @@ tfoot td{padding:9px 12px;font-weight:700}
         const extrasJug = (db.descExtras||[]).filter(e => e.jugadorNombre?.trim().toLowerCase() === nombre.toLowerCase())
         const totExtrasItems = extrasJug.reduce((s,e) => s + e.precio*(e.cantidad||1), 0)
         return (
-          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setRankingDetalle(null)}>
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:1100,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setRankingDetalle(null)}>
             <div style={{background:'#fff',borderRadius:12,padding:28,minWidth:360,maxWidth:500,boxShadow:'0 8px 32px rgba(0,0,0,0.18)',maxHeight:'80vh',display:'flex',flexDirection:'column'}} onClick={e=>e.stopPropagation()}>
               <div style={{display:'flex',alignItems:'baseline',gap:10,marginBottom:4}}>
                 {jug?.numero && <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:22,color:'#121212'}}>{jug.numero}</span>}
                 <span style={{fontWeight:700,fontSize:16,textTransform:'uppercase'}}>{nombre}</span>
               </div>
               <div style={{fontSize:12,color:'#999',marginBottom:16}}>{jug?.posicion||''}</div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 60px 60px auto',gap:'0 10px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',paddingBottom:6,borderBottom:'2px solid #ECECE8',marginBottom:4}}>
-                <span>REPOSICIÓN</span>
-                <span style={{textAlign:'center'}}>CAM</span>
-                <span style={{textAlign:'center'}}>SHO</span>
-                <span style={{textAlign:'right'}}>MONTO</span>
-              </div>
               <div style={{overflowY:'auto',flex:1}}>
-                {filas.length === 0
-                  ? <div style={{color:'#999',fontSize:13,padding:'20px 0',textAlign:'center'}}>Sin registros</div>
-                  : filas.map((f,i) => (
-                    <div key={i} style={{display:'grid',gridTemplateColumns:'1fr 60px 60px auto',gap:'0 10px',alignItems:'center',padding:'7px 0',borderBottom:'1px solid #ECECE8'}}>
-                      <div>
-                        {f.fecha && <div style={{fontSize:11,fontWeight:700,color:'#121212',marginBottom:1}}>{f.fecha}</div>}
-                        <div style={{fontWeight:500,fontSize:12,textTransform:'uppercase',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'#555'}}>{f.label}{f.torneo ? ` · ${f.torneo}` : ''}</div>
-                      </div>
-                      <span style={{textAlign:'center',fontWeight:700,fontSize:13}}>{f.cam}</span>
-                      <span style={{textAlign:'center',fontWeight:700,fontSize:13}}>{f.sht}</span>
-                      <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,fontWeight:600,textAlign:'right',whiteSpace:'nowrap'}}>$ {f.monto.toLocaleString('es-UY')}</span>
-                    </div>
-                  ))
-                }
-              </div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 60px 60px auto',gap:'0 10px',alignItems:'center',padding:'10px 0 0',borderTop:'2px solid #121212',marginTop:8}}>
-                <span style={{fontWeight:700,fontSize:12}}>TOTAL</span>
-                <span style={{textAlign:'center',fontWeight:700,fontSize:14,background:'#f2cb12',borderRadius:20,padding:'2px 6px'}}>{totCam}</span>
-                <span style={{textAlign:'center',fontWeight:700,fontSize:14,background:'#f2cb12',borderRadius:20,padding:'2px 6px'}}>{totSht}</span>
-                <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,textAlign:'right',whiteSpace:'nowrap'}}>$ {totMonto.toLocaleString('es-UY')}</span>
+                <table style={{width:'100%',borderCollapse:'collapse',tableLayout:'fixed'}}>
+                  <colgroup>
+                    <col style={{width:'auto'}}/>
+                    <col style={{width:52}}/>
+                    <col style={{width:52}}/>
+                    <col style={{width:80}}/>
+                  </colgroup>
+                  <thead>
+                    <tr style={{borderBottom:'2px solid #ECECE8'}}>
+                      <th style={{padding:'0 0 6px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',textAlign:'left'}}>REPOSICIÓN</th>
+                      <th style={{padding:'0 0 6px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',textAlign:'center'}}>CAM</th>
+                      <th style={{padding:'0 0 6px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',textAlign:'center'}}>SHO</th>
+                      <th style={{padding:'0 0 6px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',textAlign:'right'}}>MONTO</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filas.length === 0
+                      ? <tr><td colSpan={4} style={{color:'#999',fontSize:13,padding:'20px 0',textAlign:'center'}}>Sin registros</td></tr>
+                      : filas.map((f,i) => (
+                        <tr key={i} style={{borderBottom:'1px solid #ECECE8'}}>
+                          <td style={{padding:'7px 8px 7px 0',verticalAlign:'middle'}}>
+                            {f.fecha && <div style={{fontSize:11,fontWeight:700,color:'#121212',marginBottom:1}}>{f.fecha}</div>}
+                            <div style={{fontWeight:500,fontSize:12,textTransform:'uppercase',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'#555'}}>{f.label}{f.torneo ? ` · ${f.torneo}` : ''}</div>
+                          </td>
+                          <td style={{padding:'7px 4px',textAlign:'center',fontWeight:700,fontSize:13,verticalAlign:'middle'}}>{f.cam}</td>
+                          <td style={{padding:'7px 4px',textAlign:'center',fontWeight:700,fontSize:13,verticalAlign:'middle'}}>{f.sht}</td>
+                          <td style={{padding:'7px 0 7px 4px',fontFamily:'IBM Plex Mono,monospace',fontSize:12,fontWeight:600,textAlign:'right',whiteSpace:'nowrap',verticalAlign:'middle'}}>$ {f.monto.toLocaleString('es-UY')}</td>
+                        </tr>
+                      ))
+                    }
+                  </tbody>
+                  <tfoot>
+                    <tr style={{borderTop:'2px solid #121212'}}>
+                      <td style={{padding:'8px 8px 0 0',fontWeight:700,fontSize:12}}>TOTAL</td>
+                      <td style={{padding:'8px 4px 0',textAlign:'center'}}><span style={{fontWeight:700,fontSize:14,background:'#f2cb12',borderRadius:20,padding:'2px 6px'}}>{totCam}</span></td>
+                      <td style={{padding:'8px 4px 0',textAlign:'center'}}><span style={{fontWeight:700,fontSize:14,background:'#f2cb12',borderRadius:20,padding:'2px 6px'}}>{totSht}</span></td>
+                      <td style={{padding:'8px 0 0 4px',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,textAlign:'right',whiteSpace:'nowrap'}}>$ {totMonto.toLocaleString('es-UY')}</td>
+                    </tr>
+                  </tfoot>
+                </table>
               </div>
               {extrasJug.length > 0 && (<>
                 <div style={{fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',paddingTop:12,paddingBottom:4,borderBottom:'2px solid #ECECE8',marginTop:8}}>DESCUENTOS EXTRA</div>
@@ -5416,9 +5430,9 @@ tfoot td{padding:9px 12px;font-weight:700}
                             ? <tr><td colSpan={5} style={{padding:'28px 0',textAlign:'center',color:'#8a8a82',fontSize:13}}>Sin descuentos este mes.</td></tr>
                             : filasAdmin.map((f,i)=>(
                               <tr key={i} style={{borderBottom:'1px solid #F0F0EC',background:i%2===0?'#fff':'#FAFAF8'}}>
-                                <td style={{padding:'7px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
+                                <td style={{padding:'7px 12px',fontWeight:500,whiteSpace:'nowrap',cursor:'pointer'}} onClick={()=>setRankingDetalle(f.nombre)}>
                                   <span style={{fontFamily:'IBM Plex Mono,monospace',color:'#121212',marginRight:8,fontSize:11}}>{f.numero}</span>
-                                  {f.nombre}
+                                  <span style={{textDecoration:'underline',textDecorationStyle:'dotted',textUnderlineOffset:3}}>{f.nombre}</span>
                                 </td>
                                 <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.cam}</td>
                                 <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.sht}</td>
