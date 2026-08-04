@@ -5768,7 +5768,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                     }))
                   }} placeholder="CAM-XXX-26" />
                   {(() => {
-                    const existing = na.code ? db.articles.find(a => a.code === na.code) : null
+                    const existing = na.code ? db.articles.find(a => a.code === na.code && (a.sizes||[]).reduce((s,z)=>s+z.qty,0) > 0) : null
                     if (!existing?.ubic) return null
                     return (
                       <div style={{marginTop:6,fontSize:12,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:6,padding:'6px 10px',display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>
