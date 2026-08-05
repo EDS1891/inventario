@@ -211,6 +211,7 @@ export default function App() {
   const [pumaMetric, setPumaMetric] = useState('unidades')
   const [cartLines, setCartLines] = useState([])
   const [cartPickerCode, setCartPickerCode] = useState(null)
+  const [cartPickerUbic, setCartPickerUbic] = useState('')
   const [cartPickerTalle, setCartPickerTalle] = useState('')
   const [cartPickerQty, setCartPickerQty] = useState('')
   const [repTab, setRepTab] = useState('reposiciones')
@@ -426,13 +427,19 @@ export default function App() {
     if (!cartPickerCode || !cartPickerTalle || !qty || qty <= 0) { showToast('Elegí talle y cantidad.'); return }
     const artsForCode = db.articles.filter(a => a.code === cartPickerCode)
     const artName = artsForCode[0]?.name || cartPickerCode
+    const entriesWithStock = artsForCode.filter(a => a.sizes.reduce((s,z) => s+z.qty, 0) > 0)
+    const needsUbic = entriesWithStock.length > 1
+    if (needsUbic && !cartPickerUbic) { showToast('Elegí la ubicación primero.'); return }
+    const relevantArts = needsUbic ? artsForCode.filter(a => a.ubic === cartPickerUbic) : artsForCode
     const sizeMap = {}
-    artsForCode.forEach(a => a.sizes.forEach(s => { sizeMap[s.talle] = (sizeMap[s.talle] || 0) + s.qty }))
+    relevantArts.forEach(a => a.sizes.forEach(s => { sizeMap[s.talle] = (sizeMap[s.talle] || 0) + s.qty }))
     const avail = sizeMap[cartPickerTalle] || 0
-    const already = cartLines.filter(l => l.code === cartPickerCode && l.talle === cartPickerTalle).reduce((s, l) => s + l.qty, 0)
+    const already = cartLines.filter(l => l.code === cartPickerCode && l.talle === cartPickerTalle && l.ubic === (needsUbic ? cartPickerUbic : l.ubic)).reduce((s, l) => s + l.qty, 0)
     if (avail === 0 || qty + already > avail) { showToast(`Stock insuficiente (${avail - already} disp.).`); return }
-    setCartLines(p => [...p, { code: cartPickerCode, talle: cartPickerTalle, qty, name: artName }])
-    setCartPickerCode(null); setCartPickerTalle(''); setCartPickerQty('')
+    const line = { code: cartPickerCode, talle: cartPickerTalle, qty, name: artName }
+    if (needsUbic) line.ubic = cartPickerUbic
+    setCartLines(p => [...p, line])
+    setCartPickerCode(null); setCartPickerUbic(''); setCartPickerTalle(''); setCartPickerQty('')
   }
 
   const openCartConfirm = () => {
@@ -6398,40 +6405,60 @@ tfoot td{padding:9px 12px;font-weight:700}
       {cartPickerCode && (() => {
         const artsForCode = db.articles.filter(a => a.code === cartPickerCode)
         const artName = artsForCode[0]?.name || cartPickerCode
+        const entriesWithStock = artsForCode.filter(a => a.sizes.reduce((s,z) => s+z.qty, 0) > 0)
+        const needsUbic = entriesWithStock.length > 1
+        const relevantArts = needsUbic && cartPickerUbic ? artsForCode.filter(a => a.ubic === cartPickerUbic) : (needsUbic ? [] : artsForCode)
         const sizeMap = {}
-        artsForCode.forEach(a => a.sizes.forEach(s => { sizeMap[s.talle] = (sizeMap[s.talle] || 0) + s.qty }))
+        relevantArts.forEach(a => a.sizes.forEach(s => { sizeMap[s.talle] = (sizeMap[s.talle] || 0) + s.qty }))
         const tallesConStock = Object.entries(sizeMap).filter(([,q]) => q > 0).map(([t]) => t)
+        const ubicsConStock = entriesWithStock.map(a => a.ubic).filter(Boolean)
         return (
-          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.45)',zIndex:400,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={() => setCartPickerCode(null)}>
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.45)',zIndex:400,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={() => { setCartPickerCode(null); setCartPickerUbic('') }}>
             <div style={{background:'#fff',borderRadius:12,padding:24,width:320,boxShadow:'0 8px 32px rgba(0,0,0,.22)'}} onClick={e=>e.stopPropagation()}>
               <div style={{fontWeight:700,fontSize:15,marginBottom:3}}>{artName}</div>
               <div style={{fontSize:11.5,color:'#8a8a82',marginBottom:18,fontFamily:'IBM Plex Mono,monospace'}}>{cartPickerCode}</div>
-              <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.05em',marginBottom:8}}>TALLE</div>
-              {tallesConStock.length > 0
-                ? <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:18}}>
-                    {tallesConStock.map(t => (
-                      <button key={t} onClick={() => setCartPickerTalle(t)}
-                        style={{padding:'6px 13px',borderRadius:6,border:'1.5px solid',cursor:'pointer',fontWeight:700,fontSize:12.5,
-                          background: cartPickerTalle===t ? '#121212' : '#F5F5F0',
-                          color: cartPickerTalle===t ? '#f2cb12' : '#5a5a52',
-                          borderColor: cartPickerTalle===t ? '#121212' : '#E0E0DA'}}>
-                        {t} <span style={{fontWeight:400,fontSize:10.5,opacity:.7}}>({sizeMap[t]})</span>
-                      </button>
-                    ))}
-                  </div>
-                : <div style={{color:'#C2473D',fontSize:13,marginBottom:18}}>Sin stock disponible.</div>
-              }
-              <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.05em',marginBottom:8}}>CANTIDAD</div>
-              <input type="number" min="1" className="field-input" value={cartPickerQty}
-                onChange={e => setCartPickerQty(e.target.value)}
-                onKeyDown={e => e.key==='Enter' && addToCart()}
-                placeholder="Cantidad" style={{marginBottom:18}} autoFocus />
+              {needsUbic && (<>
+                <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.05em',marginBottom:8}}>UBICACIÓN</div>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:18}}>
+                  {ubicsConStock.map(u => (
+                    <button key={u} onClick={() => { setCartPickerUbic(u); setCartPickerTalle('') }}
+                      style={{padding:'6px 13px',borderRadius:6,border:'1.5px solid',cursor:'pointer',fontWeight:700,fontSize:12,
+                        background: cartPickerUbic===u ? '#121212' : '#F5F5F0',
+                        color: cartPickerUbic===u ? '#f2cb12' : '#5a5a52',
+                        borderColor: cartPickerUbic===u ? '#121212' : '#E0E0DA'}}>
+                      {u}
+                    </button>
+                  ))}
+                </div>
+              </>)}
+              {(!needsUbic || cartPickerUbic) && (<>
+                <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.05em',marginBottom:8}}>TALLE</div>
+                {tallesConStock.length > 0
+                  ? <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:18}}>
+                      {tallesConStock.map(t => (
+                        <button key={t} onClick={() => setCartPickerTalle(t)}
+                          style={{padding:'6px 13px',borderRadius:6,border:'1.5px solid',cursor:'pointer',fontWeight:700,fontSize:12.5,
+                            background: cartPickerTalle===t ? '#121212' : '#F5F5F0',
+                            color: cartPickerTalle===t ? '#f2cb12' : '#5a5a52',
+                            borderColor: cartPickerTalle===t ? '#121212' : '#E0E0DA'}}>
+                          {t} <span style={{fontWeight:400,fontSize:10.5,opacity:.7}}>({sizeMap[t]})</span>
+                        </button>
+                      ))}
+                    </div>
+                  : <div style={{color:'#C2473D',fontSize:13,marginBottom:18}}>Sin stock disponible.</div>
+                }
+                <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.05em',marginBottom:8}}>CANTIDAD</div>
+                <input type="number" min="1" className="field-input" value={cartPickerQty}
+                  onChange={e => setCartPickerQty(e.target.value)}
+                  onKeyDown={e => e.key==='Enter' && addToCart()}
+                  placeholder="Cantidad" style={{marginBottom:18}} autoFocus />
+              </>)}
               <div style={{display:'flex',gap:8}}>
-                <button onClick={() => setCartPickerCode(null)} style={{flex:1,padding:'9px',border:'1px solid #E0E0DA',borderRadius:6,background:'#F5F5F0',color:'#5a5a52',fontWeight:600,fontSize:13,cursor:'pointer'}}>Cancelar</button>
-                <button onClick={addToCart} disabled={!cartPickerTalle||!cartPickerQty}
+                <button onClick={() => { setCartPickerCode(null); setCartPickerUbic('') }} style={{flex:1,padding:'9px',border:'1px solid #E0E0DA',borderRadius:6,background:'#F5F5F0',color:'#5a5a52',fontWeight:600,fontSize:13,cursor:'pointer'}}>Cancelar</button>
+                <button onClick={addToCart} disabled={!cartPickerTalle||!cartPickerQty||(needsUbic&&!cartPickerUbic)}
                   style={{flex:2,padding:'9px',border:'none',borderRadius:6,fontWeight:700,fontSize:13,cursor:'pointer',
-                    background: cartPickerTalle&&cartPickerQty ? '#f2cb12' : '#EDE9D2',
-                    color: cartPickerTalle&&cartPickerQty ? '#121212' : '#a89e6a'}}>
+                    background: cartPickerTalle&&cartPickerQty&&(!needsUbic||cartPickerUbic) ? '#f2cb12' : '#EDE9D2',
+                    color: cartPickerTalle&&cartPickerQty&&(!needsUbic||cartPickerUbic) ? '#121212' : '#a89e6a'}}>
                   Agregar a entrega múltiple
                 </button>
               </div>
