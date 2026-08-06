@@ -195,6 +195,7 @@ export default function App() {
   const [utiFilterTemp, setUtiFilterTemp] = useState('')
   const [utiFilterModelo, setUtiFilterModelo] = useState('')
   const [utiFilterUbic, setUtiFilterUbic] = useState('')
+  const [utiFiltersOpen, setUtiFiltersOpen] = useState(false)
   const [utiForm, setUtiForm] = useState({ tipo:'', competicion:'', numero:'', jugador:'', talle:'S', modelo:'', estampado:'', parches:'', detalle:'', temporada:'', utiEstante:'1', utiAltura:'A', photos:[], id:null })
   const [utiModal, setUtiModal] = useState(false)
   const [repForm, setRepForm] = useState({ editId:null, concepto:'', descuento:true, rows:[], fechaPartido:'' })
@@ -3841,47 +3842,69 @@ tfoot td{padding:9px 12px;font-weight:700}
                 <div className="kpi-value">{(db.camisetasUtileria||[]).length}</div>
                 <div className="kpi-sub">en utilería</div>
               </div>
-              <div style={{display:'flex',gap:8,alignItems:'flex-start',justifyContent:'space-between'}}>
-                <div style={{display:'flex',flexDirection:'column',gap:6,flex:1}}>
-                  {/* Filtro: Competición */}
-                  <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
-                    <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>COMPETICIÓN</span>
-                    <button className={`chip${utiFilter===''?' active':''}`} onClick={()=>setUtiFilter('')}>Todas</button>
-                    {COMPETICIONES.map(c => <button key={c} className={`chip${utiFilter===c?' active':''}`} onClick={()=>setUtiFilter(c)}>{c}</button>)}
-                  </div>
-                  {/* Filtro: Tipo */}
-                  <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
-                    <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>TIPO</span>
-                    <button className={`chip${utiFilterTipo===''?' active':''}`} onClick={()=>setUtiFilterTipo('')}>Todos</button>
-                    {['JUGADOR','GOLERO'].map(t => <button key={t} className={`chip${utiFilterTipo===t?' active':''}`} onClick={()=>setUtiFilterTipo(t)}>{t}</button>)}
-                  </div>
-                  {/* Filtro: Temporada */}
-                  <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
-                    <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>TEMPORADA</span>
-                    <button className={`chip${utiFilterTemp===''?' active':''}`} onClick={()=>setUtiFilterTemp('')}>Todas</button>
-                    {['2012/2013','2013/2014','2015/2016','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025','2026'].map(t => <button key={t} className={`chip${utiFilterTemp===t?' active':''}`} onClick={()=>setUtiFilterTemp(t)}>{t}</button>)}
-                  </div>
-                  {/* Filtro: Modelo */}
-                  <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
-                    <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>MODELO</span>
-                    <button className={`chip${utiFilterModelo===''?' active':''}`} onClick={()=>setUtiFilterModelo('')}>Todos</button>
-                    {[...new Set([...MODELOS_JUGADOR,...MODELOS_GOLERO])].map(m => <button key={m} className={`chip${utiFilterModelo===m?' active':''}`} onClick={()=>setUtiFilterModelo(m)}>{m}</button>)}
-                  </div>
-                  {/* Filtro: Ubicación */}
-                  {(() => {
-                    const ubicsUsadas = [...new Set((db.camisetasUtileria||[]).map(c => c.ubic).filter(Boolean))].sort()
-                    if (!ubicsUsadas.length) return null
-                    return (
-                      <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
-                        <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>UBICACIÓN</span>
-                        <button className={`chip${utiFilterUbic===''?' active':''}`} onClick={()=>setUtiFilterUbic('')}>Todas</button>
-                        {ubicsUsadas.map(u => <button key={u} className={`chip${utiFilterUbic===u?' active':''}`} onClick={()=>setUtiFilterUbic(u)} style={{fontFamily:'IBM Plex Mono,monospace'}}>{u}</button>)}
+              {(() => {
+                const activeFiltros = [utiFilter,utiFilterTipo,utiFilterTemp,utiFilterModelo,utiFilterUbic].filter(Boolean).length
+                const ubicsUsadas = [...new Set((db.camisetasUtileria||[]).map(c => c.ubic).filter(Boolean))].sort()
+                const clearAll = () => { setUtiFilter(''); setUtiFilterTipo(''); setUtiFilterTemp(''); setUtiFilterModelo(''); setUtiFilterUbic('') }
+                return (
+                  <div style={{display:'flex',gap:8,alignItems:'flex-start',justifyContent:'space-between'}}>
+                    <div style={{flex:1}}>
+                      {/* Barra colapsable */}
+                      <div style={{display:'flex',gap:8,alignItems:'center',marginBottom: utiFiltersOpen ? 10 : 0}}>
+                        <button onClick={()=>setUtiFiltersOpen(p=>!p)}
+                          style={{display:'flex',alignItems:'center',gap:6,padding:'6px 12px',borderRadius:7,border:'1px solid #D0D0CA',background: utiFiltersOpen?'#121212':'#F5F5F0',color: utiFiltersOpen?'#f2cb12':'#5a5a52',fontWeight:600,fontSize:12.5,cursor:'pointer'}}>
+                          <span style={{fontSize:13}}>{utiFiltersOpen ? '▲' : '▼'}</span>
+                          Filtros
+                          {activeFiltros > 0 && <span style={{background:'#f2cb12',color:'#121212',borderRadius:10,padding:'1px 7px',fontSize:11,fontWeight:800,marginLeft:2}}>{activeFiltros}</span>}
+                        </button>
+                        {activeFiltros > 0 && (
+                          <>
+                            {utiFilter && <span style={{fontSize:12,background:'#121212',color:'#f2cb12',borderRadius:5,padding:'2px 8px',fontWeight:600}}>{utiFilter}</span>}
+                            {utiFilterTipo && <span style={{fontSize:12,background:'#121212',color:'#f2cb12',borderRadius:5,padding:'2px 8px',fontWeight:600}}>{utiFilterTipo}</span>}
+                            {utiFilterTemp && <span style={{fontSize:12,background:'#121212',color:'#f2cb12',borderRadius:5,padding:'2px 8px',fontWeight:600}}>{utiFilterTemp}</span>}
+                            {utiFilterModelo && <span style={{fontSize:12,background:'#121212',color:'#f2cb12',borderRadius:5,padding:'2px 8px',fontWeight:600}}>{utiFilterModelo}</span>}
+                            {utiFilterUbic && <span style={{fontSize:12,background:'#121212',color:'#f2cb12',borderRadius:5,padding:'2px 8px',fontWeight:600,fontFamily:'IBM Plex Mono,monospace'}}>{utiFilterUbic}</span>}
+                            <button onClick={clearAll} style={{fontSize:12,color:'#C2473D',background:'none',border:'none',cursor:'pointer',fontWeight:600,padding:'2px 4px'}}>Limpiar</button>
+                          </>
+                        )}
                       </div>
-                    )
-                  })()}
-                </div>
-                {!isSoloVista && <button className="btn btn-dark" style={{flexShrink:0,marginTop:2}} onClick={()=>{ setUtiForm({tipo:'',competicion:COMPETICIONES[0],numero:'',jugador:'',talle:'S',modelo:'',estampado:'',parches:'',detalle:'',temporada:'',utiEstante:'1',utiAltura:'A',photos:[],id:null}); setUtiModal(true) }}>+ Camiseta</button>}
-              </div>
+                      {/* Panel de filtros */}
+                      {utiFiltersOpen && (
+                        <div style={{display:'flex',flexDirection:'column',gap:6,background:'#F5F5F0',border:'1px solid #E0E0DA',borderRadius:8,padding:'12px 14px'}}>
+                          <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
+                            <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>COMPETICIÓN</span>
+                            <button className={`chip${utiFilter===''?' active':''}`} onClick={()=>setUtiFilter('')}>Todas</button>
+                            {COMPETICIONES.map(c => <button key={c} className={`chip${utiFilter===c?' active':''}`} onClick={()=>setUtiFilter(c)}>{c}</button>)}
+                          </div>
+                          <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
+                            <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>TIPO</span>
+                            <button className={`chip${utiFilterTipo===''?' active':''}`} onClick={()=>setUtiFilterTipo('')}>Todos</button>
+                            {['JUGADOR','GOLERO'].map(t => <button key={t} className={`chip${utiFilterTipo===t?' active':''}`} onClick={()=>setUtiFilterTipo(t)}>{t}</button>)}
+                          </div>
+                          <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
+                            <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>TEMPORADA</span>
+                            <button className={`chip${utiFilterTemp===''?' active':''}`} onClick={()=>setUtiFilterTemp('')}>Todas</button>
+                            {['2012/2013','2013/2014','2015/2016','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025','2026'].map(t => <button key={t} className={`chip${utiFilterTemp===t?' active':''}`} onClick={()=>setUtiFilterTemp(t)}>{t}</button>)}
+                          </div>
+                          <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
+                            <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>MODELO</span>
+                            <button className={`chip${utiFilterModelo===''?' active':''}`} onClick={()=>setUtiFilterModelo('')}>Todos</button>
+                            {[...new Set([...MODELOS_JUGADOR,...MODELOS_GOLERO])].map(m => <button key={m} className={`chip${utiFilterModelo===m?' active':''}`} onClick={()=>setUtiFilterModelo(m)}>{m}</button>)}
+                          </div>
+                          {ubicsUsadas.length > 0 && (
+                            <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
+                              <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>UBICACIÓN</span>
+                              <button className={`chip${utiFilterUbic===''?' active':''}`} onClick={()=>setUtiFilterUbic('')}>Todas</button>
+                              {ubicsUsadas.map(u => <button key={u} className={`chip${utiFilterUbic===u?' active':''}`} onClick={()=>setUtiFilterUbic(u)} style={{fontFamily:'IBM Plex Mono,monospace'}}>{u}</button>)}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {!isSoloVista && <button className="btn btn-dark" style={{flexShrink:0}} onClick={()=>{ setUtiForm({tipo:'',competicion:COMPETICIONES[0],numero:'',jugador:'',talle:'S',modelo:'',estampado:'',parches:'',detalle:'',temporada:'',utiEstante:'1',utiAltura:'A',photos:[],id:null}); setUtiModal(true) }}>+ Camiseta</button>}
+                  </div>
+                )
+              })()}
               <div className="card" style={{overflow:'auto'}}>
                 <div style={{display:'grid',gridTemplateColumns:'44px 62px 90px 50px 46px 1fr 110px 1fr 44px 1fr 60px 65px 28px',background:'#121212',padding:'9px 16px',gap:8,minWidth:980}}>
                   {['','TIPO','MODELO','TEMP.','NRO.','NOMBRE','ESTAMPADO','COMPETICIÓN','TALLE','PARCHES','UBIC.','',''].map((h,i) => (
