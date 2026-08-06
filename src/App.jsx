@@ -17,6 +17,8 @@ const CARGOS_REG = ['Administración Palacio','Atención al Socio','Coordinació
 const CARGOS_SIN_SECTOR = ['Administración Palacio','Atención al Socio','Utilería 1° División']
 const ESTANTES = ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','50','51','TRANSITO']
 const ALTURAS = ['A','B','C','D','E','O']
+const UT_ESTANTES = ['1','2','3','4','5','6','7','8','9','10']
+const UT_ALTURAS = ['A','B','C','D','E']
 const CAMISETA_TIPOS = ['Titular','Alternativa','3°']
 const SHORT_TIPOS = ['Titular','Alternativa']
 const REP_TIPOS_JUGADOR = ['TRADICIONAL','AMARILLA','VERDE']
@@ -192,7 +194,7 @@ export default function App() {
   const [utiFilterTipo, setUtiFilterTipo] = useState('')
   const [utiFilterTemp, setUtiFilterTemp] = useState('')
   const [utiFilterModelo, setUtiFilterModelo] = useState('')
-  const [utiForm, setUtiForm] = useState({ tipo:'', competicion:'', numero:'', jugador:'', talle:'S', modelo:'', estampado:'', parches:'', detalle:'', temporada:'', id:null })
+  const [utiForm, setUtiForm] = useState({ tipo:'', competicion:'', numero:'', jugador:'', talle:'S', modelo:'', estampado:'', parches:'', detalle:'', temporada:'', utiEstante:'1', utiAltura:'A', photos:[], id:null })
   const [utiModal, setUtiModal] = useState(false)
   const [repForm, setRepForm] = useState({ editId:null, concepto:'', descuento:true, rows:[], fechaPartido:'' })
   const [repModal, setRepModal] = useState(false)
@@ -1362,13 +1364,15 @@ ${rowsHtml}
 
   const saveUti = () => {
     if(!utiForm.numero.trim()) { showToast('Ingresá el número de camiseta.'); return }
+    const ubic = 'UT' + utiForm.utiEstante + utiForm.utiAltura
+    const toSave = {...utiForm, ubic}
     setDb(prev => {
       const list = prev.camisetasUtileria || []
       if(utiForm.id !== null) {
-        return {...prev, camisetasUtileria: list.map(c => c.id === utiForm.id ? {...utiForm} : c)}
+        return {...prev, camisetasUtileria: list.map(c => c.id === utiForm.id ? toSave : c)}
       } else {
         const newId = list.length > 0 ? Math.max(...list.map(c => c.id)) + 1 : 1
-        return {...prev, camisetasUtileria: [...list, {...utiForm, id: newId}]}
+        return {...prev, camisetasUtileria: [...list, {...toSave, id: newId}]}
       }
     })
     setUtiModal(false)
@@ -3862,18 +3866,22 @@ tfoot td{padding:9px 12px;font-weight:700}
                     {[...new Set([...MODELOS_JUGADOR,...MODELOS_GOLERO])].map(m => <button key={m} className={`chip${utiFilterModelo===m?' active':''}`} onClick={()=>setUtiFilterModelo(m)}>{m}</button>)}
                   </div>
                 </div>
-                {!isSoloVista && <button className="btn btn-dark" style={{flexShrink:0,marginTop:2}} onClick={()=>{ setUtiForm({tipo:'',competicion:COMPETICIONES[0],numero:'',jugador:'',talle:'S',modelo:'',estampado:'',parches:'',detalle:'',temporada:'',id:null}); setUtiModal(true) }}>+ Camiseta</button>}
+                {!isSoloVista && <button className="btn btn-dark" style={{flexShrink:0,marginTop:2}} onClick={()=>{ setUtiForm({tipo:'',competicion:COMPETICIONES[0],numero:'',jugador:'',talle:'S',modelo:'',estampado:'',parches:'',detalle:'',temporada:'',utiEstante:'1',utiAltura:'A',photos:[],id:null}); setUtiModal(true) }}>+ Camiseta</button>}
               </div>
               <div className="card" style={{overflow:'auto'}}>
-                <div style={{display:'grid',gridTemplateColumns:'62px 90px 50px 46px 1fr 110px 1fr 44px 1fr 65px 28px',background:'#121212',padding:'9px 16px',gap:8,minWidth:860}}>
-                  {['TIPO','MODELO','TEMP.','NRO.','NOMBRE','ESTAMPADO','COMPETICIÓN','TALLE','PARCHES','',''].map((h,i) => (
+                <div style={{display:'grid',gridTemplateColumns:'44px 62px 90px 50px 46px 1fr 110px 1fr 44px 1fr 60px 65px 28px',background:'#121212',padding:'9px 16px',gap:8,minWidth:980}}>
+                  {['','TIPO','MODELO','TEMP.','NRO.','NOMBRE','ESTAMPADO','COMPETICIÓN','TALLE','PARCHES','UBIC.','',''].map((h,i) => (
                     <div key={i} style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:.5}}>{h}</div>
                   ))}
                 </div>
                 {utiFiltered.length === 0
                   ? <div style={{padding:28,textAlign:'center',color:'#8a8a82',fontSize:13}}>No hay camisetas que coincidan con los filtros.</div>
                   : utiFiltered.map(c => (
-                      <div key={c.id} style={{display:'grid',gridTemplateColumns:'62px 90px 50px 46px 1fr 110px 1fr 44px 1fr 65px 28px',padding:'10px 16px',borderBottom:'1px solid #F0F0EC',alignItems:'center',gap:8,minWidth:860}}>
+                      <div key={c.id} style={{display:'grid',gridTemplateColumns:'44px 62px 90px 50px 46px 1fr 110px 1fr 44px 1fr 60px 65px 28px',padding:'10px 16px',borderBottom:'1px solid #F0F0EC',alignItems:'center',gap:8,minWidth:980}}>
+                        <div>{(c.photos||[]).length > 0
+                          ? <img src={c.photos[0]} alt="foto" style={{width:36,height:36,objectFit:'cover',borderRadius:6,border:'1px solid #E0E0DA',display:'block',cursor:'pointer'}} onClick={()=>setPhotoPreview({photos:c.photos,idx:0})} />
+                          : <div style={{width:36,height:36,borderRadius:6,border:'1px dashed #D0D0CA',background:'#F5F5F0',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,color:'#C0C0BA'}}>📷</div>
+                        }</div>
                         <div>{c.tipo && <span style={{fontSize:10,fontWeight:700,background:c.tipo==='GOLERO'?'#EDF7F2':'#F0F0EC',color:c.tipo==='GOLERO'?'#2e9b5e':'#5a5a52',border:'1px solid '+(c.tipo==='GOLERO'?'#2e9b5e':'#D0D0CA'),borderRadius:4,padding:'2px 5px'}}>{c.tipo}</span>}</div>
                         <div style={{fontSize:12,fontWeight:600,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.modelo||<span style={{color:'#ccc'}}>—</span>}</div>
                         <div style={{fontSize:12,color:'#1a1a1a'}}>{c.temporada||<span style={{color:'#ccc'}}>—</span>}</div>
@@ -3885,7 +3893,12 @@ tfoot td{padding:9px 12px;font-weight:700}
                         <div style={{fontSize:12,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.competicion||<span style={{color:'#ccc'}}>—</span>}</div>
                         <div style={{fontSize:13,fontWeight:700,textAlign:'center',color:'#1a1a1a'}}>{c.talle}</div>
                         <div style={{fontSize:12,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.parches||<span style={{color:'#ccc'}}>—</span>}</div>
-                        {!isSoloVista && <button className="btn btn-ghost" style={{padding:'4px 10px',fontSize:12}} onClick={()=>{setUtiForm({...c}); setUtiModal(true)}}>Editar</button>}
+                        <div style={{fontSize:11,fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:c.ubic?'#1a1a1a':'#ccc'}}>{c.ubic||'—'}</div>
+                        {!isSoloVista && <button className="btn btn-ghost" style={{padding:'4px 10px',fontSize:12}} onClick={()=>{
+                          const ubicMatch = (c.ubic||'').match(/^UT(\d+)([A-E])$/)
+                          setUtiForm({...c, photos:c.photos||[], utiEstante:ubicMatch?ubicMatch[1]:'1', utiAltura:ubicMatch?ubicMatch[2]:'A'})
+                          setUtiModal(true)
+                        }}>Editar</button>}
                         {!isSoloVista && <button onClick={()=>deleteUti(c.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:18,color:'#C2473D',padding:'0 4px',lineHeight:1}}>×</button>}
                         {c.detalle && (
                           <div style={{gridColumn:'1 / -1',fontSize:11,color:'#8a8a82',paddingTop:4,borderTop:'1px dashed #F0F0EC',marginTop:2}}>
@@ -4732,6 +4745,52 @@ tfoot td{padding:9px 12px;font-weight:700}
               <div className="form-group">
                 <label className="field-label">Detalle</label>
                 <input className="field-input" value={utiForm.detalle} onChange={e=>setUtiForm(p=>({...p,detalle:e.target.value}))} placeholder="" />
+              </div>
+              <div className="form-group">
+                <label className="field-label">Ubicación</label>
+                <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+                  <div style={{display:'flex',gap:6,alignItems:'center',flex:1}}>
+                    <span style={{fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>Estantería</span>
+                    <select className="field-input" style={{flex:1}} value={utiForm.utiEstante} onChange={e=>setUtiForm(p=>({...p,utiEstante:e.target.value}))}>
+                      {UT_ESTANTES.map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                  <div style={{display:'flex',gap:6,alignItems:'center',flex:1}}>
+                    <span style={{fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>Altura</span>
+                    <select className="field-input" style={{flex:1}} value={utiForm.utiAltura} onChange={e=>setUtiForm(p=>({...p,utiAltura:e.target.value}))}>
+                      {UT_ALTURAS.map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                  <div style={{fontSize:13,fontWeight:700,fontFamily:'IBM Plex Mono,monospace',background:'#121212',color:'#f2cb12',borderRadius:6,padding:'4px 10px',whiteSpace:'nowrap'}}>
+                    {'UT' + utiForm.utiEstante + utiForm.utiAltura}
+                  </div>
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="field-label">Fotos <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional · máx. 6)</span></label>
+                {(utiForm.photos||[]).length > 0 && (
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(90px,1fr))',gap:8,marginBottom:8}}>
+                    {(utiForm.photos||[]).map((src,i) => (
+                      <div key={i} style={{position:'relative'}}>
+                        <img src={src} alt={`foto ${i+1}`} style={{width:'100%',aspectRatio:'1',objectFit:'cover',borderRadius:8,border:'1px solid #E0E0DA'}} />
+                        <button type="button" onClick={()=>setUtiForm(p=>({...p,photos:p.photos.filter((_,j)=>j!==i)}))}
+                          style={{position:'absolute',top:4,right:4,width:20,height:20,borderRadius:'50%',border:'none',background:'rgba(0,0,0,0.55)',color:'#fff',fontSize:11,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {(utiForm.photos||[]).length < 6 && (
+                  <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',padding:'10px 14px',border:'2px dashed #E0E0DA',borderRadius:8,color:'#8a8a82',fontSize:13}}>
+                    <span style={{fontSize:20}}>📷</span>
+                    <span>{(utiForm.photos||[]).length === 0 ? 'Subir foto…' : 'Agregar otra foto…'}</span>
+                    <input type="file" accept="image/*" multiple style={{display:'none'}} onChange={async e => {
+                      const files = [...(e.target.files||[])].slice(0, 6-(utiForm.photos||[]).length)
+                      const b64s = await Promise.all(files.map(compressImage))
+                      setUtiForm(p => ({...p, photos:[...(p.photos||[]),...b64s].slice(0,6)}))
+                      e.target.value = ''
+                    }} />
+                  </label>
+                )}
               </div>
             </div>
             <div className="modal-footer">
