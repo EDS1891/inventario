@@ -3587,6 +3587,35 @@ tfoot td{padding:9px 12px;font-weight:700}
                   </div>
                 )
               })()}
+            {delFilterPersona && delFilterReceptor !== REP_FILTER && filteredDeliveryRows.length > 0 && (() => {
+              const totalPrendas = filteredDeliveryRows.reduce((s,d) => s+d.totalUd, 0)
+              const artMap = {}
+              filteredDeliveryRows.forEach(d => (d.lines||[]).forEach(l => {
+                const key = (codeName[l.code]||l.code) + (l.talle ? ' ' + l.talle : '')
+                artMap[key] = (artMap[key]||0) + l.qty
+              }))
+              const artList = Object.entries(artMap).sort((a,b) => b[1]-a[1])
+              return (
+                <div style={{background:'#F5F5F0',border:'1px solid #E0E0DA',borderRadius:10,padding:'14px 18px',marginBottom:8}}>
+                  <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:artList.length?12:0,flexWrap:'wrap'}}>
+                    <div style={{fontWeight:700,fontSize:14}}>{filteredDeliveryRows[0].persona}</div>
+                    <div style={{background:'#121212',color:'#f2cb12',borderRadius:6,padding:'3px 10px',fontWeight:700,fontSize:13,fontFamily:'IBM Plex Mono,monospace',whiteSpace:'nowrap'}}>
+                      {totalPrendas} prenda{totalPrendas!==1?'s':''} entregada{totalPrendas!==1?'s':''}
+                    </div>
+                    <div style={{fontSize:12,color:'#8a8a82'}}>{filteredDeliveryRows.length} entrega{filteredDeliveryRows.length!==1?'s':''}</div>
+                  </div>
+                  {artList.length > 0 && (
+                    <div style={{display:'flex',flexWrap:'wrap',gap:'6px 10px'}}>
+                      {artList.map(([art, qty]) => (
+                        <span key={art} style={{fontSize:12,background:'#fff',border:'1px solid #E0E0DA',borderRadius:5,padding:'3px 9px',color:'#3a3a32'}}>
+                          <span style={{fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:'#121212',marginRight:5}}>×{qty}</span>{art}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
             <div className="card table-wrap">
               <div className="card-header">
                 <div className="card-title">{delFilterReceptor===REP_FILTER ? 'Reposiciones 1° División' : 'Historial de entregas'}</div>
