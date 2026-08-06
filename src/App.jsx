@@ -4780,7 +4780,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 <input className="field-input" value={utiForm.parches} onChange={e=>setUtiForm(p=>({...p,parches:e.target.value}))} placeholder="" />
               </div>
               <div className="form-group">
-                <label className="field-label">Detalle</label>
+                <label className="field-label">Observaciones</label>
                 <input className="field-input" value={utiForm.detalle} onChange={e=>setUtiForm(p=>({...p,detalle:e.target.value}))} placeholder="" />
               </div>
               <div className="form-group">
