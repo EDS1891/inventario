@@ -1457,7 +1457,7 @@ ${rowsHtml}
           ...s,
           reposiciones: (s.reposiciones||[]).map(r => r.id===repForm.editId
             ? {...r, concepto:repForm.concepto.trim(), torneo:repForm.torneo, descuento:repForm.descuento,
-                fechaTorneo: tieneFecha ? Number(repForm.fechaTorneo) : null,
+                fechaTorneo: tieneFecha ? (repForm.fechaTorneo === 'Final' ? 'Final' : Number(repForm.fechaTorneo)) : null,
                 fechaPartido: repForm.fechaPartido||null,
                 tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores}
             : r),
@@ -1468,7 +1468,7 @@ ${rowsHtml}
     } else {
       setDb(s => {
         const rep = { id:s.nextRep, fecha:today(), concepto:repForm.concepto.trim(), creadoPor:currentUser?.displayName||session,
-          torneo:repForm.torneo, fechaTorneo: tieneFecha ? Number(repForm.fechaTorneo) : null, descuento:repForm.descuento,
+          torneo:repForm.torneo, fechaTorneo: tieneFecha ? (repForm.fechaTorneo === 'Final' ? 'Final' : Number(repForm.fechaTorneo)) : null, descuento:repForm.descuento,
           fechaPartido: repForm.fechaPartido||null,
           tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores }
         return { ...s, reposiciones:[rep,...(s.reposiciones||[])], nextRep:s.nextRep+1, repoAlertas: pushAlerta(s, 'crear', rep.concepto, null) }
@@ -1514,7 +1514,7 @@ ${rowsHtml}
 
     // Fila 1: concepto - torneo fecha
     ws.mergeCells('A1:F1')
-    const titulo = [rep.concepto.toUpperCase(), rep.torneo?(rep.torneo+(rep.fechaTorneo?' FECHA '+rep.fechaTorneo:'')):null].filter(Boolean).join(' - ')
+    const titulo = [rep.concepto.toUpperCase(), rep.torneo?(rep.torneo+(rep.fechaTorneo?(rep.fechaTorneo==='Final'||Number.isNaN(rep.fechaTorneo)?' FINAL':' FECHA '+rep.fechaTorneo):'')):null].filter(Boolean).join(' - ')
     style(ws.getCell('A1'), YELLOW, F_BOLD); ws.getCell('A1').value = titulo; ws.getRow(1).height = 20
 
     // Fila 2: equipo tipo jugador / golero
@@ -1559,7 +1559,7 @@ ${rowsHtml}
     const jugadores = (rep.jugadores||[]).filter(j => Number(j.cantCamiseta)>0 || Number(j.cantShort)>0)
     const totCam = jugadores.reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
     const totSht = jugadores.reduce((s,j)=>s+(Number(j.cantShort)||0),0)
-    const torneo = [rep.torneo, rep.fechaTorneo!=null&&rep.fechaTorneo!=='' ? 'Fecha '+rep.fechaTorneo : null].filter(Boolean).join(' · ')
+    const torneo = [rep.torneo, rep.fechaTorneo!=null&&rep.fechaTorneo!=='' ? (rep.fechaTorneo==='Final'||Number.isNaN(rep.fechaTorneo)?'Final':'Fecha '+rep.fechaTorneo) : null].filter(Boolean).join(' · ')
     const rows = jugadores.map((j,i) => {
       const isGolero = j.posicion==='Golero'
       const bg = isGolero ? '#e8f5e9' : (i%2===0 ? '#ffffff' : '#f9f9f7')
@@ -2149,7 +2149,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                             const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
                             return s + (dc ? (Number(j.cantCamiseta)||0)*PRECIO_CAMISETA : 0) + (ds ? (Number(j.cantShort)||0)*PRECIO_SHORT : 0)
                           }, 0)
-                          const torneoStr = [r.torneo, r.fechaTorneo!=null&&r.fechaTorneo!==''?'F.'+r.fechaTorneo:null].filter(Boolean).join(' ')
+                          const torneoStr = [r.torneo, r.fechaTorneo!=null&&r.fechaTorneo!==''?(r.fechaTorneo==='Final'||Number.isNaN(r.fechaTorneo)?'Final':'F.'+r.fechaTorneo):null].filter(Boolean).join(' ')
                           return (
                           <div key={r.id} className="table-row" style={{gridTemplateColumns:'110px 1fr 70px 70px 120px 36px',cursor:'pointer',padding:'10px 20px'}} onClick={() => setRepDetail(r)}>
                             <div>
@@ -2438,9 +2438,10 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <div className="form-group" style={{width:80,marginBottom:0}}>
                       <label className="field-label">Fecha</label>
                       <select className="field-input" value={repForm.fechaTorneo} onChange={e=>setRepForm(p=>({...p,fechaTorneo:e.target.value}))}>
-                        {Array.from({length:15},(_,i)=>i+1).map(n=>(
-                          <option key={n} value={n}>{n}</option>
-                        ))}
+                        {repForm.torneo === 'INTERMEDIO'
+                          ? [...Array.from({length:7},(_,i)=>i+1).map(n=><option key={n} value={n}>{n}</option>), <option key="Final" value="Final">Final</option>]
+                          : Array.from({length:15},(_,i)=>i+1).map(n=><option key={n} value={n}>{n}</option>)
+                        }
                       </select>
                     </div>
                   ) : (
@@ -2563,7 +2564,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>
                     {repDetail.fecha}
                     {repDetail.torneo && <span style={{marginLeft:8,fontWeight:700,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:4,padding:'1px 7px',fontSize:11}}>
-                      {repDetail.torneo}{repDetail.fechaTorneo ? ' · Fecha '+repDetail.fechaTorneo : ''}
+                      {repDetail.torneo}{repDetail.fechaTorneo ? (repDetail.fechaTorneo==='Final'||Number.isNaN(repDetail.fechaTorneo)?' · Final':' · Fecha '+repDetail.fechaTorneo) : ''}
                     </span>}
                   </div>
                   {repDetail.creadoPor && <div style={{fontSize:11.5,color:'#8a8a82',marginTop:2}}>Creado por: {repDetail.creadoPor}</div>}
@@ -4208,7 +4209,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                                 const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
                                 return s + (dc ? (Number(j.cantCamiseta)||0)*PRECIO_CAMISETA : 0) + (ds ? (Number(j.cantShort)||0)*PRECIO_SHORT : 0)
                               }, 0)
-                              const torneoStr = [r.torneo, r.fechaTorneo!=null&&r.fechaTorneo!==''?'F.'+r.fechaTorneo:null].filter(Boolean).join(' ')
+                              const torneoStr = [r.torneo, r.fechaTorneo!=null&&r.fechaTorneo!==''?(r.fechaTorneo==='Final'||Number.isNaN(r.fechaTorneo)?'Final':'F.'+r.fechaTorneo):null].filter(Boolean).join(' ')
                               return (
                               <div key={r.id} className="table-row" style={{gridTemplateColumns:'110px 1fr 70px 70px 120px 36px',cursor:'pointer',padding:'10px 20px'}} onClick={() => setRepDetail(r)}>
                                 <div>
@@ -4524,7 +4525,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                           <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11.5,color:'#6a6a62'}}>{r.fecha}</div>
                           <div>
                             <div style={{fontWeight:600,fontSize:13}}>{r.concepto}</div>
-                            {r.torneo && <div style={{fontSize:11,color:'#8a8a82'}}>{r.torneo}{r.fechaTorneo?` · Fecha ${r.fechaTorneo}`:''}</div>}
+                            {r.torneo && <div style={{fontSize:11,color:'#8a8a82'}}>{r.torneo}{r.fechaTorneo?(r.fechaTorneo==='Final'||Number.isNaN(r.fechaTorneo)?' · Final':` · Fecha ${r.fechaTorneo}`):''}</div>}
                           </div>
                           <div style={{textAlign:'center'}}>{badge(dc)}</div>
                           <div style={{textAlign:'center'}}>{badge(ds)}</div>
@@ -4871,9 +4872,10 @@ tfoot td{padding:9px 12px;font-weight:700}
                   <div className="form-group" style={{width:80,marginBottom:0}}>
                     <label className="field-label">Fecha</label>
                     <select className="field-input" value={repForm.fechaTorneo} onChange={e=>setRepForm(p=>({...p,fechaTorneo:e.target.value}))}>
-                      {Array.from({length:15},(_,i)=>i+1).map(n=>(
-                        <option key={n} value={n}>{n}</option>
-                      ))}
+                      {repForm.torneo === 'INTERMEDIO'
+                        ? [...Array.from({length:7},(_,i)=>i+1).map(n=><option key={n} value={n}>{n}</option>), <option key="Final" value="Final">Final</option>]
+                        : Array.from({length:15},(_,i)=>i+1).map(n=><option key={n} value={n}>{n}</option>)
+                      }
                     </select>
                   </div>
                 ) : (
@@ -4996,7 +4998,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>
                   {repDetail.fecha}{repDetail.creadoPor ? ' · '+repDetail.creadoPor : ''}
                   {repDetail.torneo && <span style={{marginLeft:8,fontWeight:700,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:4,padding:'1px 7px',fontSize:11}}>
-                    {repDetail.torneo}{repDetail.fechaTorneo ? ' · Fecha '+repDetail.fechaTorneo : ''}
+                    {repDetail.torneo}{repDetail.fechaTorneo ? (repDetail.fechaTorneo==='Final'||Number.isNaN(repDetail.fechaTorneo)?' · Final':' · Fecha '+repDetail.fechaTorneo) : ''}
                   </span>}
                 </div>
               </div>
