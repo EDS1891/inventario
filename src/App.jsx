@@ -5,7 +5,7 @@ import ExcelJS from 'exceljs'
 const TALLE_ORDER = ['2','4','6','8','10','12','14','Único','S','M','L','XL','XXL','XXXL']
 const TALLES_ADULTO = ['S','M','L','XL','XXL','XXXL','Único']
 const TALLES_NINO   = ['2','4','6','8','10','12','14']
-const RECEPTORES = ['1° División','3° División','Juveniles','Captación','Femenino','Juveniles Femenino','Fútbol Sala Masculino','Fútbol Sala Femenino','Basket','Deportes Anexos','Funcionarios','Marketing','Protocolo','Sponsors']
+const RECEPTORES = ['1° División','3° División','Juveniles','Captación','Femenino','Juveniles Femenino','Fútbol Sala Masculino','Fútbol Sala Femenino','Basket','Deportes Anexos','Funcionarios','Marketing','Protocolo','Sponsors','Canjes']
 const DISCIPLINAS_DEPORTES_ANEXOS = ['Atletismo','Bowling','Esports','Fisicoculturismo','Fútbol Inclusivo','Fútbol Playa Masculino','Fútbol Sala Femenino','Handball','Volley','Teqball','Cricket','Footgolf','Ciclismo','Paracaidismo','Maxi Basket','Automovilismo','Motociclismo','Hockey Patín','Esgrima']
 const PRECIO_CAMISETA = 1930
 const PRECIO_SHORT = 1030
@@ -15,9 +15,9 @@ const DIVISIONES            = ['Sub 19','Sub 17','Sub 16','Sub 15','Sub 14']
 const DIVISIONES_FEM        = ['Sub 19','Sub 16','Sub 14']
 const CARGOS_REG = ['Administración Palacio','Atención al Socio','Coordinación','Director Técnico','Ayudante Técnico','Videoanalista','Preparador Físico','Entrenador de Arqueros','Doctor/a','Kinesiólogo/a','Utilero','Utilería 1° División']
 const CARGOS_SIN_SECTOR = ['Administración Palacio','Atención al Socio','Utilería 1° División']
-const ESTANTES = ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','50','51','TRANSITO']
+const ESTANTES = [...Array.from({length:28},(_,i)=>String(i+1)),'TRANSITO']
 const ALTURAS = ['A','B','C','D','E','O']
-const UT_ESTANTES = ['1','2','3','4','5','6','7','8','9','10']
+const UT_ESTANTES = Array.from({length:28},(_,i)=>String(i+1))
 const UT_ALTURAS = ['A','B','C','D','E']
 const CAMISETA_TIPOS = ['Titular','Alternativa','3°']
 const SHORT_TIPOS = ['Titular','Alternativa']
@@ -43,6 +43,8 @@ const EXTRAS_PRENDAS = [
   {nombre:'Remera Térmica Manga Larga',precio:1320},
   {nombre:'Gorro Lana',precio:820},
   {nombre:'Gorro Visera',precio:820},
+  {nombre:'Camiseta',precio:1930},
+  {nombre:'Camiseta niño',precio:1570},
 ]
 
 const DEFAULT_USERS = [
@@ -223,6 +225,7 @@ export default function App() {
   const [plantelModal, setPlantelModal] = useState(false)
   const [descExtraModal, setDescExtraModal] = useState(false)
   const [descExtraForm, setDescExtraForm] = useState({jugadorNombre:'',jugadorNumero:'',articulo:'',precio:0,cantidad:1,fecha:''})
+  const [extrasExpandedKey, setExtrasExpandedKey] = useState(null)
   const [selectedPlantelId, setSelectedPlantelId] = useState(null)
   const [plantelHoverRow, setPlantelHoverRow] = useState(null)
   const [rechazarModal, setRechazarModal] = useState({ delId: null, motivo: '' })
@@ -1366,7 +1369,7 @@ ${rowsHtml}
 
   const saveUti = () => {
     if(!utiForm.numero.trim()) { showToast('Ingresá el número de camiseta.'); return }
-    const ubic = 'UT' + utiForm.utiEstante + utiForm.utiAltura
+    const ubic = utiForm.utiEstante + utiForm.utiAltura
     const toSave = {...utiForm, ubic}
     setDb(prev => {
       const list = prev.camisetasUtileria || []
@@ -1385,7 +1388,15 @@ ${rowsHtml}
     showToast('Camiseta eliminada.')
   }
 
-  const TORNEOS_CON_FECHA = ['APERTURA','CLAUSURA','INTERMEDIO']
+  const TORNEO_FECHAS = {
+    'APERTURA':     [...Array.from({length:15},(_,i)=>String(i+1)),'Final'],
+    'CLAUSURA':     [...Array.from({length:15},(_,i)=>String(i+1)),'Final'],
+    'INTERMEDIO':   [...Array.from({length:7},(_,i)=>String(i+1)),'Final'],
+    'LIBERTADORES': [...Array.from({length:6},(_,i)=>String(i+1)),'Octavos de Final','Cuartos de Final','Semifinales','Final'],
+    'SUDAMERICANA': [...Array.from({length:6},(_,i)=>String(i+1)),'Dieciseisavos de Final','Cuartos de Final','Semifinales','Final'],
+    'COPA AUF':     Array.from({length:3},(_,i)=>String(i+1)),
+  }
+  const TORNEOS_CON_FECHA = Object.keys(TORNEO_FECHAS)
   const openRepModal = () => {
     setRepForm({
       editId:null,
@@ -1514,7 +1525,7 @@ ${rowsHtml}
 
     // Fila 1: concepto - torneo fecha
     ws.mergeCells('A1:F1')
-    const titulo = [rep.concepto.toUpperCase(), rep.torneo?(rep.torneo+(rep.fechaTorneo?(rep.fechaTorneo==='Final'||Number.isNaN(rep.fechaTorneo)?' FINAL':' FECHA '+rep.fechaTorneo):'')):null].filter(Boolean).join(' - ')
+    const titulo = [rep.concepto.toUpperCase(), rep.torneo?(rep.torneo+(rep.fechaTorneo?(rep.fechaTorneo==='Final'||rep.fechaTorneo==='NaN'||Number.isNaN(rep.fechaTorneo)?' FINAL':' FECHA '+rep.fechaTorneo):'')):null].filter(Boolean).join(' - ')
     style(ws.getCell('A1'), YELLOW, F_BOLD); ws.getCell('A1').value = titulo; ws.getRow(1).height = 20
 
     // Fila 2: equipo tipo jugador / golero
@@ -1559,7 +1570,7 @@ ${rowsHtml}
     const jugadores = (rep.jugadores||[]).filter(j => Number(j.cantCamiseta)>0 || Number(j.cantShort)>0)
     const totCam = jugadores.reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
     const totSht = jugadores.reduce((s,j)=>s+(Number(j.cantShort)||0),0)
-    const torneo = [rep.torneo, rep.fechaTorneo!=null&&rep.fechaTorneo!=='' ? (rep.fechaTorneo==='Final'||Number.isNaN(rep.fechaTorneo)?'Final':'Fecha '+rep.fechaTorneo) : null].filter(Boolean).join(' · ')
+    const torneo = [rep.torneo, rep.fechaTorneo!=null&&rep.fechaTorneo!=='' ? (rep.fechaTorneo==='Final'||rep.fechaTorneo==='NaN'||Number.isNaN(rep.fechaTorneo)?'Final':'Fecha '+rep.fechaTorneo) : null].filter(Boolean).join(' · ')
     const rows = jugadores.map((j,i) => {
       const isGolero = j.posicion==='Golero'
       const bg = isGolero ? '#e8f5e9' : (i%2===0 ? '#ffffff' : '#f9f9f7')
@@ -2107,6 +2118,11 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <div className="kpi-value">{(db.plantel||[]).filter(j=>j.nombre.trim().toLowerCase()!=='libre').length}</div>
                     <div className="kpi-sub">jugadores registrados →</div>
                   </div>
+                  <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
+                    <div className="kpi-label">PARTIDOS REGISTRADOS</div>
+                    <div className="kpi-value">{new Set((db.reposiciones||[]).map(r=>(r.torneo&&r.fechaTorneo!=null&&r.fechaTorneo!=='')?r.torneo+'|'+r.fechaTorneo:'id:'+r.id)).size}</div>
+                    <div className="kpi-sub">partidos únicos</div>
+                  </div>
                   <div style={{display:'flex',flexDirection:'column',gap:8,alignSelf:'flex-start'}}>
                     <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed'}}>+ Nueva reposición</button>
                     <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',fecha:'',prendas:[{articulo:'',precio:0,cantidad:1}]});setDescExtraModal(true)}}>+ Descuento</button>
@@ -2149,7 +2165,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                             const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
                             return s + (dc ? (Number(j.cantCamiseta)||0)*PRECIO_CAMISETA : 0) + (ds ? (Number(j.cantShort)||0)*PRECIO_SHORT : 0)
                           }, 0)
-                          const torneoStr = [r.torneo, r.fechaTorneo!=null&&r.fechaTorneo!==''?(r.fechaTorneo==='Final'||Number.isNaN(r.fechaTorneo)?'Final':'F.'+r.fechaTorneo):null].filter(Boolean).join(' ')
+                          const _isFinal = r.fechaTorneo!=null&&r.fechaTorneo!==''&&(r.fechaTorneo==='Final'||r.fechaTorneo==='NaN'||Number.isNaN(r.fechaTorneo))
+                          const torneoStr = [_isFinal?'Final':null, r.torneo, !_isFinal&&r.fechaTorneo!=null&&r.fechaTorneo!==''?'F.'+r.fechaTorneo:null].filter(Boolean).join(' ')
                           return (
                           <div key={r.id} className="table-row" style={{gridTemplateColumns:'110px 1fr 70px 70px 120px 36px',cursor:'pointer',padding:'10px 20px'}} onClick={() => setRepDetail(r)}>
                             <div>
@@ -2258,39 +2275,61 @@ tfoot td{padding:9px 12px;font-weight:700}
             </div>
             {(db.descExtras||[]).length === 0
               ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>Sin descuentos adicionales registrados.</div>
-              : <div className="card" style={{padding:0,overflow:'hidden'}}>
-                  <div style={{overflowX:'auto'}}>
-                    <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
-                      <thead>
-                        <tr style={{background:'#2a2a2a',color:'#f2cb12'}}>
-                          <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>FECHA</th>
-                          <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>JUGADOR</th>
-                          <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>PRENDA</th>
-                          <th style={{padding:'7px 12px',textAlign:'center',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>CANT.</th>
-                          <th style={{padding:'7px 12px',textAlign:'right',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>TOTAL</th>
-                          <th style={{padding:'7px 12px'}}></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {[...(db.descExtras||[])].sort((a,b)=>{const[da,ma,ya]=a.fecha.split('/');const[db2,mb,yb]=b.fecha.split('/');return(yb-ya)||((mb-ma)||(db2-da))}).map((e,i)=>(
-                          <tr key={e.id} style={{borderBottom:'1px solid #F0F0EC',background:i%2===0?'#fff':'#FAFAF8'}}>
-                            <td style={{padding:'7px 12px',fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>{e.fecha}</td>
-                            <td style={{padding:'7px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
-                              <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#8a8a82',marginRight:6}}>{e.jugadorNumero}</span>{e.jugadorNombre}
-                            </td>
-                            <td style={{padding:'7px 12px'}}>{e.articulo}</td>
-                            <td style={{padding:'7px 12px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace'}}>{e.cantidad}</td>
-                            <td style={{padding:'7px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</td>
-                            <td style={{padding:'7px 6px',textAlign:'right',whiteSpace:'nowrap'}}>
-                              <button onClick={()=>{setDescExtraForm({...e});setDescExtraModal(true)}} title="Editar" style={{background:'none',border:'none',cursor:'pointer',color:'#5a5a50',fontSize:14,padding:'2px 6px'}}>✎</button>
-                              <button onClick={()=>deleteDescExtra(e.id)} title="Eliminar" style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:16,padding:'2px 6px',lineHeight:1}}>×</button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+              : (() => {
+                  const _sorted = [...(db.descExtras||[])].sort((a,b)=>{const[da,ma,ya]=a.fecha.split('/');const[db2,mb,yb]=b.fecha.split('/');return(yb-ya)||((mb-ma)||(db2-da))})
+                  const _gMap = {}; const _gOrder = []
+                  _sorted.forEach(e=>{ const k=e.jugadorNombre+'|'+e.fecha; if(!_gMap[k]){_gMap[k]={k,fecha:e.fecha,jugadorNombre:e.jugadorNombre,jugadorNumero:e.jugadorNumero,items:[]};_gOrder.push(k)} _gMap[k].items.push(e) })
+                  return (
+                    <div className="card" style={{padding:0,overflow:'hidden'}}>
+                      <div style={{overflowX:'auto'}}>
+                        <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                          <thead>
+                            <tr style={{background:'#2a2a2a',color:'#f2cb12'}}>
+                              <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>FECHA</th>
+                              <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>JUGADOR</th>
+                              <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>PRENDAS</th>
+                              <th style={{padding:'7px 12px',textAlign:'right',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>TOTAL</th>
+                              <th style={{padding:'7px 12px'}}></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {_gOrder.map((k,gi)=>{
+                              const g=_gMap[k]
+                              const total=g.items.reduce((s,e)=>s+e.precio*(e.cantidad||1),0)
+                              const expanded=extrasExpandedKey===k
+                              const resumen=g.items.map(e=>`${e.articulo}${(e.cantidad||1)>1?' ×'+(e.cantidad||1):''}`).join(', ')
+                              return (
+                                <Fragment key={k}>
+                                  <tr onClick={()=>setExtrasExpandedKey(expanded?null:k)} style={{borderBottom:'1px solid #F0F0EC',background:gi%2===0?'#fff':'#FAFAF8',cursor:'pointer'}}>
+                                    <td style={{padding:'8px 12px',fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>{g.fecha}</td>
+                                    <td style={{padding:'8px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
+                                      <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#8a8a82',marginRight:6}}>{g.jugadorNumero}</span>{g.jugadorNombre}
+                                    </td>
+                                    <td style={{padding:'8px 12px',fontSize:12,color:'#5a5a50'}}>{resumen}</td>
+                                    <td style={{padding:'8px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>$ {total.toLocaleString('es-UY')}</td>
+                                    <td style={{padding:'8px 10px',textAlign:'right',fontSize:11,color:'#8a8a82'}}>{expanded?'▲':'▼'}</td>
+                                  </tr>
+                                  {expanded && g.items.map(e=>(
+                                    <tr key={e.id} style={{borderBottom:'1px solid #F0F0EC',background:'#F5F5F0'}}>
+                                      <td style={{padding:'5px 12px'}}></td>
+                                      <td style={{padding:'5px 12px'}}></td>
+                                      <td style={{padding:'5px 12px 5px 24px',fontSize:12}}>{e.articulo} <span style={{color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>×{e.cantidad||1}</span></td>
+                                      <td style={{padding:'5px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:12}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</td>
+                                      <td style={{padding:'5px 6px',textAlign:'right',whiteSpace:'nowrap'}}>
+                                        <button onClick={ev=>{ev.stopPropagation();setDescExtraForm({...e});setDescExtraModal(true)}} title="Editar" style={{background:'none',border:'none',cursor:'pointer',color:'#5a5a50',fontSize:14,padding:'2px 6px'}}>✎</button>
+                                        <button onClick={ev=>{ev.stopPropagation();deleteDescExtra(e.id)}} title="Eliminar" style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:16,padding:'2px 6px',lineHeight:1}}>×</button>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </Fragment>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )
+                })()
             }
           </div>
         )}
@@ -2424,7 +2463,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <label className="field-label">Torneo</label>
                     <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                       {['APERTURA','CLAUSURA','INTERMEDIO','COPA AUF','LIBERTADORES','SUDAMERICANA'].map(t=>(
-                        <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,torneo:t}))}
+                        <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,torneo:t,fechaTorneo:(TORNEO_FECHAS[t]||['1'])[0]}))}
                           style={{padding:'6px 10px',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:11,cursor:'pointer',
                             borderColor:repForm.torneo===t?'#f2cb12':'#ECECE8',
                             background:repForm.torneo===t?'#FFF8D6':'#fff',
@@ -2434,22 +2473,12 @@ tfoot td{padding:9px 12px;font-weight:700}
                       ))}
                     </div>
                   </div>
-                  {TORNEOS_CON_FECHA.includes(repForm.torneo) ? (
-                    <div className="form-group" style={{width:80,marginBottom:0}}>
-                      <label className="field-label">Fecha</label>
-                      <select className="field-input" value={repForm.fechaTorneo} onChange={e=>setRepForm(p=>({...p,fechaTorneo:e.target.value}))}>
-                        {repForm.torneo === 'INTERMEDIO'
-                          ? [...Array.from({length:7},(_,i)=>i+1).map(n=><option key={n} value={n}>{n}</option>), <option key="Final" value="Final">Final</option>]
-                          : Array.from({length:15},(_,i)=>i+1).map(n=><option key={n} value={n}>{n}</option>)
-                        }
-                      </select>
-                    </div>
-                  ) : (
-                    <div className="form-group" style={{width:140,marginBottom:0}}>
-                      <label className="field-label">Fecha</label>
-                      <input className="field-input" value={repForm.fechaTorneo||''} onChange={e=>setRepForm(p=>({...p,fechaTorneo:e.target.value}))} placeholder="Ej. Ida / Final" />
-                    </div>
-                  )}
+                  <div className="form-group" style={{marginBottom:0}}>
+                    <label className="field-label">Fecha</label>
+                    <select className="field-input" value={repForm.fechaTorneo} onChange={e=>setRepForm(p=>({...p,fechaTorneo:e.target.value}))}>
+                      {(TORNEO_FECHAS[repForm.torneo]||[]).map(f=><option key={f} value={f}>{f}</option>)}
+                    </select>
+                  </div>
                 </div>
                 {/* Fecha Partido — solo para reposiciones con descuento cross-mes */}
                 {/reposici[oó]n/i.test(repForm.concepto) && (
@@ -2564,7 +2593,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>
                     {repDetail.fecha}
                     {repDetail.torneo && <span style={{marginLeft:8,fontWeight:700,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:4,padding:'1px 7px',fontSize:11}}>
-                      {repDetail.torneo}{repDetail.fechaTorneo ? (repDetail.fechaTorneo==='Final'||Number.isNaN(repDetail.fechaTorneo)?' · Final':' · Fecha '+repDetail.fechaTorneo) : ''}
+                      {repDetail.torneo}{repDetail.fechaTorneo ? (repDetail.fechaTorneo==='Final'||repDetail.fechaTorneo==='NaN'||Number.isNaN(repDetail.fechaTorneo)?' · Final':' · Fecha '+repDetail.fechaTorneo) : ''}
                     </span>}
                   </div>
                   {repDetail.creadoPor && <div style={{fontSize:11.5,color:'#8a8a82',marginTop:2}}>Creado por: {repDetail.creadoPor}</div>}
@@ -3933,7 +3962,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                         <div style={{fontSize:12,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.parches||<span style={{color:'#ccc'}}>—</span>}</div>
                         <div style={{fontSize:11,fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:c.ubic?'#1a1a1a':'#ccc'}}>{c.ubic||'—'}</div>
                         {!isSoloVista && <button className="btn btn-ghost" style={{padding:'4px 10px',fontSize:12}} onClick={()=>{
-                          const ubicMatch = (c.ubic||'').match(/^UT(\d+)([A-E])$/)
+                          const ubicMatch = (c.ubic||'').match(/^(\d+)([A-E])$/)
                           setUtiForm({...c, photos:c.photos||[], utiEstante:ubicMatch?ubicMatch[1]:'1', utiAltura:ubicMatch?ubicMatch[2]:'A'})
                           setUtiModal(true)
                         }}>Editar</button>}
@@ -4167,6 +4196,11 @@ tfoot td{padding:9px 12px;font-weight:700}
                         <div className="kpi-value">{(db.plantel||[]).filter(j=>j.nombre.trim().toLowerCase()!=='libre').length}</div>
                         <div className="kpi-sub">jugadores registrados →</div>
                       </div>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
+                        <div className="kpi-label">PARTIDOS REGISTRADOS</div>
+                        <div className="kpi-value">{new Set((db.reposiciones||[]).map(r=>(r.torneo&&r.fechaTorneo!=null&&r.fechaTorneo!=='')?r.torneo+'|'+r.fechaTorneo:'id:'+r.id)).size}</div>
+                        <div className="kpi-sub">partidos únicos</div>
+                      </div>
                       <div style={{display:'flex',flexDirection:'column',gap:8,alignSelf:'flex-start'}}>
                         <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed'}}>+ Nueva reposición</button>
                         <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',fecha:'',prendas:[{articulo:'',precio:0,cantidad:1}]});setDescExtraModal(true)}}>+ Descuento</button>
@@ -4209,7 +4243,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                                 const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
                                 return s + (dc ? (Number(j.cantCamiseta)||0)*PRECIO_CAMISETA : 0) + (ds ? (Number(j.cantShort)||0)*PRECIO_SHORT : 0)
                               }, 0)
-                              const torneoStr = [r.torneo, r.fechaTorneo!=null&&r.fechaTorneo!==''?(r.fechaTorneo==='Final'||Number.isNaN(r.fechaTorneo)?'Final':'F.'+r.fechaTorneo):null].filter(Boolean).join(' ')
+                              const _isFinal = r.fechaTorneo!=null&&r.fechaTorneo!==''&&(r.fechaTorneo==='Final'||r.fechaTorneo==='NaN'||Number.isNaN(r.fechaTorneo))
+                          const torneoStr = [_isFinal?'Final':null, r.torneo, !_isFinal&&r.fechaTorneo!=null&&r.fechaTorneo!==''?'F.'+r.fechaTorneo:null].filter(Boolean).join(' ')
                               return (
                               <div key={r.id} className="table-row" style={{gridTemplateColumns:'110px 1fr 70px 70px 120px 36px',cursor:'pointer',padding:'10px 20px'}} onClick={() => setRepDetail(r)}>
                                 <div>
@@ -4291,39 +4326,61 @@ tfoot td{padding:9px 12px;font-weight:700}
                   </div>
                   {(db.descExtras||[]).length === 0
                     ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>Sin descuentos adicionales registrados.</div>
-                    : <div className="card" style={{padding:0,overflow:'hidden'}}>
-                        <div style={{overflowX:'auto'}}>
-                          <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
-                            <thead>
-                              <tr style={{background:'#2a2a2a',color:'#f2cb12'}}>
-                                <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>FECHA</th>
-                                <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>JUGADOR</th>
-                                <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>PRENDA</th>
-                                <th style={{padding:'7px 12px',textAlign:'center',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>CANT.</th>
-                                <th style={{padding:'7px 12px',textAlign:'right',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>TOTAL</th>
-                                <th style={{padding:'7px 12px'}}></th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {[...(db.descExtras||[])].sort((a,b)=>{const[da,ma,ya]=a.fecha.split('/');const[db2,mb,yb]=b.fecha.split('/');return(yb-ya)||((mb-ma)||(db2-da))}).map((e,i)=>(
-                                <tr key={e.id} style={{borderBottom:'1px solid #F0F0EC',background:i%2===0?'#fff':'#FAFAF8'}}>
-                                  <td style={{padding:'7px 12px',fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>{e.fecha}</td>
-                                  <td style={{padding:'7px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
-                                    <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#8a8a82',marginRight:6}}>{e.jugadorNumero}</span>{e.jugadorNombre}
-                                  </td>
-                                  <td style={{padding:'7px 12px'}}>{e.articulo}</td>
-                                  <td style={{padding:'7px 12px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace'}}>{e.cantidad}</td>
-                                  <td style={{padding:'7px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</td>
-                                  <td style={{padding:'7px 6px',textAlign:'right',whiteSpace:'nowrap'}}>
-                                    <button onClick={()=>{setDescExtraForm({...e});setDescExtraModal(true)}} title="Editar" style={{background:'none',border:'none',cursor:'pointer',color:'#5a5a50',fontSize:14,padding:'2px 6px'}}>✎</button>
-                                    <button onClick={()=>deleteDescExtra(e.id)} title="Eliminar" style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:16,padding:'2px 6px',lineHeight:1}}>×</button>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
+                    : (() => {
+                        const _sorted2 = [...(db.descExtras||[])].sort((a,b)=>{const[da,ma,ya]=a.fecha.split('/');const[db2,mb,yb]=b.fecha.split('/');return(yb-ya)||((mb-ma)||(db2-da))})
+                        const _gMap2 = {}; const _gOrder2 = []
+                        _sorted2.forEach(e=>{ const k=e.jugadorNombre+'|'+e.fecha; if(!_gMap2[k]){_gMap2[k]={k,fecha:e.fecha,jugadorNombre:e.jugadorNombre,jugadorNumero:e.jugadorNumero,items:[]};_gOrder2.push(k)} _gMap2[k].items.push(e) })
+                        return (
+                          <div className="card" style={{padding:0,overflow:'hidden'}}>
+                            <div style={{overflowX:'auto'}}>
+                              <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                                <thead>
+                                  <tr style={{background:'#2a2a2a',color:'#f2cb12'}}>
+                                    <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>FECHA</th>
+                                    <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>JUGADOR</th>
+                                    <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>PRENDAS</th>
+                                    <th style={{padding:'7px 12px',textAlign:'right',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>TOTAL</th>
+                                    <th style={{padding:'7px 12px'}}></th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {_gOrder2.map((k,gi)=>{
+                                    const g=_gMap2[k]
+                                    const total=g.items.reduce((s,e)=>s+e.precio*(e.cantidad||1),0)
+                                    const expanded=extrasExpandedKey===k
+                                    const resumen=g.items.map(e=>`${e.articulo}${(e.cantidad||1)>1?' ×'+(e.cantidad||1):''}`).join(', ')
+                                    return (
+                                      <Fragment key={k}>
+                                        <tr onClick={()=>setExtrasExpandedKey(expanded?null:k)} style={{borderBottom:'1px solid #F0F0EC',background:gi%2===0?'#fff':'#FAFAF8',cursor:'pointer'}}>
+                                          <td style={{padding:'8px 12px',fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>{g.fecha}</td>
+                                          <td style={{padding:'8px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
+                                            <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#8a8a82',marginRight:6}}>{g.jugadorNumero}</span>{g.jugadorNombre}
+                                          </td>
+                                          <td style={{padding:'8px 12px',fontSize:12,color:'#5a5a50'}}>{resumen}</td>
+                                          <td style={{padding:'8px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>$ {total.toLocaleString('es-UY')}</td>
+                                          <td style={{padding:'8px 10px',textAlign:'right',fontSize:11,color:'#8a8a82'}}>{expanded?'▲':'▼'}</td>
+                                        </tr>
+                                        {expanded && g.items.map(e=>(
+                                          <tr key={e.id} style={{borderBottom:'1px solid #F0F0EC',background:'#F5F5F0'}}>
+                                            <td style={{padding:'5px 12px'}}></td>
+                                            <td style={{padding:'5px 12px'}}></td>
+                                            <td style={{padding:'5px 12px 5px 24px',fontSize:12}}>{e.articulo} <span style={{color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>×{e.cantidad||1}</span></td>
+                                            <td style={{padding:'5px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:12}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</td>
+                                            <td style={{padding:'5px 6px',textAlign:'right',whiteSpace:'nowrap'}}>
+                                              <button onClick={ev=>{ev.stopPropagation();setDescExtraForm({...e});setDescExtraModal(true)}} title="Editar" style={{background:'none',border:'none',cursor:'pointer',color:'#5a5a50',fontSize:14,padding:'2px 6px'}}>✎</button>
+                                              <button onClick={ev=>{ev.stopPropagation();deleteDescExtra(e.id)}} title="Eliminar" style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:16,padding:'2px 6px',lineHeight:1}}>×</button>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </Fragment>
+                                    )
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )
+                      })()
                   }
                 </div>
               )
@@ -4416,14 +4473,6 @@ tfoot td{padding:9px 12px;font-weight:700}
                             counts[nombre].monto += cam * PRECIO_CAMISETA + sht * PRECIO_SHORT
                           }
                         })
-                      })
-                      ;(db.descExtras||[]).forEach(e => {
-                        const nombre = e.jugadorNombre?.trim()
-                        if (!nombre) return
-                        const qty = e.cantidad || 1
-                        if (!counts[nombre]) counts[nombre] = {total:0, monto:0}
-                        counts[nombre].total += qty
-                        counts[nombre].monto += e.precio * qty
                       })
                       return Object.entries(counts).sort((a,b) => b[1].total-a[1].total).slice(0,15)
                     })()
@@ -4525,7 +4574,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                           <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11.5,color:'#6a6a62'}}>{r.fecha}</div>
                           <div>
                             <div style={{fontWeight:600,fontSize:13}}>{r.concepto}</div>
-                            {r.torneo && <div style={{fontSize:11,color:'#8a8a82'}}>{r.torneo}{r.fechaTorneo?(r.fechaTorneo==='Final'||Number.isNaN(r.fechaTorneo)?' · Final':` · Fecha ${r.fechaTorneo}`):''}</div>}
+                            {r.torneo && <div style={{fontSize:11,color:'#8a8a82'}}>{r.torneo}{r.fechaTorneo?(r.fechaTorneo==='Final'||r.fechaTorneo==='NaN'||Number.isNaN(r.fechaTorneo)?' · Final':` · Fecha ${r.fechaTorneo}`):''}</div>}
                           </div>
                           <div style={{textAlign:'center'}}>{badge(dc)}</div>
                           <div style={{textAlign:'center'}}>{badge(ds)}</div>
@@ -4800,7 +4849,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                     </select>
                   </div>
                   <div style={{fontSize:13,fontWeight:700,fontFamily:'IBM Plex Mono,monospace',background:'#121212',color:'#f2cb12',borderRadius:6,padding:'4px 10px',whiteSpace:'nowrap'}}>
-                    {'UT' + utiForm.utiEstante + utiForm.utiAltura}
+                    {utiForm.utiEstante + utiForm.utiAltura}
                   </div>
                 </div>
               </div>
@@ -4858,7 +4907,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   <label className="field-label">Torneo</label>
                   <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                     {['APERTURA','CLAUSURA','INTERMEDIO','COPA AUF','LIBERTADORES','SUDAMERICANA'].map(t=>(
-                      <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,torneo:t}))}
+                      <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,torneo:t,fechaTorneo:(TORNEO_FECHAS[t]||['1'])[0]}))}
                         style={{padding:'6px 10px',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:11,cursor:'pointer',
                           borderColor:repForm.torneo===t?'#f2cb12':'#ECECE8',
                           background:repForm.torneo===t?'#FFF8D6':'#fff',
@@ -4868,22 +4917,12 @@ tfoot td{padding:9px 12px;font-weight:700}
                     ))}
                   </div>
                 </div>
-                {TORNEOS_CON_FECHA.includes(repForm.torneo) ? (
-                  <div className="form-group" style={{width:80,marginBottom:0}}>
-                    <label className="field-label">Fecha</label>
-                    <select className="field-input" value={repForm.fechaTorneo} onChange={e=>setRepForm(p=>({...p,fechaTorneo:e.target.value}))}>
-                      {repForm.torneo === 'INTERMEDIO'
-                        ? [...Array.from({length:7},(_,i)=>i+1).map(n=><option key={n} value={n}>{n}</option>), <option key="Final" value="Final">Final</option>]
-                        : Array.from({length:15},(_,i)=>i+1).map(n=><option key={n} value={n}>{n}</option>)
-                      }
-                    </select>
-                  </div>
-                ) : (
-                  <div className="form-group" style={{width:140,marginBottom:0}}>
-                    <label className="field-label">Fecha</label>
-                    <input className="field-input" value={repForm.fechaTorneo||''} onChange={e=>setRepForm(p=>({...p,fechaTorneo:e.target.value}))} placeholder="Ej. Ida / Final" />
-                  </div>
-                )}
+                <div className="form-group" style={{marginBottom:0}}>
+                  <label className="field-label">Fecha</label>
+                  <select className="field-input" value={repForm.fechaTorneo} onChange={e=>setRepForm(p=>({...p,fechaTorneo:e.target.value}))}>
+                    {(TORNEO_FECHAS[repForm.torneo]||[]).map(f=><option key={f} value={f}>{f}</option>)}
+                  </select>
+                </div>
               </div>
               {/* Fecha Partido — solo para reposiciones con descuento cross-mes */}
               {/reposici[oó]n/i.test(repForm.concepto) && (
@@ -4998,7 +5037,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>
                   {repDetail.fecha}{repDetail.creadoPor ? ' · '+repDetail.creadoPor : ''}
                   {repDetail.torneo && <span style={{marginLeft:8,fontWeight:700,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:4,padding:'1px 7px',fontSize:11}}>
-                    {repDetail.torneo}{repDetail.fechaTorneo ? (repDetail.fechaTorneo==='Final'||Number.isNaN(repDetail.fechaTorneo)?' · Final':' · Fecha '+repDetail.fechaTorneo) : ''}
+                    {repDetail.torneo}{repDetail.fechaTorneo ? (repDetail.fechaTorneo==='Final'||repDetail.fechaTorneo==='NaN'||Number.isNaN(repDetail.fechaTorneo)?' · Final':' · Fecha '+repDetail.fechaTorneo) : ''}
                   </span>}
                 </div>
               </div>
