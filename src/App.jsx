@@ -3353,12 +3353,13 @@ tfoot td{padding:9px 12px;font-weight:700}
           <div className="search-box">
             <span className="search-icon" />
             <input
-              value={view==='entregas' ? delFilterPersona : search}
+              value={view==='entregas' ? delFilterPersona : view==='utileria' ? utiFilterJugador : search}
               onChange={e => {
                 if (view==='entregas') { setDelFilterPersona(e.target.value) }
+                else if (view==='utileria') { setUtiFilterJugador(e.target.value) }
                 else { setSearch(e.target.value); if((view==='panel'||view==='detalle')&&e.target.value) setView('inventario') }
               }}
-              placeholder={view==='entregas' ? 'Buscar integrante…' : 'Buscar artículo…'}
+              placeholder={view==='entregas' ? 'Buscar integrante…' : view==='utileria' ? 'Buscar jugador…' : 'Buscar artículo…'}
             />
           </div>
           {!isSoloVista && <button className="btn btn-ghost" onClick={openArticulo}>+<span className="btn-label"> Artículo</span></button>}
@@ -4039,7 +4040,6 @@ tfoot td{padding:9px 12px;font-weight:700}
                           Filtros
                           {activeFiltros > 0 && <span style={{background:'#f2cb12',color:'#121212',borderRadius:10,padding:'1px 7px',fontSize:11,fontWeight:800,marginLeft:2}}>{activeFiltros}</span>}
                         </button>
-                        <input className="field-input" style={{maxWidth:200,padding:'6px 10px',fontSize:12.5}} placeholder="Buscar jugador…" value={utiFilterJugador} onChange={e=>setUtiFilterJugador(e.target.value)} />
                         {activeFiltros > 0 && (
                           <>
                             {utiFilter && <span style={{fontSize:12,background:'#121212',color:'#f2cb12',borderRadius:5,padding:'2px 8px',fontWeight:600}}>{utiFilter}</span>}
