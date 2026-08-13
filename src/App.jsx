@@ -198,7 +198,7 @@ export default function App() {
   const [utiFilterModelo, setUtiFilterModelo] = useState('')
   const [utiFilterUbic, setUtiFilterUbic] = useState('')
   const [utiFiltersOpen, setUtiFiltersOpen] = useState(false)
-  const [utiForm, setUtiForm] = useState({ tipo:'', competicion:'', numero:'', jugador:'', talle:'S', modelo:'', estampado:'', parches:'', detalle:'', temporada:'', utiEstante:'1', utiAltura:'A', photos:[], id:null })
+  const [utiForm, setUtiForm] = useState({ tipo:'', competicion:'', numero:'', jugador:'', talle:'S', modelo:'', estampado:'', parches:'', detalle:'', temporada:'', cantidad:1, utiEstante:'1', utiAltura:'A', photos:[], id:null })
   const [utiModal, setUtiModal] = useState(false)
   const [repForm, setRepForm] = useState({ editId:null, concepto:'', descuento:true, rows:[], fechaPartido:'' })
   const [repModal, setRepModal] = useState(false)
@@ -1401,7 +1401,7 @@ ${rowsHtml}
   const saveUti = () => {
     if(!utiForm.numero.trim()) { showToast('Ingresá el número de camiseta.'); return }
     const ubic = utiForm.utiEstante + utiForm.utiAltura
-    const toSave = {...utiForm, ubic}
+    const toSave = {...utiForm, ubic, cantidad: Math.max(1, Number(utiForm.cantidad)||1)}
     setDb(prev => {
       const list = prev.camisetasUtileria || []
       if(utiForm.id !== null) {
@@ -4077,20 +4077,20 @@ tfoot td{padding:9px 12px;font-weight:700}
                         </div>
                       )}
                     </div>
-                    {!isSoloVista && <button className="btn btn-dark" style={{flexShrink:0}} onClick={()=>{ setUtiForm({tipo:'',competicion:COMPETICIONES[0],numero:'',jugador:'',talle:'S',modelo:'',estampado:'',parches:'',detalle:'',temporada:'',utiEstante:'1',utiAltura:'A',photos:[],id:null}); setUtiModal(true) }}>+ Camiseta</button>}
+                    {!isSoloVista && <button className="btn btn-dark" style={{flexShrink:0}} onClick={()=>{ setUtiForm({tipo:'',competicion:COMPETICIONES[0],numero:'',jugador:'',talle:'S',modelo:'',estampado:'',parches:'',detalle:'',temporada:'',cantidad:1,utiEstante:'1',utiAltura:'A',photos:[],id:null}); setUtiModal(true) }}>+ Camiseta</button>}
                   </div>
                 )
               })()}
               <div className="card" style={{overflow:'auto'}}>
-                <div style={{display:'grid',gridTemplateColumns:'44px 74px 62px 90px 46px 44px 1fr 110px 1fr 1fr 60px 65px 28px',background:'#121212',padding:'9px 16px',gap:8,minWidth:1004}}>
-                  {['','TEMP.','USO','MODELO','NRO.','TALLE','JUGADOR','ESTAMPADO','COMPETICIÓN','PARCHES','UBIC.','',''].map((h,i) => (
-                    <div key={i} style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:.5,textAlign:[5,7,9,10].includes(i)?'center':'left'}}>{h}</div>
+                <div style={{display:'grid',gridTemplateColumns:'44px 74px 62px 90px 46px 44px 1fr 110px 1fr 1fr 50px 60px 65px 28px',background:'#121212',padding:'9px 16px',gap:8,minWidth:1062}}>
+                  {['','TEMP.','USO','MODELO','NRO.','TALLE','JUGADOR','ESTAMPADO','COMPETICIÓN','PARCHES','CANT.','UBIC.','',''].map((h,i) => (
+                    <div key={i} style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:.5,textAlign:[5,7,9,10,11].includes(i)?'center':'left'}}>{h}</div>
                   ))}
                 </div>
                 {utiFiltered.length === 0
                   ? <div style={{padding:28,textAlign:'center',color:'#8a8a82',fontSize:13}}>No hay camisetas que coincidan con los filtros.</div>
                   : utiFiltered.map(c => (
-                      <div key={c.id} style={{display:'grid',gridTemplateColumns:'44px 74px 62px 90px 46px 44px 1fr 110px 1fr 1fr 60px 65px 28px',padding:'10px 16px',borderBottom:'1px solid #F0F0EC',alignItems:'center',gap:8,minWidth:1004}}>
+                      <div key={c.id} style={{display:'grid',gridTemplateColumns:'44px 74px 62px 90px 46px 44px 1fr 110px 1fr 1fr 50px 60px 65px 28px',padding:'10px 16px',borderBottom:'1px solid #F0F0EC',alignItems:'center',gap:8,minWidth:1062}}>
                         <div>{(c.photos||[]).length > 0
                           ? <img src={c.photos[0]} alt="foto" style={{width:36,height:36,objectFit:'cover',borderRadius:6,border:'1px solid #E0E0DA',display:'block',cursor:'pointer'}} onClick={()=>setPhotoPreview({photos:c.photos,idx:0})} />
                           : <div style={{width:36,height:36,borderRadius:6,border:'1px dashed #D0D0CA',background:'#F5F5F0',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,color:'#C0C0BA'}}>📷</div>
@@ -4106,6 +4106,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                         <div style={{fontSize:12,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textAlign:'center'}}>{c.estampado||<span style={{color:'#ccc'}}>—</span>}</div>
                         <div style={{fontSize:12,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.competicion||<span style={{color:'#ccc'}}>—</span>}</div>
                         <div style={{fontSize:12,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textAlign:'center'}}>{c.parches||<span style={{color:'#ccc'}}>—</span>}</div>
+                        <div style={{fontSize:13,fontWeight:700,textAlign:'center',color:'#1a1a1a'}}>{c.cantidad ?? 1}</div>
                         <div style={{fontSize:11,fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:c.ubic?'#1a1a1a':'#ccc',textAlign:'center'}}>{c.ubic||'—'}</div>
                         {!isSoloVista && <button className="btn btn-ghost" style={{padding:'4px 10px',fontSize:12}} onClick={()=>{
                           const ubicMatch = (c.ubic||'').match(/^(\d+)([A-E])$/)
@@ -4945,7 +4946,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   {COMPETICIONES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-              <div className="form-cols-2">
+              <div className="form-cols-2" style={{gridTemplateColumns:'1fr 1fr 0.7fr'}}>
                 <div className="form-group">
                   <label className="field-label">Número</label>
                   <input className="field-input" value={utiForm.numero} onChange={e=>setUtiForm(p=>({...p,numero:e.target.value}))} placeholder="10" />
@@ -4955,6 +4956,10 @@ tfoot td{padding:9px 12px;font-weight:700}
                   <select className="field-input" value={utiForm.talle} onChange={e=>setUtiForm(p=>({...p,talle:e.target.value}))}>
                     {['S','M','L','XL'].map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
+                </div>
+                <div className="form-group">
+                  <label className="field-label">Cantidad</label>
+                  <input type="number" min="1" className="field-input" value={utiForm.cantidad ?? 1} onChange={e=>setUtiForm(p=>({...p,cantidad:Math.max(1, Number(e.target.value)||1)}))} />
                 </div>
               </div>
               <div className="form-group">
