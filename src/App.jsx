@@ -1,33 +1,79 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, Fragment } from 'react'
 import { supabase } from './supabase.js'
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 
 const TALLE_ORDER = ['2','4','6','8','10','12','14','Único','S','M','L','XL','XXL','XXXL']
 const TALLES_ADULTO = ['S','M','L','XL','XXL','XXXL','Único']
 const TALLES_NINO   = ['2','4','6','8','10','12','14']
-const RECEPTORES = ['1° División','3° División','Juveniles','Captación','Femenino','Juveniles Femenino','Fútbol Sala Masculino','Fútbol Sala Femenino','Basket','Deportes Anexos','Funcionarios','Protocolo']
+const RECEPTORES = ['1° División','3° División','Juveniles','Captación','Femenino','Juveniles Femenino','Fútbol Sala Masculino','Fútbol Sala Femenino','Basket','Deportes Anexos','Funcionarios','Marketing','Protocolo','Sponsors','Canjes']
+const DISCIPLINAS_DEPORTES_ANEXOS = ['Atletismo','Bowling','Esports','Fisicoculturismo','Fútbol Inclusivo','Fútbol Playa Masculino','Fútbol Sala Femenino','Handball','Volley','Teqball','Cricket','Footgolf','Ciclismo','Paracaidismo','Maxi Basket','Automovilismo','Motociclismo','Hockey Patín','Esgrima']
+const PRECIO_CAMISETA = 1930
+const PRECIO_SHORT = 1030
 const CATEGORIAS = ['Entrenamiento','Juego','Casual']
 const OCUPACIONES = ['3° División','Juveniles','Juveniles Femenino','Captacion']
-const DIVISIONES = ['Sub 19','Sub 17','Sub 16','Sub 15','Sub 14','Captacion']
-const CARGOS_REG = ['Coordinación','Director Técnico','Ayudante Técnico','Videoanalista','Preparador Físico','Entrenador de Arqueros','Doctor/a','Kinesiólogo/a']
-const ESTANTES = ['0','1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20']
+const DIVISIONES            = ['Sub 19','Sub 17','Sub 16','Sub 15','Sub 14']
+const DIVISIONES_FEM        = ['Sub 19','Sub 16','Sub 14']
+const CARGOS_REG = ['Administración Palacio','Atención al Socio','Coordinación','Director Técnico','Ayudante Técnico','Videoanalista','Preparador Físico','Entrenador de Arqueros','Doctor/a','Kinesiólogo/a','Utilero','Utilería 1° División']
+const CARGOS_SIN_SECTOR = ['Administración Palacio','Atención al Socio','Utilería 1° División']
+const ESTANTES = [...Array.from({length:28},(_,i)=>String(i+1)),'TRANSITO']
 const ALTURAS = ['A','B','C','D','E','O']
+const UT_ESTANTES = Array.from({length:28},(_,i)=>String(i+1))
+const UT_ALTURAS = ['A','B','C','D','E']
+const CAMISETA_TIPOS = ['Titular','Alternativa','3°']
+const SHORT_TIPOS = ['Titular','Alternativa']
+const REP_TIPOS_JUGADOR = ['TRADICIONAL','AMARILLA','VERDE']
+const REP_TIPOS_GOLERO  = ['NEGRO','NARANJA','CREMA']
+const getRepTipos = (posicion) => posicion === 'Golero' ? REP_TIPOS_GOLERO : REP_TIPOS_JUGADOR
+const ROLE_LABELS = { admin:'Admin', 'solo-vista':'Solo Vista', receptor:'Receptor', receptor_reposiciones:'Receptor + Repos.' }
+const ROLE_OPTIONS = [['admin','Administrador'],['solo-vista','Solo Vista'],['receptor','Receptor'],['receptor_reposiciones','Receptor + Reposiciones']]
+const PRECIO_DESC_CAMISETA = 1930
+const PRECIO_DESC_SHORT = 1030
+const EXTRAS_PRENDAS = [
+  {nombre:'Campera Concentración',precio:2245},
+  {nombre:'Pantalón Concentración',precio:1660},
+  {nombre:'Remera Concentración',precio:1210},
+  {nombre:'Remera Entrenamiento',precio:1166},
+  {nombre:'Buzo Entrenamiento',precio:1660},
+  {nombre:'Campera de Lluvia',precio:2470},
+  {nombre:'Short Entrenamiento',precio:1030},
+  {nombre:'Pantalón Entrenamiento',precio:1660},
+  {nombre:'Calza Corta',precio:1210},
+  {nombre:'Calza Larga',precio:1810},
+  {nombre:'Remera Térmica Manga Corta',precio:1120},
+  {nombre:'Remera Térmica Manga Larga',precio:1320},
+  {nombre:'Gorro Lana',precio:820},
+  {nombre:'Gorro Visera',precio:820},
+  {nombre:'Camiseta',precio:1930},
+  {nombre:'Camiseta niño',precio:1570},
+]
 
-const DEFAULT_USERS = [{ username:'compras', password:'peniarol1891', role:'admin', displayName:'Compras Peñarol', status:'aprobado' }]
-const EMPTY_DB = { articles:[], deliveries:[], movimientos:[], nextId:1, nextDel:1, nextMov:1, users: DEFAULT_USERS }
+const DEFAULT_USERS = [
+  { username:'compras', password:'peniarol1891', role:'admin', displayName:'Compras Peñarol', status:'aprobado' },
+  { username:'iabella@capenarol.com.uy', password:'Temporal2026', role:'receptor', displayName:'Ignacio Abella Goday', status:'aprobado' },
+  { username:'jfalero@capenarol.com.uy', password:'Temporal2026', role:'receptor', displayName:'Joaquín Falero', status:'aprobado' },
+  { username:'rferrari@capenarol.com.uy', password:'Temporal2026', role:'receptor', displayName:'Rodrigo Ferrari', status:'aprobado' },
+  { username:'clauria@capenarol.com.uy', password:'Temporal2026', role:'receptor', displayName:'Camilo Lauria', status:'aprobado' },
+]
+const EMPTY_DB = { articles:[], deliveries:[], movimientos:[], nextId:1, nextDel:1, nextMov:1, nextRep:1, users: DEFAULT_USERS, camisetasUtileria:[], reposiciones:[], plantel:[], repoAlertas:[], descExtras:[] }
+const COMPETICIONES = ['CAMPEONATO URUGUAYO','CONMEBOL','COPA LIBERTADORES FEMENINA','COPA LIBERTADORES FÚTBOL SALA','COPA INTERCONTINENTAL SUB 20']
+const MODELOS_JUGADOR = ['TRADICIONAL','GRIS','AMARILLA','DORADA','NEGRA Y DORADA','NEGRA Y AMARILLA','AMARILLA FLÚO']
+const MODELOS_GOLERO  = ['VERDE','NARANJA','NEGRO','GRIS','ROSADO','CREMA','AMARILLO FLÚO','AMARILLO']
 
 const USERS_KEY = 'dep_usuarios_v1'
 const SESSION_KEY = 'dep_session'
 
 
 async function loadFromSupabase() {
-  const { data, error } = await supabase
-    .from('deposito_state')
-    .select('*')
-    .eq('id', 1)
-    .single()
-  if (error || !data) return EMPTY_DB
-  let users = data.users || null
+  const [{ data, error }, { data: usersRow }, { data: utiRow }, { data: alertasRow }] = await Promise.all([
+    supabase.from('deposito_state').select('*').eq('id', 1).single(),
+    supabase.from('deposito_state').select('deliveries').eq('id', 2).single(),
+    supabase.from('deposito_state').select('articles,deliveries,movimientos,next_del').eq('id', 3).single(),
+    supabase.from('deposito_state').select('deliveries,articles').eq('id', 4).single(),
+  ])
+  if (error || !data) { console.error('[Supabase] Error cargando datos:', error?.message, error?.code, error?.details); return null }
+  let users = (usersRow?.deliveries?.length > 0 && usersRow.deliveries[0]?.username)
+    ? usersRow.deliveries
+    : null
   if (!users) {
     try {
       const raw = JSON.parse(localStorage.getItem(USERS_KEY)) || []
@@ -36,31 +82,71 @@ async function loadFromSupabase() {
         : DEFAULT_USERS
     } catch { users = DEFAULT_USERS }
   }
+  // Eliminar usuario legacy con email como username
+  users = users.filter(u => u.username !== 'compras@capenarol.com.uy')
+  // Siempre garantizar que los usuarios de DEFAULT_USERS estén presentes
+  DEFAULT_USERS.forEach(du => {
+    if (!users.find(u => u.username === du.username)) users.push(du)
+  })
+  const rawDeliveries = data.deliveries || []
+  const needsMigration = rawDeliveries.some(d => !d.creadoPor)
+  const deliveries = needsMigration
+    ? rawDeliveries.map(d => d.creadoPor ? d : { ...d, creadoPor: 'Emiliano Domínguez' })
+    : rawDeliveries
+  if (needsMigration) {
+    supabase.from('deposito_state').upsert({ id: 1, articles: data.articles, deliveries, movimientos: data.movimientos, next_id: data.next_id, next_del: data.next_del, next_mov: data.next_mov })
+      .then(({ error }) => { if (error) console.error('Error migrando creadoPor:', error.message) })
+  }
   return {
     articles: (data.articles || []).map(a => ({
       ...a, sizes: (a.sizes || []).map(s => ({ talle: s.talle, qty: Number(s.qty)||0, min: Number(s.min)||0 }))
     })),
-    deliveries: data.deliveries || [],
+    deliveries,
     movimientos: data.movimientos || [],
     nextId: data.next_id || 1,
     nextDel: data.next_del || 1,
     nextMov: data.next_mov || 1,
     users,
+    camisetasUtileria: utiRow?.articles || [],
+    reposiciones: utiRow?.deliveries || [],
+    nextRep: utiRow?.next_del || 1,
+    plantel: utiRow?.movimientos || [],
+    repoAlertas: alertasRow?.deliveries || [],
+    descExtras: alertasRow?.articles || [],
   }
 }
 
 async function saveToSupabase(db) {
-  await supabase.from('deposito_state').upsert({
-    id: 1,
-    articles: db.articles,
-    deliveries: db.deliveries,
-    movimientos: db.movimientos,
-    next_id: db.nextId,
-    next_del: db.nextDel,
-    next_mov: db.nextMov,
-    users: db.users,
-    updated_at: new Date().toISOString(),
-  })
+  // Row id=2 (users) is managed exclusively by saveUsers() to avoid session-collision overwrites
+  const [r1, r3, r4] = await Promise.all([
+    supabase.from('deposito_state').upsert({
+      id: 1,
+      articles: db.articles,
+      deliveries: db.deliveries,
+      movimientos: db.movimientos,
+      next_id: db.nextId,
+      next_del: db.nextDel,
+      next_mov: db.nextMov,
+      updated_at: new Date().toISOString(),
+    }),
+    supabase.from('deposito_state').upsert({
+      id: 3,
+      articles: db.camisetasUtileria || [],
+      deliveries: db.reposiciones || [],
+      movimientos: db.plantel || [],
+      next_id: 0,
+      next_del: db.nextRep || 1,
+      next_mov: 0,
+      updated_at: new Date().toISOString(),
+    }),
+    supabase.from('deposito_state').upsert({
+      id: 4,
+      deliveries: db.repoAlertas || [],
+      articles: db.descExtras || [],
+      updated_at: new Date().toISOString(),
+    }),
+  ])
+  return !r1.error && !r3.error && !r4.error
 }
 
 function fmt(n) { return Number(n).toLocaleString('es-UY') }
@@ -92,15 +178,66 @@ export default function App() {
   const [selectedCode, setSelectedCode] = useState(null)
   const [search, setSearch] = useState('')
   const [cat, setCat] = useState('Todas')
+  const [filterUbic, setFilterUbic] = useState('')
   const [modal, setModal] = useState(null)
   const [confirm, setConfirm] = useState(null)
   const [editing, setEditing] = useState(null)
   const [movFilter, setMovFilter] = useState('Todos')
   const [delFilterReceptor, setDelFilterReceptor] = useState('')
+  const [delFilterDisciplina, setDelFilterDisciplina] = useState('')
   const [delFilterPersona, setDelFilterPersona] = useState('')
+  const [delFilterPaga, setDelFilterPaga] = useState('')
+  const [selectedDeliveryId, setSelectedDeliveryId] = useState(null)
+  const [remitoSelIds, setRemitoSelIds] = useState(null)
+  const [movsExpanded, setMovsExpanded] = useState(false)
+  const [photoPreview, setPhotoPreview] = useState(null)
+  const [selectedReceptor, setSelectedReceptor] = useState(null)
+  const [utiFilter, setUtiFilter] = useState('')
+  const [utiFilterJugador, setUtiFilterJugador] = useState('')
+  const [utiFilterTipo, setUtiFilterTipo] = useState('')
+  const [utiFilterTemp, setUtiFilterTemp] = useState('')
+  const [utiFilterModelo, setUtiFilterModelo] = useState('')
+  const [utiFilterUbic, setUtiFilterUbic] = useState('')
+  const [utiFiltersOpen, setUtiFiltersOpen] = useState(false)
+  const [utiForm, setUtiForm] = useState({ tipo:'', competicion:'', numero:'', jugador:'', talle:'S', modelo:'', estampado:'', parches:'', detalle:'', temporada:'', cantidad:1, utiEstante:'1', utiAltura:'A', photos:[], id:null })
+  const [utiModal, setUtiModal] = useState(false)
+  const [utiDetalle, setUtiDetalle] = useState(null)
+  const [repForm, setRepForm] = useState({ editId:null, concepto:'', descuento:true, rows:[], fechaPartido:'' })
+  const [repModal, setRepModal] = useState(false)
+  const [repDetail, setRepDetail] = useState(null)
+  const [repResumen, setRepResumen] = useState(null)
+  const [repDesglose, setRepDesglose] = useState(null)
+  const [resumenMesSel, setResumenMesSel] = useState(null)
+  const [showUnidadesDesglose, setShowUnidadesDesglose] = useState(false)
+  const [talleDetalle, setTalleDetalle] = useState(null)
+  const [repararRanking, setRepararRanking] = useState(null)
+  const [rankingDetalle, setRankingDetalle] = useState(null)
+  const [repFilterTorneo, setRepFilterTorneo] = useState('')
+  const [repConceptoEdit, setRepConceptoEdit] = useState(null)
+  const [disciplinaEdit, setDisciplinaEdit] = useState(null)
+  const [editDelivery, setEditDelivery] = useState(null)
+  const [pumaMetric, setPumaMetric] = useState('unidades')
+  const [cartLines, setCartLines] = useState([])
+  const [cartPickerCode, setCartPickerCode] = useState(null)
+  const [cartPickerUbic, setCartPickerUbic] = useState('')
+  const [cartPickerTalle, setCartPickerTalle] = useState('')
+  const [cartPickerQty, setCartPickerQty] = useState('')
+  const [repTab, setRepTab] = useState('reposiciones')
+  const [plantelForm, setPlantelForm] = useState({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',cantCamiseta:1,talleShort:'L',cantShort:1})
+  const [plantelModal, setPlantelModal] = useState(false)
+  const [showPartidosModal, setShowPartidosModal] = useState(false)
+  const [descExtraModal, setDescExtraModal] = useState(false)
+  const [descExtraForm, setDescExtraForm] = useState({jugadorNombre:'',jugadorNumero:'',articulo:'',precio:0,cantidad:1,fecha:''})
+  const [extrasExpandedKey, setExtrasExpandedKey] = useState(null)
+  const [selectedPlantelId, setSelectedPlantelId] = useState(null)
+  const [plantelHoverRow, setPlantelHoverRow] = useState(null)
+  const [rechazarModal, setRechazarModal] = useState({ delId: null, motivo: '' })
+  const [receptorTab, setReceptorTab] = useState('entregas')
   const [toast, setToast] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [session, setSession] = useState(() => sessionStorage.getItem(SESSION_KEY) || null)
+  const [depositosOpen, setDepositosOpen] = useState(false)
+  const [reposicionesOpen, setReposicionesOpen] = useState(false)
+  const [session, setSession] = useState(() => localStorage.getItem(SESSION_KEY) || null)
   const [loginView, setLoginView] = useState('login')
   const [loginForm, setLoginForm] = useState({ user:'', pass:'', err:'' })
   const [regForm, setRegForm] = useState({ displayName:'', email:'', telefono:'', cargo:'', categoria:'', division:'', pass:'', pass2:'', err:'' })
@@ -109,9 +246,13 @@ export default function App() {
   const [userMgmt, setUserMgmt] = useState({ list:[], newUser:'', newPass:'', err:'' })
   const toastTimer = useRef(null)
   const saveTimer = useRef(null)
+  const saveEnabled = useRef(false)
+  const initialLoadDone = useRef(false)
+  const hasPendingSave = useRef(false)
+  const dbRef = useRef(db)
 
   // delivery/devolución form
-  const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' })
+  const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', disciplina:'', fecha:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'', obs:'' })
   // new article form
   const [na, setNa] = useState({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', precio:'', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' })
   // reponer form
@@ -119,22 +260,48 @@ export default function App() {
   // ajuste form
   const [aj, setAj] = useState({ talle:'', cantidad:'' })
   // mover form
-  const [mv, setMv] = useState({ tallesArr:[], estante:'1', altura:'A' })
+  const [mv, setMv] = useState({ qtys:{}, estante:'1', altura:'A' })
 
-  // Load from Supabase on mount (filter out articles with no stock)
+  // Keep dbRef current so visibilitychange flush always sees latest state
+  useEffect(() => { dbRef.current = db }, [db])
+
   useEffect(() => {
     loadFromSupabase().then(data => {
-      setDb({...data, articles: data.articles.filter(a => total(a) > 0)})
+      if (data) {
+        setDb(data)
+        saveEnabled.current = true
+      }
       setLoading(false)
     })
   }, [])
 
-  // Save to Supabase whenever data changes (debounced 800ms)
+  // Save to Supabase whenever data changes (debounced 800ms).
+  // Skip the first fire right after the initial load to avoid overwriting data that
+  // another session saved between our load and our first debounce tick.
   useEffect(() => {
-    if (loading) return
+    if (loading || !saveEnabled.current) return
+    if (!initialLoadDone.current) { initialLoadDone.current = true; return }
     clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => saveToSupabase(db), 800)
+    hasPendingSave.current = true
+    saveTimer.current = setTimeout(async () => {
+      hasPendingSave.current = false
+      const ok = await saveToSupabase(db)
+      if (!ok) showToast('Error al guardar. Verificá la conexión.')
+    }, 800)
   }, [db, loading])
+
+  // Flush any pending save immediately when tab is hidden (mobile: switch app / close tab).
+  // Only flush if there is actually a pending debounce save — never write stale load data.
+  useEffect(() => {
+    const flush = () => {
+      if (!saveEnabled.current || !hasPendingSave.current) return
+      clearTimeout(saveTimer.current)
+      hasPendingSave.current = false
+      saveToSupabase(dbRef.current)
+    }
+    document.addEventListener('visibilitychange', flush)
+    return () => document.removeEventListener('visibilitychange', flush)
+  }, [])
 
   // Redirect to inventario if selected article code no longer exists
   useEffect(() => {
@@ -145,13 +312,17 @@ export default function App() {
   }, [db.articles, view, selectedCode])
 
   const saveUsers = (list) => {
-    setDb(prev => ({ ...prev, users: list }))
+    const merged = [...list]
+    DEFAULT_USERS.forEach(du => { if (!merged.find(u => u.username === du.username)) merged.push(du) })
+    setDb(prev => ({ ...prev, users: merged }))
+    supabase.from('deposito_state').upsert({ id: 2, deliveries: merged })
+      .then(({ error }) => { if (error) console.error('Error guardando usuarios:', error.message) })
   }
   const doLogin = () => {
     const found = db.users.find(u => u.username.toLowerCase() === loginForm.user.toLowerCase() && u.password === loginForm.pass)
     if(!found) { setLoginForm(p => ({...p, err:'Usuario o contraseña incorrectos.'})); return }
     if(found.status === 'pendiente') { setLoginForm(p => ({...p, err:'Tu cuenta está pendiente de aprobación por el administrador.'})); return }
-    sessionStorage.setItem(SESSION_KEY, found.username); setSession(found.username); setLoginForm({user:'',pass:'',err:''})
+    localStorage.setItem(SESSION_KEY, found.username); setSession(found.username); setLoginForm({user:'',pass:'',err:''})
   }
   const doRegister = () => {
     const { displayName, email, telefono, cargo, categoria, division, pass, pass2 } = regForm
@@ -159,8 +330,8 @@ export default function App() {
     if(!email.trim() || !email.includes('@')) { setRegForm(p=>({...p,err:'Ingresá un correo electrónico válido.'})); return }
     if(!telefono.trim()) { setRegForm(p=>({...p,err:'Ingresá tu teléfono.'})); return }
     if(!cargo) { setRegForm(p=>({...p,err:'Seleccioná tu cargo.'})); return }
-    if(!categoria) { setRegForm(p=>({...p,err:'Seleccioná tu sector.'})); return }
-    if(!division) { setRegForm(p=>({...p,err:'Seleccioná tu división.'})); return }
+    if(!CARGOS_SIN_SECTOR.includes(cargo) && !categoria) { setRegForm(p=>({...p,err:'Seleccioná tu sector.'})); return }
+    if(!CARGOS_SIN_SECTOR.includes(cargo) && ['Juveniles','Juveniles Femenino'].includes(categoria) && cargo !== 'Coordinación' && !division) { setRegForm(p=>({...p,err:'Seleccioná tu división.'})); return }
     if(!pass || pass.length < 6) { setRegForm(p=>({...p,err:'La contraseña debe tener al menos 6 caracteres.'})); return }
     if(pass !== pass2) { setRegForm(p=>({...p,err:'Las contraseñas no coinciden.'})); return }
     const username = email.trim().toLowerCase()
@@ -170,7 +341,7 @@ export default function App() {
     setLoginView('registered')
     setRegForm({ displayName:'', email:'', telefono:'', cargo:'', categoria:'', division:'', pass:'', pass2:'', err:'' })
   }
-  const doLogout = () => { sessionStorage.removeItem(SESSION_KEY); setSession(null) }
+  const doLogout = () => { localStorage.removeItem(SESSION_KEY); setSession(null) }
   const doForgotStep1 = () => {
     const email = forgotForm.email.trim().toLowerCase()
     if(!email) { setForgotForm(p=>({...p,err:'Ingresá tu correo.'})); return }
@@ -236,72 +407,460 @@ export default function App() {
   const byCode = (code) => db.articles.find(a => a.code === code)
   const curCode = () => selectedCode || ''
 
-  const goView = (v) => { setView(v); setSearch(''); setSidebarOpen(false) }
+  const goView = (v) => { setView(v); setSearch(''); setDelFilterPersona(''); setSidebarOpen(false); if(v==='reposiciones') setReposicionesOpen(true) }
   const openDetail = (code) => { setSelectedCode(code); setView('detalle'); setSidebarOpen(false) }
 
   // ---- Entregas / Devoluciones ----
-  const openEntrega = () => { setNd({ mode:'entrega', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
-  const openDevolucion = () => { setNd({ mode:'devolucion', persona:'', receptor:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
-  const openEntregaFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'entrega', persona:'', receptor:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
-  const openDevolucionFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'devolucion', persona:'', receptor:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'' }); setModal('entrega') }
+  const openEntrega = () => { setNd({ mode:'entrega', persona:'', receptor:'', disciplina:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'', obs:'' }); setModal('entrega') }
+  const openDevolucion = () => { setNd({ mode:'devolucion', persona:'', receptor:'', disciplina:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'', obs:'' }); setModal('entrega') }
+  const openEntregaFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'entrega', persona:'', receptor:'', disciplina:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'', obs:'' }); setModal('entrega') }
+  const openDevolucionFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'devolucion', persona:'', receptor:'', disciplina:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'', obs:'' }); setModal('entrega') }
 
   const ndAddLine = () => {
     const qty = parseInt(nd.cQty, 10)
     if(!nd.cCode || !nd.cTalle || !qty || qty <= 0) { showToast('Completá artículo, talle y cantidad.'); return }
+    const ndUbicsAll = [...new Set(db.articles.filter(a => a.code === nd.cCode).map(a => a.ubic).filter(Boolean))]
+    if(ndUbicsAll.length > 1 && !nd.cUbic) { showToast('Seleccioná la ubicación primero.'); return }
+    const ubicToUse = nd.cUbic || (ndUbicsAll[0] || '')
     if(nd.mode !== 'devolucion') {
-      const allArts = db.articles.filter(a => a.code === nd.cCode)
-      const totalAvail = allArts.reduce((s, a) => { const sz = a.sizes.find(x => x.talle === nd.cTalle); return s + (sz ? sz.qty : 0) }, 0)
-      const already = nd.lines.filter(l => l.code === nd.cCode && l.talle === nd.cTalle).reduce((s,l) => s+l.qty, 0)
-      if(totalAvail === 0 || qty + already > totalAvail) { showToast('Stock insuficiente ('+(totalAvail-already)+' disp.).'); return }
+      const srcArts = db.articles.filter(a => a.code === nd.cCode && (!ubicToUse || a.ubic === ubicToUse))
+      const avail = srcArts.reduce((s,a) => s+(a.sizes.find(x=>x.talle===nd.cTalle)?.qty||0), 0)
+      const already = nd.lines.filter(l => l.code === nd.cCode && l.talle === nd.cTalle && l.ubic === ubicToUse).reduce((s,l) => s+l.qty, 0)
+      if(avail === 0 || qty + already > avail) { showToast('Stock insuficiente ('+(avail-already)+' disp.).'); return }
     }
-    setNd(p => ({...p, lines:[...p.lines,{code:nd.cCode,talle:nd.cTalle,qty}], cCode:'', cSearch:'', cTalle:'', cQty:''}))
+    const artName = db.articles.find(a => a.code === nd.cCode)?.name || nd.cCode
+    setNd(p => ({...p, lines:[...p.lines,{code:nd.cCode,talle:nd.cTalle,qty,ubic:ubicToUse,name:artName}], cTalle:'', cQty:''}))
+  }
+
+  const addToCart = () => {
+    const qty = parseInt(cartPickerQty, 10)
+    if (!cartPickerCode || !cartPickerTalle || !qty || qty <= 0) { showToast('Elegí talle y cantidad.'); return }
+    const artsForCode = db.articles.filter(a => a.code === cartPickerCode)
+    const artName = artsForCode[0]?.name || cartPickerCode
+    const entriesWithStock = artsForCode.filter(a => a.sizes.reduce((s,z) => s+z.qty, 0) > 0)
+    const needsUbic = entriesWithStock.length > 1
+    if (needsUbic && !cartPickerUbic) { showToast('Elegí la ubicación primero.'); return }
+    const relevantArts = needsUbic ? artsForCode.filter(a => a.ubic === cartPickerUbic) : artsForCode
+    const sizeMap = {}
+    relevantArts.forEach(a => a.sizes.forEach(s => { sizeMap[s.talle] = (sizeMap[s.talle] || 0) + s.qty }))
+    const avail = sizeMap[cartPickerTalle] || 0
+    const already = cartLines.filter(l => l.code === cartPickerCode && l.talle === cartPickerTalle && l.ubic === (needsUbic ? cartPickerUbic : l.ubic)).reduce((s, l) => s + l.qty, 0)
+    if (avail === 0 || qty + already > avail) { showToast(`Stock insuficiente (${avail - already} disp.).`); return }
+    const line = { code: cartPickerCode, talle: cartPickerTalle, qty, name: artName }
+    if (needsUbic) line.ubic = cartPickerUbic
+    setCartLines(p => [...p, line])
+    setCartPickerCode(null); setCartPickerUbic(''); setCartPickerTalle(''); setCartPickerQty('')
+  }
+
+  const openCartConfirm = () => {
+    setNd(p => ({ ...p, mode: 'entrega', lines: cartLines, cCode: '', cSearch: '', cTalle: '', cQty: '' }))
+    setCartLines([])
+    setModal('entrega')
+  }
+
+  const buildPedidoHtml = (lines, persona, receptor, disciplina, fecha) => {
+    const grouped = []
+    lines.forEach(l => {
+      let g = grouped.find(g => g.code === l.code)
+      if (!g) {
+        const arts = db.articles.filter(a => a.code === l.code)
+        const artWithPhoto = arts.find(a => a.photos?.length || a.photo)
+        const photo = artWithPhoto ? (artWithPhoto.photos?.length ? artWithPhoto.photos[0] : artWithPhoto.photo) : null
+        g = { code: l.code, name: l.name, photo, lines: [] }
+        grouped.push(g)
+      }
+      g.lines.push(l)
+    })
+    const [y,m,d] = fecha.split('-')
+    const fechaStr = `${d}/${m}/${y}`
+    const totalUnidades = lines.reduce((s,l)=>s+l.qty,0)
+    const rowsHtml = grouped.map(g => {
+      const photoHtml = g.photo
+        ? `<img src="${g.photo}" style="width:88px;height:88px;object-fit:cover;border-radius:6px;border:1px solid #ddd;">`
+        : `<div style="width:88px;height:88px;border-radius:6px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:11px;text-align:center;">Sin foto</div>`
+      const tallesHtml = g.lines.map(l =>
+        `<tr><td style="padding:4px 14px 4px 0;font-size:13px;">${l.talle}</td><td style="padding:4px 14px 4px 0;font-size:13px;font-weight:700;">${l.qty}</td><td style="padding:4px 0;font-size:12px;color:#666;">${l.ubic||'—'}</td></tr>`
+      ).join('')
+      return `<div style="display:flex;gap:16px;border:1px solid #E4E4DE;border-radius:8px;padding:14px;margin-bottom:12px;break-inside:avoid;page-break-inside:avoid;">
+        <div style="flex-shrink:0;">${photoHtml}</div>
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:700;margin-bottom:2px;">${g.name}</div>
+          <div style="font-size:11px;color:#999;margin-bottom:10px;">${g.code}</div>
+          <table style="border-collapse:collapse;">
+            <thead><tr>
+              <th style="padding:0 14px 6px 0;font-size:11px;color:#888;text-align:left;font-weight:600;text-transform:uppercase;">Talle</th>
+              <th style="padding:0 14px 6px 0;font-size:11px;color:#888;text-align:left;font-weight:600;text-transform:uppercase;">Cant.</th>
+              <th style="padding:0 0 6px 0;font-size:11px;color:#888;text-align:left;font-weight:600;text-transform:uppercase;">Ubic.</th>
+            </tr></thead>
+            <tbody>${tallesHtml}</tbody>
+          </table>
+        </div>
+      </div>`
+    }).join('')
+    const receptorExtra = receptor==='Deportes Anexos'&&disciplina ? ` &nbsp;·&nbsp; <b>Disciplina:</b> ${disciplina}` : ''
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Pedido de Entrega</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;padding-bottom:80px;font-size:13px;}@media print{body{padding:12px;padding-bottom:80px;}}</style>
+</head><body>
+<div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;margin-bottom:20px;border-bottom:2px solid #111;">
+  <div style="display:flex;align-items:center;gap:14px;">
+    <img src="${window.location.origin}/escudo_blanco.png" style="height:64px;width:auto;" alt="CAP">
+    <div>
+      <div style="font-family:'Oswald',Arial,sans-serif;font-size:20px;font-weight:700;letter-spacing:.06em;color:#111;text-transform:uppercase;line-height:1.1;-webkit-text-stroke:.4px #111;">CLUB ATLÉTICO PEÑAROL</div>
+      <div style="font-family:'Oswald',Arial,sans-serif;font-size:11px;font-weight:400;letter-spacing:.14em;color:#555;text-transform:uppercase;margin-top:5px;">Entregas de indumentaria</div>
+    </div>
+  </div>
+  <div style="text-align:right;">
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:18px;font-weight:600;letter-spacing:.04em;color:#111;">Pedido de Entrega</div>
+  </div>
+</div>
+<div style="display:flex;gap:28px;margin-bottom:18px;font-size:13px;flex-wrap:wrap;">
+  <span><b>Fecha:</b> ${fechaStr}</span>
+  <span><b>Para:</b> ${persona||'—'}</span>
+  <span><b>Receptor:</b> ${receptor||'—'}${receptorExtra}</span>
+  <span><b>Total:</b> ${totalUnidades} unidades</span>
+</div>
+${rowsHtml}
+<div style="position:fixed;bottom:0;left:0;right:0;padding:14px 24px;border-top:1px solid #ddd;display:flex;justify-content:center;background:#fff;">
+  <img src="${window.location.origin}/logo_horizontal.png" style="height:36px;width:auto;" alt="Club Atlético Peñarol">
+</div>
+</body></html>`
+  }
+
+  const buildRemitoHtml = (lines, persona, receptor, disciplina, fecha, obs, paga, monto) => {
+    const grouped = []
+    lines.forEach(l => {
+      let g = grouped.find(g => g.code === l.code)
+      if (!g) {
+        const arts = db.articles.filter(a => a.code === l.code)
+        const artWithPhoto = arts.find(a => a.photos?.length || a.photo)
+        const photo = artWithPhoto ? (artWithPhoto.photos?.length ? artWithPhoto.photos[0] : artWithPhoto.photo) : null
+        g = { code: l.code, name: l.name, photo, lines: [] }
+        grouped.push(g)
+      }
+      g.lines.push(l)
+    })
+    const totalUnidades = lines.reduce((s,l)=>s+l.qty,0)
+    const receptorExtra = receptor==='Deportes Anexos'&&disciplina ? ` &nbsp;·&nbsp; <b>Disciplina:</b> ${disciplina}` : ''
+    const rowsHtml = grouped.map(g => {
+      const photoHtml = g.photo
+        ? `<img src="${g.photo}" style="width:88px;height:88px;object-fit:cover;border-radius:6px;border:1px solid #ddd;">`
+        : `<div style="width:88px;height:88px;border-radius:6px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:11px;text-align:center;">Sin foto</div>`
+      const tallesHtml = g.lines.map(l =>
+        `<tr><td style="padding:4px 14px 4px 0;font-size:13px;">${l.talle}</td><td style="padding:4px 0;font-size:13px;font-weight:700;">${l.qty}</td></tr>`
+      ).join('')
+      return `<div style="display:flex;gap:16px;border:1px solid #E4E4DE;border-radius:8px;padding:14px;margin-bottom:12px;break-inside:avoid;page-break-inside:avoid;">
+        <div style="flex-shrink:0;">${photoHtml}</div>
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:700;margin-bottom:2px;">${g.name.replace(/\s+\d{4}(\/\d{2,4})?$/, '')}</div>
+          <div style="font-size:11px;color:#999;margin-bottom:10px;">${g.code}</div>
+          <table style="border-collapse:collapse;">
+            <thead><tr>
+              <th style="padding:0 14px 6px 0;font-size:11px;color:#888;text-align:left;font-weight:600;text-transform:uppercase;">Talle</th>
+              <th style="padding:0 0 6px 0;font-size:11px;color:#888;text-align:left;font-weight:600;text-transform:uppercase;">Cant.</th>
+            </tr></thead>
+            <tbody>${tallesHtml}</tbody>
+          </table>
+        </div>
+      </div>`
+    }).join('')
+    const montoHtml = paga==='si'&&monto>0
+      ? `<div style="margin:12px 0;padding:10px 14px;background:#f0faf4;border:1px solid #b6e4c8;border-radius:6px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:700;color:#1a5c33;">Total a cobrar</span>
+          <span style="font-weight:800;color:#1a5c33;font-size:15px;">$ ${monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+        </div>` : ''
+    const obsHtml = obs ? `<span><b>Obs:</b> ${obs}</span>` : ''
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>INDUMENTARIA CLUB ATLETICO PEÑAROL</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;padding-bottom:80px;font-size:13px;}
+.no-print{text-align:right;margin-bottom:16px;}
+.no-print button{background:#121212;color:#f2cb12;border:none;padding:9px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
+@media print{.no-print{display:none;}body{padding:12px;padding-bottom:80px;}}</style>
+</head><body>
+<div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;margin-bottom:20px;border-bottom:2px solid #111;">
+  <div style="display:flex;align-items:center;gap:14px;">
+    <img src="${window.location.origin}/escudo_blanco.png" style="height:64px;width:auto;" alt="CAP">
+    <div>
+      <div style="font-family:'Oswald',Arial,sans-serif;font-size:20px;font-weight:700;letter-spacing:.06em;color:#111;text-transform:uppercase;line-height:1.1;-webkit-text-stroke:.4px #111;">CLUB ATLÉTICO PEÑAROL</div>
+      <div style="font-family:'Oswald',Arial,sans-serif;font-size:11px;font-weight:400;letter-spacing:.14em;color:#555;text-transform:uppercase;margin-top:5px;">Entregas de indumentaria</div>
+    </div>
+  </div>
+  <div style="text-align:right;">
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:18px;font-weight:600;letter-spacing:.04em;color:#111;">Remito de Entrega</div>
+  </div>
+</div>
+<div style="display:flex;gap:28px;margin-bottom:18px;font-size:13px;flex-wrap:wrap;">
+  <span><b>Fecha:</b> ${fecha}</span>
+  <span><b>Para:</b> ${persona||'—'}</span>
+  <span><b>Receptor:</b> ${receptor||'—'}${receptorExtra}</span>
+  <span><b>Total:</b> ${totalUnidades} unidades</span>
+  ${obsHtml}
+</div>
+${rowsHtml}
+${montoHtml}
+<div style="position:fixed;bottom:0;left:0;right:0;padding:14px 24px;border-top:1px solid #ddd;display:flex;justify-content:center;background:#fff;">
+  <img src="${window.location.origin}/logo_horizontal.png" style="height:36px;width:auto;" alt="Club Atlético Peñarol">
+</div>
+</body></html>`
+  }
+
+  const buildRemitoCombinadoHtml = (deliveries) => {
+    const grouped = []
+    deliveries.forEach(d => {
+      ;(d.lines||[]).forEach(l => {
+        let g = grouped.find(g => g.code === l.code && g.talle === l.talle)
+        if (!g) {
+          const arts = db.articles.filter(a => a.code === l.code)
+          const artWithPhoto = arts.find(a => a.photos?.length || a.photo)
+          const photo = artWithPhoto ? (artWithPhoto.photos?.length ? artWithPhoto.photos[0] : artWithPhoto.photo) : null
+          g = { code: l.code, name: l.name, talle: l.talle, photo, qty: 0 }
+          grouped.push(g)
+        }
+        g.qty += l.qty
+      })
+    })
+    // Re-group by article (merge talles)
+    const byArticle = []
+    grouped.forEach(g => {
+      let a = byArticle.find(a => a.code === g.code)
+      if (!a) { a = { code: g.code, name: g.name, photo: g.photo, lines: [] }; byArticle.push(a) }
+      a.lines.push({ talle: g.talle, qty: g.qty })
+    })
+    const personas = [...new Set(deliveries.map(d => d.persona).filter(Boolean))]
+    const receptor = deliveries[0]?.receptor || '—'
+    const disciplina = deliveries[0]?.disciplina
+    const receptorExtra = receptor==='Deportes Anexos'&&disciplina ? ` &nbsp;·&nbsp; <b>Disciplina:</b> ${disciplina}` : ''
+    const fechas = [...new Set(deliveries.map(d => d.fecha).filter(Boolean))].sort()
+    const fechaStr = fechas.length === 1 ? fechas[0] : `${fechas[0]} — ${fechas[fechas.length-1]}`
+    const totalUnidades = grouped.reduce((s,g)=>s+g.qty,0)
+    const rowsHtml = byArticle.map(a => {
+      const photoHtml = a.photo
+        ? `<img src="${a.photo}" style="width:88px;height:88px;object-fit:cover;border-radius:6px;border:1px solid #ddd;">`
+        : `<div style="width:88px;height:88px;border-radius:6px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:11px;text-align:center;">Sin foto</div>`
+      const tallesHtml = a.lines.map(l =>
+        `<tr><td style="padding:4px 14px 4px 0;font-size:13px;">${l.talle}</td><td style="padding:4px 0;font-size:13px;font-weight:700;">${l.qty}</td></tr>`
+      ).join('')
+      return `<div style="display:flex;gap:16px;border:1px solid #E4E4DE;border-radius:8px;padding:14px;margin-bottom:12px;break-inside:avoid;page-break-inside:avoid;">
+        <div style="flex-shrink:0;">${photoHtml}</div>
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:700;margin-bottom:2px;">${a.name.replace(/\s+\d{4}(\/\d{2,4})?$/, '')}</div>
+          <div style="font-size:11px;color:#999;margin-bottom:10px;">${a.code}</div>
+          <table style="border-collapse:collapse;">
+            <thead><tr>
+              <th style="padding:0 14px 6px 0;font-size:11px;color:#888;text-align:left;font-weight:600;text-transform:uppercase;">Talle</th>
+              <th style="padding:0 0 6px 0;font-size:11px;color:#888;text-align:left;font-weight:600;text-transform:uppercase;">Cant.</th>
+            </tr></thead>
+            <tbody>${tallesHtml}</tbody>
+          </table>
+        </div>
+      </div>`
+    }).join('')
+    const personasHtml = personas.length > 1
+      ? `<div style="margin-bottom:12px;padding:8px 14px;background:#fffbea;border:1px solid #ffe066;border-radius:6px;font-size:12px;">
+          <b>Integrantes:</b> ${personas.join(', ')}
+        </div>`
+      : ''
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>INDUMENTARIA CLUB ATLETICO PEÑAROL</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;padding-bottom:80px;font-size:13px;}
+.no-print{text-align:right;margin-bottom:16px;}
+.no-print button{background:#121212;color:#f2cb12;border:none;padding:9px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
+@media print{.no-print{display:none;}body{padding:12px;padding-bottom:80px;}}</style>
+</head><body>
+<div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;margin-bottom:20px;border-bottom:2px solid #111;">
+  <div style="display:flex;align-items:center;gap:14px;">
+    <img src="${window.location.origin}/escudo_blanco.png" style="height:64px;width:auto;" alt="CAP">
+    <div>
+      <div style="font-family:'Oswald',Arial,sans-serif;font-size:20px;font-weight:700;letter-spacing:.06em;color:#111;text-transform:uppercase;line-height:1.1;-webkit-text-stroke:.4px #111;">CLUB ATLÉTICO PEÑAROL</div>
+      <div style="font-family:'Oswald',Arial,sans-serif;font-size:11px;font-weight:400;letter-spacing:.14em;color:#555;text-transform:uppercase;margin-top:5px;">Entregas de indumentaria</div>
+    </div>
+  </div>
+  <div style="text-align:right;">
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:18px;font-weight:600;letter-spacing:.04em;color:#111;">Remito de Entrega</div>
+  </div>
+</div>
+<div style="display:flex;gap:28px;margin-bottom:14px;font-size:13px;flex-wrap:wrap;">
+  <span><b>Fecha:</b> ${fechaStr}</span>
+  <span><b>Para:</b> ${personas.length===1?personas[0]:'Varias entregas'}</span>
+  <span><b>Receptor:</b> ${receptor}${receptorExtra}</span>
+  <span><b>Total:</b> ${totalUnidades} unidades</span>
+</div>
+${personasHtml}
+${rowsHtml}
+<div style="position:fixed;bottom:0;left:0;right:0;padding:14px 24px;border-top:1px solid #ddd;display:flex;justify-content:center;background:#fff;">
+  <img src="${window.location.origin}/logo_horizontal.png" style="height:36px;width:auto;" alt="Club Atlético Peñarol">
+</div>
+</body></html>`
+  }
+
+  const openPrintWindow = (html) => {
+    const w = window.open('', '_blank', 'width=860,height=720')
+    if (!w) { showToast('Permitir ventanas emergentes para imprimir.'); return }
+    w.document.write(html)
+    w.document.close()
+    setTimeout(() => { w.focus(); w.print() }, 500)
+  }
+
+  const printPedido = () => {
+    if (!nd.persona.trim()) { showToast('Ingresá el nombre del integrante.'); return }
+    if (!nd.receptor) { showToast('Elegí un grupo / plantel.'); return }
+    if (nd.receptor === 'Deportes Anexos' && !nd.disciplina.trim()) { showToast('Ingresá la disciplina.'); return }
+    if (nd.lines.length === 0) { showToast('Agregá al menos un artículo.'); return }
+    const fecha = nd.fecha || today()
+    const persona = nd.persona.trim()
+    const lines = [...nd.lines]
+    let newDbState = null
+    setDb(s => {
+      const articles = s.articles.map(a => ({...a, sizes: a.sizes.map(z => ({...z}))}))
+      const movimientos = [...s.movimientos]
+      let mid = s.nextMov
+      lines.forEach(l => {
+        const a = l.ubic
+          ? articles.find(x => x.code === l.code && x.ubic === l.ubic)
+          : articles.find(x => x.code === l.code && x.sizes.some(sz => sz.talle === l.talle))
+        const z = a && a.sizes.find(x => x.talle === l.talle)
+        if (z) z.qty = Math.max(0, z.qty - l.qty)
+        movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'salida', fecha, talle:l.talle, qty:l.qty,
+          detalle:'Entrega a '+persona+' ('+nd.receptor+(nd.disciplina?' - '+nd.disciplina:'')+')', delId:s.nextDel, creadoPor:currentUser?.displayName||session})
+      })
+      const deliveries = [{
+        id: s.nextDel, fecha, persona, receptor: nd.receptor,
+        disciplina: nd.receptor==='Deportes Anexos' ? nd.disciplina.trim() : undefined,
+        paga: nd.receptor==='Protocolo' ? nd.paga : null, monto: null,
+        obs: nd.obs?.trim()||undefined, lines, toUser: nd.toUser||null,
+        status: 'pendiente_separar', confirmedAt: null, creadoPor: currentUser?.displayName||session
+      }, ...s.deliveries]
+      const r = {...s, articles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid}
+      newDbState = r; return r
+    })
+    if (newDbState) saveToSupabase(newDbState)
+    closeModal()
+    showToast('Pedido guardado. Stock reservado.')
+    openPrintWindow(buildPedidoHtml(lines, persona, nd.receptor, nd.disciplina, fecha))
+  }
+
+  const confirmarSeparar = (delId) => {
+    let newDbState = null
+    let delSnapshot = null
+    setDb(s => {
+      const del = s.deliveries.find(d => d.id === delId)
+      if (!del) return s
+      delSnapshot = del
+      const hasUser = !!del.toUser
+      const newStatus = hasUser ? 'pendiente' : 'aceptado'
+      const confirmedAt = hasUser ? null : today()
+      const deliveries = s.deliveries.map(d => d.id === delId ? {...d, status:newStatus, confirmedAt} : d)
+      const r = {...s, deliveries}
+      newDbState = r; return r
+    })
+    if (newDbState) saveToSupabase(newDbState)
+    if (delSnapshot?.toUser) {
+      const recipient = db.users.find(u => u.username === delSnapshot.toUser)
+      const recipientEmail = recipient?.email || (recipient?.username?.includes('@') ? recipient?.username : null)
+      if (recipientEmail) {
+        fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: recipientEmail,
+            displayName: recipient.displayName || recipient.username,
+            lines: delSnapshot.lines,
+            delId,
+          })
+        })
+        .then(r => r.json())
+        .then(d => { if (d.ok) showToast('Email enviado a ' + recipientEmail); else showToast('Error al enviar email.') })
+        .catch(() => showToast('No se pudo conectar con el servidor de email.'))
+      }
+    }
+    setSelectedDeliveryId(null)
+    showToast('Entrega confirmada.')
+  }
+
+  const migrarStockPendientes = () => {
+    let newDbState = null
+    setDb(s => {
+      const sinMovimiento = s.deliveries.filter(d =>
+        d.status === 'pendiente_separar' &&
+        !s.movimientos.some(m => m.delId === d.id)
+      )
+      if (sinMovimiento.length === 0) return s
+      const articles = s.articles.map(a => ({...a, sizes: a.sizes.map(z => ({...z}))}))
+      const movimientos = [...s.movimientos]
+      let mid = s.nextMov
+      sinMovimiento.forEach(del => {
+        const fecha = del.fecha || today()
+        del.lines.forEach(l => {
+          const a = l.ubic
+            ? articles.find(x => x.code === l.code && x.ubic === l.ubic)
+            : articles.find(x => x.code === l.code && x.sizes.some(sz => sz.talle === l.talle))
+          const z = a && a.sizes.find(x => x.talle === l.talle)
+          if (z) z.qty = Math.max(0, z.qty - l.qty)
+          movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'salida', fecha, talle:l.talle, qty:l.qty,
+            detalle:'Entrega a '+del.persona+' ('+del.receptor+(del.disciplina?' - '+del.disciplina:'')+')', delId:del.id, creadoPor:del.creadoPor||session})
+        })
+      })
+      const r = {...s, articles, movimientos, nextMov:mid}
+      newDbState = r; return r
+    })
+    if (newDbState) saveToSupabase(newDbState)
+    showToast('Stock actualizado para pedidos pendientes.')
   }
 
   const ndConfirm = () => {
     const esDev = nd.mode === 'devolucion'
     if(!nd.persona.trim()) { showToast('Ingresá el nombre del integrante.'); return }
     if(!nd.receptor) { showToast('Elegí un grupo / plantel.'); return }
+    if(nd.receptor === 'Deportes Anexos' && !nd.disciplina.trim()) { showToast('Ingresá la disciplina.'); return }
     if(nd.lines.length === 0) { showToast('Agregá al menos un artículo.'); return }
+    let newDbState = null
     setDb(s => {
       const articles = s.articles.map(a => ({...a, sizes: a.sizes.map(z => ({...z}))}))
       const movimientos = [...s.movimientos]
       let mid = s.nextMov
-      const fecha = today()
+      const fecha = nd.fecha || today()
       nd.lines.forEach(l => {
-        // Find the entry that has this talle
-        const a = articles.find(x => x.code === l.code && x.sizes.some(sz => sz.talle === l.talle))
+        // Find the entry at the specific location (ubic), fallback to first with the talle
+        const a = l.ubic
+          ? articles.find(x => x.code === l.code && x.ubic === l.ubic)
+          : articles.find(x => x.code === l.code && x.sizes.some(sz => sz.talle === l.talle))
         const z = a && a.sizes.find(x => x.talle === l.talle)
         if(z) z.qty = esDev ? z.qty + l.qty : Math.max(0, z.qty - l.qty)
         if(esDev) {
-          movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'entrada', fecha, talle:l.talle, qty:l.qty, detalle:'Devolución de '+nd.persona+' ('+nd.receptor+')'})
+          movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'entrada', fecha, talle:l.talle, qty:l.qty, detalle:'Devolución de '+nd.persona+' ('+nd.receptor+')', creadoPor:currentUser?.displayName||session})
         } else {
-          movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'salida', fecha, talle:l.talle, qty:l.qty, detalle:'Entrega a '+nd.persona+' ('+nd.receptor+')', delId:s.nextDel})
+          movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'salida', fecha, talle:l.talle, qty:l.qty, detalle:'Entrega a '+nd.persona+' ('+nd.receptor+(nd.disciplina?' - '+nd.disciplina:'')+')', delId:s.nextDel, creadoPor:currentUser?.displayName||session})
         }
       })
-      const activeArticles = articles.filter(a => total(a) > 0)
-      if(esDev) return { ...s, articles:activeArticles, movimientos, modal:null, nextMov:mid }
+      if(esDev) { const r = { ...s, articles, movimientos, modal:null, nextMov:mid }; newDbState = r; return r }
       const toUser = nd.toUser || null
       const status = toUser ? 'pendiente' : 'aceptado'
       const confirmedAt = toUser ? null : fecha
-      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, lines:[...nd.lines], toUser, status, confirmedAt}, ...s.deliveries]
-      return { ...s, articles:activeArticles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid }
+      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, disciplina:nd.receptor==='Deportes Anexos'?nd.disciplina.trim():undefined, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, obs:nd.obs?.trim()||undefined, lines:[...nd.lines], toUser, status, confirmedAt, creadoPor:currentUser?.displayName||session}, ...s.deliveries]
+      const r = { ...s, articles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid }
+      newDbState = r; return r
     })
+    // Guardar inmediatamente en Supabase sin esperar el debounce de 800ms
+    if (newDbState) saveToSupabase(newDbState)
     // Enviar email de notificación si la entrega va a un usuario específico
     if (nd.toUser && nd.mode !== 'devolucion') {
       const recipient = db.users.find(u => u.username === nd.toUser)
-      if (recipient?.email) {
+      const recipientEmail = recipient?.email || (recipient?.username?.includes('@') ? recipient?.username : null)
+      if (recipientEmail) {
         fetch('/api/send-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            to: recipient.email,
+            to: recipientEmail,
             displayName: recipient.displayName || recipient.username,
             lines: nd.lines,
             delId: db.nextDel,
           })
         })
         .then(r => r.json())
-        .then(d => { if (d.ok) { showToast('Email de notificación enviado a ' + recipient.email) } else { showToast('Error al enviar email: ' + (d.error || 'error desconocido')) } })
+        .then(d => { if (d.ok) { showToast('Email de notificación enviado a ' + recipientEmail) } else { showToast('Error al enviar email: ' + (d.error || 'error desconocido')) } })
         .catch(() => showToast('No se pudo conectar con el servidor de email.'))
       }
     }
@@ -311,7 +870,7 @@ export default function App() {
   }
 
   // ---- Nuevo artículo ----
-  const openArticulo = () => { setNa({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', precio:'', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' }); setModal('articulo') }
+  const openArticulo = () => { setNa({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', precio:'', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A', photos:[] }); setModal('articulo') }
 
   const naToggleTalle = (t) => {
     setNa(p => {
@@ -330,10 +889,40 @@ export default function App() {
     const { code, name, cat:ncat, tallesArr, tallesMins, tallesQty, estante, altura, precio } = na
     if(!code || !name) { showToast('Completá código y nombre.'); return }
     if(tallesArr.length === 0) { showToast('Seleccioná al menos un talle.'); return }
-    const ubic = (estante||'1') + (altura||'A')
+    const ubic = estante === 'TRANSITO' ? 'TRANSITO' : (estante||'1') + (altura||'A')
     const sizes = tallesArr.map(t => ({talle:t, qty:tallesQty[t]||0, min:tallesMins[t]||0}))
     const precioNum = parseFloat(precio)||0
-    setDb(s => ({ ...s, articles:[{id:s.nextId, code, name, cat:ncat, ubic, precio:precioNum, sizes}, ...s.articles], nextId:s.nextId+1 }))
+    const fecha = today()
+    setDb(s => {
+      let nextMov = s.nextMov
+      const newMovs = sizes
+        .filter(sz => sz.qty > 0)
+        .map(sz => ({id:nextMov++, code, name, tipo:'entrada', fecha, talle:sz.talle, qty:sz.qty, detalle:'Stock inicial', creadoPor:currentUser?.displayName||session}))
+      // Si ya existe un registro con el mismo código y ubicación, fusionar talles
+      const existing = s.articles.find(a => a.code === code && a.ubic === ubic)
+      if (existing) {
+        const mergedSizes = TALLE_ORDER.map(t => {
+          const exSz = existing.sizes.find(z => z.talle === t)
+          const newSz = sizes.find(z => z.talle === t)
+          if (!exSz && !newSz) return null
+          return { talle: t, qty: (exSz?.qty||0) + (newSz?.qty||0), min: Math.max(exSz?.min||0, newSz?.min||0) }
+        }).filter(Boolean)
+        const mergedPhotos = existing.photos?.length ? existing.photos : (na.photos||[])
+        return {
+          ...s,
+          articles: s.articles.map(a => a.id === existing.id ? { ...a, sizes: mergedSizes, photos: mergedPhotos, precio: precioNum||a.precio } : a),
+          movimientos: [...newMovs, ...s.movimientos],
+          nextMov
+        }
+      }
+      return {
+        ...s,
+        articles: [{id:s.nextId, code, name, cat:ncat, ubic, precio:precioNum, sizes, photos:na.photos||[]}, ...s.articles],
+        nextId: s.nextId+1,
+        movimientos: [...newMovs, ...s.movimientos],
+        nextMov
+      }
+    })
     setModal(null); setView('inventario')
     showToast('Artículo «'+name+'» creado.')
   }
@@ -354,7 +943,7 @@ export default function App() {
         if(a.id !== selectedId) return a
         return {...a, sizes: a.sizes.map(z => { const e=entries.find(e=>e.talle===z.talle); return e ? {...z, qty:z.qty+e.q} : z })}
       })
-      const newMovs = entries.map(e => ({id:nextMov++, code, name:artName, tipo:'entrada', fecha, talle:e.talle, qty:e.q, detalle:'Ingreso de stock'}))
+      const newMovs = entries.map(e => ({id:nextMov++, code, name:artName, tipo:'entrada', fecha, talle:e.talle, qty:e.q, detalle:'Ingreso de stock', creadoPor:currentUser?.displayName||session}))
       return { ...s, articles, movimientos:[...newMovs,...s.movimientos], nextMov }
     })
     setModal(null)
@@ -375,81 +964,200 @@ export default function App() {
     setDb(s => {
       const artName = selA.name
       const articles = s.articles.map(a => { if(a.id!==selectedId) return a; return {...a, sizes:a.sizes.map(z => z.talle===aj.talle?{...z,qty:Math.max(0,q)}:z)} })
-      const activeArticles = articles.filter(a => total(a) > 0)
-      const movimientos = [{id:s.nextMov, code, name:artName, tipo:(delta>0?'entrada':'salida'), fecha, talle:aj.talle, qty:Math.abs(delta), detalle:'Ajuste por recuento (de '+cur+' a '+q+')'}, ...s.movimientos]
-      return { ...s, articles:activeArticles, movimientos, nextMov:s.nextMov+1 }
+      const movimientos = [{id:s.nextMov, code, name:artName, tipo:(delta>0?'entrada':'salida'), fecha, talle:aj.talle, qty:Math.abs(delta), detalle:'Ajuste por recuento (de '+cur+' a '+q+')', creadoPor:currentUser?.displayName||session}, ...s.movimientos]
+      return { ...s, articles, movimientos, nextMov:s.nextMov+1 }
     })
     setModal(null)
     showToast('Stock ajustado: '+aj.talle+' = '+q+' ('+(delta>0?'+':'')+delta+').')
   }
 
   // ---- Mover talle ----
-  const openMover = () => { setMv({ tallesArr:[], estante:'1', altura:'A' }); setModal('mover') }
+  const openMover = () => { setMv({ qtys:{}, estante:'1', altura:'A' }); setModal('mover') }
 
-  const exportExcel = () => {
+  const exportExcel = async () => {
+    const YELLOW = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
+    const F_BOLD = {name:'Calibri',size:11,bold:true}
+    const F_NORM = {name:'Calibri',size:11}
+    const BORDER = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('Stock por Ubicación')
+    const headers = ['UBICACIÓN','CÓDIGO','ARTÍCULO','CATEGORÍA','PRECIO',...TALLE_ORDER,'TOTAL']
+    ws.columns = headers.map((h,i) => ({header:h, width: i===2?32 : i===4?10 : i<5?14 : 7}))
+    ws.getRow(1).eachCell(cell => { cell.fill=YELLOW; cell.font=F_BOLD; cell.border=BORDER; cell.alignment={horizontal:'center',vertical:'middle'} })
+    ws.getRow(1).height = 20
     const sorted = [...articles].sort((a, b) => {
       const pu = u => { if(!u||u==='—') return {n:Infinity,l:''}; const m=u.match(/^(\d+)(.*)/); return m?{n:parseInt(m[1],10),l:m[2]}:{n:Infinity,l:u} }
       const ua=pu(a.ubic), ub=pu(b.ubic)
       return ua.n!==ub.n ? ua.n-ub.n : ua.l.localeCompare(ub.l)
     })
-    const rows = sorted.map(a => {
-      const row = { UBICACIÓN: a.ubic||'—', CÓDIGO: a.code, ARTÍCULO: a.name, CATEGORÍA: a.cat, PRECIO: a.precio||0 }
-      TALLE_ORDER.forEach(t => { const sz=a.sizes.find(s=>s.talle===t); row[t]=sz?sz.qty:'' })
-      row['TOTAL'] = a.sizes.reduce((s,z)=>s+z.qty,0)
-      return row
+    sorted.forEach(a => {
+      const vals = [a.ubic||'—', a.code, a.name, a.cat, a.precio||0]
+      TALLE_ORDER.forEach(t => { const sz=a.sizes.find(s=>s.talle===t); vals.push(sz?sz.qty:'') })
+      vals.push(a.sizes.reduce((s,z)=>s+z.qty,0))
+      const row = ws.addRow(vals)
+      row.eachCell(cell => { cell.font=F_NORM; cell.border=BORDER })
     })
-    const headers = ['UBICACIÓN','CÓDIGO','ARTÍCULO','CATEGORÍA','PRECIO',...TALLE_ORDER,'TOTAL']
-    const ws = XLSX.utils.json_to_sheet(rows, { header: headers })
-    ws['!cols'] = headers.map((h,i) => ({ wch: i===2?32 : i===4?10 : i<5?14 : 7 }))
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Stock por Ubicación')
-    XLSX.writeFile(wb, 'stock-deposito-peniarol.xlsx')
+    const buf = await wb.xlsx.writeBuffer()
+    const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href=url; a.download='stock-deposito-peniarol.xlsx'; a.click()
+    URL.revokeObjectURL(url)
+  }
+  const exportProductoExcel = async () => {
+    if (!detail) return
+    const YELLOW = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
+    const DARK   = {type:'pattern',pattern:'solid',fgColor:{argb:'FF1E1E1E'}}
+    const F_BOLD = {name:'Calibri',size:11,bold:true}
+    const F_NORM = {name:'Calibri',size:11}
+    const F_WITE = {name:'Calibri',size:11,bold:true,color:{argb:'FFFFFFFF'}}
+    const BORDER = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('Stock por Ubicación')
+    ws.columns = [{header:'UBICACIÓN',width:14},{header:'TALLE',width:10},{header:'CANTIDAD',width:12}]
+    ws.getRow(1).eachCell(cell => { cell.fill=YELLOW; cell.font=F_BOLD; cell.border=BORDER; cell.alignment={horizontal:'center',vertical:'middle'} })
+    let total = 0
+    detail.entries.forEach(entry => {
+      entry.sizes.filter(s=>s.qty>0).forEach(s => {
+        const row = ws.addRow([entry.ubic||'—', s.talle, s.qty])
+        row.eachCell(cell => { cell.font=F_NORM; cell.border=BORDER; cell.alignment={horizontal:'center'} })
+        row.getCell(1).alignment={horizontal:'left'}
+        total += s.qty
+      })
+    })
+    const totRow = ws.addRow(['TOTAL','',total])
+    totRow.eachCell(cell => { cell.fill=DARK; cell.font=F_WITE; cell.border=BORDER; cell.alignment={horizontal:'center'} })
+    totRow.getCell(1).alignment={horizontal:'left'}
+    const buf = await wb.xlsx.writeBuffer()
+    const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href=url; a.download=`stock-${detail.code}-${detail.name.replace(/\s+/g,'-')}.xlsx`; a.click()
+    URL.revokeObjectURL(url)
+  }
+  const downloadPlantelExcel = async () => {
+    const YELLOW = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
+    const F_BOLD = {name:'Calibri',size:11,bold:true}
+    const F_NORM = {name:'Calibri',size:11}
+    const BORDER = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('Plantel')
+    ws.columns = [
+      {header:'Nº', width:6}, {header:'NOMBRE', width:28}, {header:'POSICIÓN', width:12},
+      {header:'CAMISETA', width:12}, {header:'SHORT', width:10},
+    ]
+    ws.getRow(1).eachCell(cell => { cell.fill=YELLOW; cell.font=F_BOLD; cell.border=BORDER; cell.alignment={horizontal:'center',vertical:'middle'} })
+    ws.getRow(1).height = 20
+    ;(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).forEach(j => {
+      const row = ws.addRow([j.numero||'', j.nombre, j.posicion||'Jugador', j.talleCamiseta, j.talleShort])
+      row.eachCell(cell => { cell.font=F_NORM; cell.border=BORDER })
+    })
+    const buf = await wb.xlsx.writeBuffer()
+    const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href=url; a.download='plantel-peniarol.xlsx'; a.click()
+    URL.revokeObjectURL(url)
   }
   const mvConfirm = () => {
-    if(mv.tallesArr.length === 0) { showToast('Seleccioná al menos un talle.'); return }
-    const newUbic = mv.estante + mv.altura
+    const toMove = Object.entries(mv.qtys).map(([t,q]) => [t, parseInt(q,10)||0]).filter(([,q]) => q > 0)
+    if(toMove.length === 0) { showToast('Ingresá la cantidad a mover en al menos un talle.'); return }
+    const newUbic = mv.estante === 'TRANSITO' ? 'TRANSITO' : mv.estante + mv.altura
     if(newUbic === selA.ubic) { showToast('La ubicación destino es la misma que la actual.'); return }
+    for(const [t, q] of toMove) {
+      const src = selA.sizes.find(sz => sz.talle === t)
+      if(!src || q > src.qty) { showToast('Stock insuficiente para talle ' + t + '.'); return }
+    }
     setDb(prev => {
       const code = curCode()
-      let arts = prev.articles
+      let arts = [...prev.articles]
       let nextId = prev.nextId
-      const targetEntry = arts.find(a => a.code === code && a.ubic === newUbic && a.id !== selA.id)
+      // Reducir stock en origen
+      arts = arts.map(a => {
+        if(a.id !== selA.id) return a
+        const newSizes = a.sizes.map(sz => {
+          const q = parseInt(mv.qtys[sz.talle],10)||0
+          return q > 0 ? {...sz, qty: sz.qty - q} : sz
+        }).filter(sz => sz.qty > 0)
+        return newSizes.length === 0 ? null : {...a, sizes: newSizes}
+      }).filter(Boolean)
+      // Agregar en destino
+      const targetEntry = arts.find(a => a.code === code && a.ubic === newUbic)
+      const srcPhotos = selA.photos?.length ? selA.photos : (selA.photo ? [selA.photo] : [])
       if(targetEntry) {
         arts = arts.map(a => {
           if(a.id !== targetEntry.id) return a
           const newSizes = [...a.sizes]
-          mv.tallesArr.forEach(t => {
+          toMove.forEach(([t, q]) => {
             const src = selA.sizes.find(sz => sz.talle === t)
             const idx = newSizes.findIndex(sz => sz.talle === t)
-            if(idx >= 0) newSizes[idx] = {...newSizes[idx], qty: newSizes[idx].qty + (src?.qty||0)}
-            else newSizes.push({...src})
+            if(idx >= 0) newSizes[idx] = {...newSizes[idx], qty: newSizes[idx].qty + q}
+            else newSizes.push({talle:t, qty:q, min:src?.min||0})
           })
-          return {...a, sizes: newSizes}
+          const photos = a.photos?.length ? a.photos : srcPhotos
+          return {...a, sizes: newSizes, photos}
         })
       } else {
-        const movedSizes = selA.sizes.filter(sz => mv.tallesArr.includes(sz.talle))
-        arts = [...arts, {id:nextId++, code, name:selA.name, cat:selA.cat, ubic:newUbic, sizes:movedSizes}]
+        const newSizes = toMove.map(([t, q]) => {
+          const src = selA.sizes.find(sz => sz.talle === t)
+          return {talle:t, qty:q, min:src?.min||0}
+        })
+        arts = [...arts, {id:nextId++, code, name:selA.name, cat:selA.cat, ubic:newUbic, sizes:newSizes, precio:selA.precio||0, photos:srcPhotos}]
       }
-      const remaining = selA.sizes.filter(sz => !mv.tallesArr.includes(sz.talle))
-      arts = remaining.length === 0
-        ? arts.filter(a => a.id !== selA.id)
-        : arts.map(a => a.id === selA.id ? {...a, sizes:remaining} : a)
       return {...prev, articles:arts, nextId}
     })
     setModal(null); setView('inventario')
-    showToast('Talle(s) movido(s) a ' + mv.estante + mv.altura + '.')
+    showToast('Movido a ' + (mv.estante === 'TRANSITO' ? 'TRANSITO' : mv.estante + mv.altura) + '.')
   }
 
   // ---- Editar ----
   const openEdit = () => {
     const a = db.articles.find(x => x.id === selectedId); if(!a) return
-    setEditing({id:a.id, code:a.code, name:a.name, cat:a.cat, ubic:a.ubic||'', precio:a.precio||''}); setModal('edit')
+    const photos = a.photos?.length ? a.photos : (a.photo ? [a.photo] : [])
+    const sizes = a.sizes.map(s=>({...s}))
+    setEditing({id:a.id, code:a.code, name:a.name, cat:a.cat, ubic:a.ubic||'', precio:a.precio||'', photos, sizes, _origSizes:sizes}); setModal('edit')
   }
   const saveEdit = () => {
     if(!editing.code.trim() || !editing.name.trim()) { showToast('Completá código y nombre.'); return }
-    setDb(s => ({...s, articles:s.articles.map(a => a.id===editing.id?{...a,code:editing.code.trim(),name:editing.name.trim(),cat:editing.cat,ubic:editing.ubic.trim(),precio:parseFloat(editing.precio)||0}:a)}))
+    const newCode = editing.code.trim()
+    const newPhotos = editing.photos || []
+    const newSizes = (editing.sizes || []).filter(s => s.qty > 0 || (editing._origSizes||[]).find(o=>o.talle===s.talle))
+    setDb(s => {
+      const origArt = s.articles.find(a => a.id === editing.id)
+      const origSizes = origArt?.sizes || []
+      let nextMov = s.nextMov
+      const fecha = today()
+      const newMovs = (editing.sizes||[]).filter(sz => {
+        const orig = origSizes.find(o => o.talle === sz.talle)
+        return !orig && sz.qty > 0
+      }).map(sz => ({id:nextMov++, code:newCode, name:editing.name.trim(), tipo:'entrada', fecha, talle:sz.talle, qty:sz.qty, detalle:'Stock inicial (nuevo talle)', creadoPor:currentUser?.displayName||session}))
+      return {
+        ...s,
+        nextMov,
+        movimientos: [...newMovs, ...s.movimientos],
+        articles: s.articles.map(a => {
+          if(a.id === editing.id) return {...a, code:newCode, name:editing.name.trim(), cat:editing.cat, ubic:editing.ubic.trim(), precio:parseFloat(editing.precio)||0, photos:newPhotos, photo:'', sizes:newSizes}
+          if(a.code === newCode) return {...a, photos:newPhotos, photo:''}
+          return a
+        })
+      }
+    })
     setModal(null); showToast('Artículo actualizado.')
   }
+  const compressImage = (file) => new Promise(resolve => {
+    const reader = new FileReader()
+    reader.onload = e => {
+      const img = new Image()
+      img.onload = () => {
+        const MAX = 900
+        let w = img.width, h = img.height
+        if (w > MAX || h > MAX) { const r = Math.min(MAX/w, MAX/h); w = Math.round(w*r); h = Math.round(h*r) }
+        const canvas = document.createElement('canvas')
+        canvas.width = w; canvas.height = h
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+        resolve(canvas.toDataURL('image/jpeg', 0.78))
+      }
+      img.src = e.target.result
+    }
+    reader.readAsDataURL(file)
+  })
 
   // ---- Eliminar ----
   const askDeleteDelivery = (id) => {
@@ -465,7 +1173,17 @@ export default function App() {
       setDb(s => {
         const del = s.deliveries.find(d => d.id === c.id); if(!del) return {...s}
         const articles = s.articles.map(a => ({...a, sizes:a.sizes.map(z=>({...z}))}))
-        del.lines.forEach(l => { const a=articles.find(x=>x.code===l.code); const z=a&&a.sizes.find(x=>x.talle===l.talle); if(z) z.qty+=l.qty })
+        del.lines.forEach(l => {
+          let a = articles.find(x => x.code === l.code && (!l.ubic || x.ubic === l.ubic))
+          if (!a) a = articles.find(x => x.code === l.code)
+          if (!a) {
+            a = { id: Date.now() + articles.length, code: l.code, name: l.name || l.code, cat: '', ubic: l.ubic || '', sizes: [], photos: [] }
+            articles.push(a)
+          }
+          let z = a.sizes.find(x => x.talle === l.talle)
+          if (!z) { z = { talle: l.talle, qty: 0 }; a.sizes.push(z) }
+          z.qty += l.qty
+        })
         return {...s, articles, deliveries:s.deliveries.filter(d=>d.id!==c.id), movimientos:s.movimientos.filter(m=>m.delId!==c.id)}
       })
       showToast('Entrega eliminada y stock restituido.')
@@ -490,15 +1208,16 @@ export default function App() {
     })
     showToast('Entrega aceptada.')
   }
-  const receptorRechazar = (delId) => {
+  const receptorRechazar = (delId, motivo) => {
     setDb(s => {
       const del = s.deliveries.find(d => d.id === delId); if(!del) return {...s}
       // revert stock
       const articles = s.articles.map(a => ({...a, sizes:a.sizes.map(z=>({...z}))}))
       del.lines.forEach(l => { const a=articles.find(x=>x.code===l.code); const z=a&&a.sizes.find(x=>x.talle===l.talle); if(z) z.qty+=l.qty })
-      const deliveries = s.deliveries.map(d => d.id === delId ? {...d, status:'rechazado', confirmedAt:today()} : d)
+      const deliveries = s.deliveries.map(d => d.id === delId ? {...d, status:'rechazado', confirmedAt:today(), motivoRechazo: motivo||''} : d)
       return {...s, articles, deliveries}
     })
+    setRechazarModal({ delId: null, motivo: '' })
     showToast('Entrega rechazada y stock restituido.')
   }
 
@@ -509,10 +1228,19 @@ export default function App() {
   // Current user role
   const allUsers = db.users
   const currentUser = allUsers.find(u => u.username === session) || null
-  const isReceptor = currentUser?.role === 'receptor'
+  const isReceptor  = currentUser?.role === 'receptor' || currentUser?.role === 'receptor_reposiciones'
+  const isReceptorReposiciones = currentUser?.role === 'receptor_reposiciones'
+  const isSoloVista = currentUser?.role === 'solo-vista'
+
+  // Marcar como vistos los cambios de Reposiciones (rol Receptor + Reposiciones) apenas el admin entra a esa sección
+  useEffect(() => {
+    if (view === 'reposiciones' && currentUser?.role === 'admin' && (db.repoAlertas||[]).length > 0) {
+      setDb(s => ({...s, repoAlertas:[]}))
+    }
+  }, [view, currentUser?.role])
 
   // Receptor users list (for the delivery modal selector)
-  const receptorUsers = allUsers.filter(u => u.role === 'receptor')
+  const receptorUsers = allUsers.filter(u => u.status === 'aprobado')
 
   // KPIs: count unique codes, group by code for category totals
   const byCodeMap = {}
@@ -523,7 +1251,7 @@ export default function App() {
   const catTotal = cat => Object.values(byCodeMap).filter(v => v.cat === cat).reduce((s, v) => s + v.qty, 0)
 
   const kpis = {
-    articulos: new Set(articles.map(a => a.code)).size,
+    articulos: new Set(articles.filter(a => total(a) > 0).map(a => a.code)).size,
     unidades: fmt(articles.reduce((s,a) => s + total(a), 0)),
     valorStock: articles.reduce((s,a) => s + (a.precio||0) * total(a), 0),
     entrenamiento: fmt(catTotal('Entrenamiento')),
@@ -531,11 +1259,14 @@ export default function App() {
     casual: fmt(catTotal('Casual')),
     bajo: articles.filter(isLow).length,
     entregas: deliveries.length,
+    sinFoto: new Set(articles.filter(a => !a.photos?.length && !a.photo).map(a => a.code)).size,
   }
 
-  const q = search.trim().toLowerCase()
-  let filtered = articles.filter(a => cat==='Todas' || a.cat===cat)
-  if(q) filtered = filtered.filter(a => a.name.toLowerCase().includes(q) || a.code.toLowerCase().includes(q) || (a.ubic||'').toLowerCase().includes(q))
+  const normStr = s => s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase()
+  const q = normStr(search.trim())
+  let filtered = articles.filter(a => total(a) > 0 && (cat==='Todas' || a.cat===cat))
+  if(q) filtered = filtered.filter(a => normStr(a.name).includes(q) || normStr(a.code).includes(q) || normStr(a.ubic||'').includes(q))
+  if(filterUbic) filtered = filtered.filter(a => (a.ubic||'') === filterUbic)
 
   const parseUbic = u => {
     if(!u || u==='—') return { n: Infinity, l: '' }
@@ -548,6 +1279,12 @@ export default function App() {
     return ua.l.localeCompare(ub.l)
   })
 
+  const availableUbics = [...new Set(articles.map(a => a.ubic).filter(Boolean))].sort((a,b) => {
+    const pa = parseUbic(a), pb = parseUbic(b)
+    if(pa.n !== pb.n) return pa.n - pb.n
+    return pa.l.localeCompare(pb.l)
+  })
+
   // Group by code for inventory rows
   const groupedCodes = {}
   filtered.forEach(a => {
@@ -558,16 +1295,29 @@ export default function App() {
     const allSizes = g._entries.flatMap(e => e.sizes)
     const tot = allSizes.reduce((s, z) => s + z.qty, 0)
     const low = g._entries.some(e => isLow(e))
-    const ubics = [...new Set(g._entries.map(e => e.ubic).filter(Boolean))].join(' · ')
+    const sortedEntries = [...g._entries].sort((a, b) => {
+      const ua = parseUbic(a.ubic), ub = parseUbic(b.ubic)
+      if(ua.n !== ub.n) return ua.n - ub.n
+      return ua.l.localeCompare(ub.l)
+    })
+    const ubics = [...new Set(sortedEntries.map(e => e.ubic).filter(Boolean))].join(' · ')
+    const entryWithPhoto = g._entries.find(x => x.photos?.length || x.photo)
+    const photos = entryWithPhoto ? (entryWithPhoto.photos?.length ? entryWithPhoto.photos : [entryWithPhoto.photo]) : []
     return {
       ...g,
       totalFmt: fmt(tot),
       sizesLabel: TALLE_ORDER.filter(t => allSizes.some(s => s.talle === t)).join(' · '),
       low,
       ubic: ubics || '—',
+      _firstUbic: sortedEntries[0]?.ubic || '',
       precio: g.precio || 0,
       dupUbic: false,
+      photos,
     }
+  }).sort((a, b) => {
+    const ua = parseUbic(a._firstUbic), ub = parseUbic(b._firstUbic)
+    if(ua.n !== ub.n) return ua.n - ub.n
+    return ua.l.localeCompare(ub.l)
   })
 
   const lowList = articles.filter(isLow).map(a => ({
@@ -576,9 +1326,10 @@ export default function App() {
     tallesBajo:  a.sizes.filter(s => (s.min||0) > 0 && s.qty < s.min).length,
   }))
 
-  // Talles duplicados: mismo código+talle en más de una ubicación
+  // Talles duplicados: mismo código+talle en más de una ubicación, con stock > 0
   const codeTalleCounts = {}
   articles.forEach(a => a.sizes.forEach(s => {
+    if ((s.qty||0) === 0) return
     const k = a.code + ':' + s.talle
     codeTalleCounts[k] = (codeTalleCounts[k]||0)+1
   }))
@@ -589,6 +1340,7 @@ export default function App() {
     const entries = articles.filter(a => a.code === code)
     const talleUbics = {}
     entries.forEach(a => a.sizes.forEach(s => {
+      if ((s.qty||0) === 0) return
       if(!talleUbics[s.talle]) talleUbics[s.talle] = []
       talleUbics[s.talle].push(a.ubic || '—')
     }))
@@ -596,7 +1348,7 @@ export default function App() {
       .filter(([, ubics]) => ubics.length > 1)
       .map(([talle, ubics]) => ({ talle, ubics }))
     return { code, name: entries[0].name, tallesDup }
-  }).filter(d => d.tallesDup.length > 0)
+  }).filter(d => d.tallesDup.length > 0 && !d.name.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().includes('camperon'))
 
   const delEnrich = d => {
     const totalUd = d.lines.reduce((s,l) => s+l.qty, 0)
@@ -605,11 +1357,30 @@ export default function App() {
   }
   const deliveryRows = deliveries.map(delEnrich)
   const deliveryReceptores = [...new Set(deliveries.map(d => d.receptor).filter(Boolean))]
+  const REP_FILTER = 'Reposiciones 1° División'
+  const deliveryReceptoresOrdenados = [
+    ...(deliveryReceptores.includes('1° División') ? ['1° División'] : []),
+    REP_FILTER,
+    ...deliveryReceptores.filter(r => r !== '1° División'),
+  ]
+  const deportesAnexosDisciplinas = [...new Set(deliveries.filter(d => d.receptor==='Deportes Anexos' && d.disciplina).map(d => d.disciplina))].sort()
   const filteredDeliveryRows = deliveryRows
-    .filter(d => !delFilterReceptor || d.receptor === delFilterReceptor)
+    .filter(d => !delFilterReceptor || delFilterReceptor === REP_FILTER || d.receptor === delFilterReceptor)
+    .filter(d => delFilterReceptor !== 'Deportes Anexos' || !delFilterDisciplina || d.disciplina === delFilterDisciplina)
     .filter(d => !delFilterPersona || d.persona.toLowerCase().includes(delFilterPersona.toLowerCase()))
+    .filter(d => delFilterReceptor !== 'Protocolo' || !delFilterPaga || d.paga === delFilterPaga)
+  const repRows = (db.reposiciones||[]).map(r => {
+    const totalCamisetas = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
+    const totalShorts = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
+    const parts = []
+    if (totalCamisetas) parts.push(`${totalCamisetas} camiseta${totalCamisetas!==1?'s':''}`)
+    if (totalShorts) parts.push(`${totalShorts} short${totalShorts!==1?'s':''}`)
+    return { id:r.id, fecha:r.fecha, persona:r.concepto, subLabel:r.torneo||'', ini:ini(r.concepto), resumen:parts.join(' · ')||'—', totalUd:totalCamisetas+totalShorts, creadoPor:r.creadoPor, _rep:r }
+  })
+  const filteredRepRows = repRows.filter(r => !delFilterPersona || r.persona.toLowerCase().includes(delFilterPersona.toLowerCase()))
   const recentDeliveries = deliveries.slice(0,4).map(delEnrich)
   const pendingApprovals = db.users.filter(u => u.status === 'pendiente')
+  const pendingSeparar = deliveries.filter(d => d.status === 'pendiente_separar')
   const pendingDeliveries = deliveries
     .filter(d => d.status === 'pendiente' && d.toUser)
     .map(d => {
@@ -629,10 +1400,448 @@ export default function App() {
   const movFilterKind = (movChipDefs.find(c=>c[0]===movFilter)||[])[1]
   const movRows = movimientos.filter(m => !movFilterKind || movKind(m)===movFilterKind)
 
+  const saveUti = () => {
+    if(!utiForm.numero.trim()) { showToast('Ingresá el número de camiseta.'); return }
+    const ubic = utiForm.utiEstante + utiForm.utiAltura
+    const toSave = {...utiForm, ubic, cantidad: Math.max(1, Number(utiForm.cantidad)||1)}
+    setDb(prev => {
+      const list = prev.camisetasUtileria || []
+      if(utiForm.id !== null) {
+        return {...prev, camisetasUtileria: list.map(c => c.id === utiForm.id ? toSave : c)}
+      } else {
+        const newId = list.length > 0 ? Math.max(...list.map(c => c.id)) + 1 : 1
+        return {...prev, camisetasUtileria: [...list, {...toSave, id: newId}]}
+      }
+    })
+    setUtiModal(false)
+    showToast(utiForm.id !== null ? 'Camiseta actualizada.' : 'Camiseta agregada.')
+  }
+  const deleteUti = (id) => {
+    setDb(prev => ({...prev, camisetasUtileria: (prev.camisetasUtileria||[]).filter(c => c.id !== id)}))
+    showToast('Camiseta eliminada.')
+  }
+
+  const TORNEO_FECHAS = {
+    'APERTURA':     [...Array.from({length:15},(_,i)=>String(i+1)),'Final'],
+    'CLAUSURA':     [...Array.from({length:15},(_,i)=>String(i+1)),'Final'],
+    'INTERMEDIO':   [...Array.from({length:7},(_,i)=>String(i+1)),'Final'],
+    'LIBERTADORES': [...Array.from({length:6},(_,i)=>String(i+1)),'Octavos de Final','Cuartos de Final','Semifinales','Final'],
+    'SUDAMERICANA': [...Array.from({length:6},(_,i)=>String(i+1)),'Dieciseisavos de Final','Cuartos de Final','Semifinales','Final'],
+    'COPA AUF':     Array.from({length:3},(_,i)=>String(i+1)),
+  }
+  const TORNEOS_CON_FECHA = Object.keys(TORNEO_FECHAS)
+  const openRepModal = () => {
+    setRepForm({
+      editId:null,
+      concepto:'',
+      descuento:true,
+      torneo:'APERTURA',
+      fechaTorneo:'1',
+      fechaPartido:'',
+      tipoCamisetaJugador: REP_TIPOS_JUGADOR[0],
+      tipoCamisetaGolero: REP_TIPOS_GOLERO[0],
+      rows:(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j=>({...j,cantCamiseta:'',cantShort:'',descuentoCamiseta:true,descuentoShort:true}))
+    })
+    setRepModal(true)
+  }
+  const openRepEdit = (rep) => {
+    const plantelRows = (db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => {
+      const ex = (rep.jugadores||[]).find(jj => jj.nombre===j.nombre)
+      const descFallback = ex ? ex.descuento !== false : true
+      return { ...j, cantCamiseta: ex ? String(ex.cantCamiseta) : '', cantShort: ex ? String(ex.cantShort) : '',
+        descuentoCamiseta: ex ? (ex.descuentoCamiseta !== undefined ? ex.descuentoCamiseta !== false : descFallback) : true,
+        descuentoShort: ex ? (ex.descuentoShort !== undefined ? ex.descuentoShort !== false : descFallback) : true }
+    })
+    setRepForm({
+      editId: rep.id,
+      concepto: rep.concepto,
+      descuento: rep.descuento !== false,
+      torneo: rep.torneo || 'APERTURA',
+      fechaTorneo: rep.fechaTorneo != null ? String(rep.fechaTorneo) : '1',
+      fechaPartido: rep.fechaPartido || '',
+      tipoCamisetaJugador: rep.tipoCamisetaJugador || REP_TIPOS_JUGADOR[0],
+      tipoCamisetaGolero: rep.tipoCamisetaGolero || REP_TIPOS_GOLERO[0],
+      rows: plantelRows
+    })
+    setRepDetail(null)
+    setRepModal(true)
+  }
+  const saveReposicion = () => {
+    if (!repForm.concepto.trim()) { showToast('Ingresá el concepto.'); return }
+    const jugadores = repForm.rows
+      .filter(r => Number(r.cantCamiseta)>0 || Number(r.cantShort)>0)
+      .map(r => {
+        const tipo = (r.posicion||'Jugador')==='Golero' ? repForm.tipoCamisetaGolero : repForm.tipoCamisetaJugador
+        return { numero:r.numero, nombre:r.nombre, posicion:r.posicion||'Jugador',
+          talleCamiseta:r.talleCamiseta, talleShort:r.talleShort,
+          descuentoCamiseta:r.descuentoCamiseta !== false, descuentoShort:r.descuentoShort !== false,
+          tipoCamiseta: tipo, cantCamiseta:Number(r.cantCamiseta)||0, cantShort:Number(r.cantShort)||0 }
+      })
+    if (!jugadores.length) { showToast('Ingresá al menos una cantidad.'); return }
+    const tieneFecha = TORNEOS_CON_FECHA.includes(repForm.torneo)
+    const notifica = currentUser?.role === 'receptor_reposiciones'
+    const pushAlerta = (s, tipo, concepto, detalle) => notifica
+      ? [{id:Date.now(), tipo, concepto, detalle, por:currentUser?.displayName||session, fecha:today()}, ...(s.repoAlertas||[])]
+      : (s.repoAlertas||[])
+    if (repForm.editId) {
+      setDb(s => {
+        const oldRep = (s.reposiciones||[]).find(r => r.id === repForm.editId)
+        const cambios = []
+        if (oldRep && oldRep.concepto !== repForm.concepto.trim()) cambios.push('cambió el nombre')
+        if (oldRep && oldRep.torneo !== repForm.torneo) cambios.push(`cambió el torneo a ${repForm.torneo}`)
+        if (oldRep) {
+          const diffCount = jugadores.filter(j => {
+            const old = (oldRep.jugadores||[]).find(x => x.nombre === j.nombre)
+            return !old || old.cantCamiseta !== j.cantCamiseta || old.cantShort !== j.cantShort
+          }).length + (oldRep.jugadores||[]).filter(j => !jugadores.find(x => x.nombre === j.nombre)).length
+          if (diffCount > 0) cambios.push(`modificó cantidades de ${diffCount} jugador${diffCount !== 1 ? 'es' : ''}`)
+        }
+        const detalle = cambios.length > 0 ? cambios.join(', ') : null
+        return {
+          ...s,
+          reposiciones: (s.reposiciones||[]).map(r => r.id===repForm.editId
+            ? {...r, concepto:repForm.concepto.trim(), torneo:repForm.torneo, descuento:repForm.descuento,
+                fechaTorneo: tieneFecha ? (repForm.fechaTorneo === 'Final' ? 'Final' : Number(repForm.fechaTorneo)) : null,
+                fechaPartido: repForm.fechaPartido||null,
+                tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores}
+            : r),
+          repoAlertas: pushAlerta(s, 'editar', repForm.concepto.trim(), detalle)
+        }
+      })
+      showToast('Reposición actualizada.')
+    } else {
+      setDb(s => {
+        const rep = { id:s.nextRep, fecha:today(), concepto:repForm.concepto.trim(), creadoPor:currentUser?.displayName||session,
+          torneo:repForm.torneo, fechaTorneo: tieneFecha ? (repForm.fechaTorneo === 'Final' ? 'Final' : Number(repForm.fechaTorneo)) : null, descuento:repForm.descuento,
+          fechaPartido: repForm.fechaPartido||null,
+          tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores }
+        return { ...s, reposiciones:[rep,...(s.reposiciones||[])], nextRep:s.nextRep+1, repoAlertas: pushAlerta(s, 'crear', rep.concepto, null) }
+      })
+      showToast('Reposición registrada.')
+    }
+    setRepModal(false)
+  }
+  const deleteReposicion = (id) => {
+    setDb(s => {
+      const rep = (s.reposiciones||[]).find(r=>r.id===id)
+      const repoAlertas = currentUser?.role === 'receptor_reposiciones' && rep
+        ? [{id:Date.now(), tipo:'eliminar', concepto:rep.concepto, detalle:null, por:currentUser?.displayName||session, fecha:today()}, ...(s.repoAlertas||[])]
+        : (s.repoAlertas||[])
+      return {...s, reposiciones:(s.reposiciones||[]).filter(r=>r.id!==id), repoAlertas}
+    })
+    setRepDetail(null)
+    showToast('Reposición eliminada.')
+  }
+  const exportRepToExcel = async (rep) => {
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet(rep.concepto.slice(0,31))
+    ws.columns = [
+      {width:8.5},{width:17.625},{width:9.25},{width:10.25},{width:6.5},{width:9.75}
+    ]
+    const YELLOW    = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
+    const FILL_WHT  = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFFFF'}}
+    const FILL_GRAY = {type:'pattern',pattern:'solid',fgColor:{argb:'FFD0D0D0'}}
+    const FILL_ORAN = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFE5CC'}}
+    const FILL_CREM = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFF8E8'}}
+    const F_BOLD    = {name:'Calibri',size:11,bold:true}
+    const F_NORM    = {name:'Calibri',size:11}
+    const CENTER    = {horizontal:'center',vertical:'middle'}
+    const BORDER    = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
+    const style = (cell,fill,font) => { cell.fill=fill; cell.font=font; cell.alignment=CENTER; cell.border=BORDER }
+    const goleroFill = (j) => {
+      if (j.posicion !== 'Golero') return FILL_WHT
+      if (j.tipoCamiseta === 'NEGRO')   return FILL_GRAY
+      if (j.tipoCamiseta === 'NARANJA') return FILL_ORAN
+      if (j.tipoCamiseta === 'CREMA')   return FILL_CREM
+      return FILL_WHT
+    }
+
+    // Fila 1: concepto - torneo fecha
+    ws.mergeCells('A1:F1')
+    const titulo = [rep.concepto.toUpperCase(), rep.torneo?(rep.torneo+(rep.fechaTorneo?(rep.fechaTorneo==='Final'||rep.fechaTorneo==='NaN'||Number.isNaN(rep.fechaTorneo)?' FINAL':' FECHA '+rep.fechaTorneo):'')):null].filter(Boolean).join(' - ')
+    style(ws.getCell('A1'), YELLOW, F_BOLD); ws.getCell('A1').value = titulo; ws.getRow(1).height = 20
+
+    // Fila 2: equipo tipo jugador / golero
+    ws.mergeCells('A2:F2')
+    const equipo = ['EQUIPO',rep.tipoCamisetaJugador||'','GOLERO',rep.tipoCamisetaGolero||''].join(' ').replace(/\s+/g,' ').trim()
+    style(ws.getCell('A2'), YELLOW, F_BOLD); ws.getCell('A2').value = equipo; ws.getRow(2).height = 20
+
+    // Fila 3: headers
+    ;['NÚMERO','NOMBRE','CAMISETA','CANTIDAD','SHORT','CANTIDAD'].forEach((h,i) => {
+      const c = ws.getRow(3).getCell(i+1); style(c, YELLOW, F_BOLD); c.value = h
+    })
+    ws.getRow(3).height = 20
+
+    // Filas de jugadores
+    ;(rep.jugadores||[]).forEach((j,idx) => {
+      const r = ws.getRow(idx+4)
+      r.height = 18
+      const fill = goleroFill(j)
+      ;[j.numero||'—', j.nombre||'—', j.talleCamiseta||'—', Number(j.cantCamiseta)||0, j.talleShort||'—', Number(j.cantShort)||0].forEach((v,i) => {
+        const c = r.getCell(i+1); style(c, fill, F_NORM); c.value = v
+      })
+    })
+
+    // Fila TOTAL
+    const totN = (rep.jugadores||[]).length + 4
+    const totCam = (rep.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
+    const totSht = (rep.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
+    ws.mergeCells(`A${totN}:B${totN}`)
+    ws.getRow(totN).height = 20
+    ;[[1,'TOTAL'],[3,''],[4,totCam],[5,''],[6,totSht]].forEach(([col,val]) => {
+      const c = ws.getRow(totN).getCell(col); style(c, YELLOW, F_BOLD); c.value = val
+    })
+
+    // Descargar
+    const buf = await wb.xlsx.writeBuffer()
+    const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href=url; a.download=`${rep.concepto.replace(/[\\/:*?"<>|]/g,'-')}.xlsx`; a.click()
+    URL.revokeObjectURL(url)
+  }
+  const printRemito = (rep) => {
+    const jugadores = (rep.jugadores||[]).filter(j => Number(j.cantCamiseta)>0 || Number(j.cantShort)>0)
+    const totCam = jugadores.reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
+    const totSht = jugadores.reduce((s,j)=>s+(Number(j.cantShort)||0),0)
+    const torneo = [rep.torneo, rep.fechaTorneo!=null&&rep.fechaTorneo!=='' ? (rep.fechaTorneo==='Final'||rep.fechaTorneo==='NaN'||Number.isNaN(rep.fechaTorneo)?'Final':'Fecha '+rep.fechaTorneo) : null].filter(Boolean).join(' · ')
+    const rows = jugadores.map((j,i) => {
+      const isGolero = j.posicion==='Golero'
+      const bg = isGolero ? '#e8f5e9' : (i%2===0 ? '#ffffff' : '#f9f9f7')
+      return `<tr style="background:${bg}">
+        <td style="text-align:center;font-weight:700">${j.numero||'—'}</td>
+        <td style="font-weight:600">${j.nombre||'—'}</td>
+        <td style="text-align:center;color:#666;font-size:11px">${j.posicion||'Jugador'}</td>
+        <td style="text-align:center">${j.tipoCamiseta||'—'}</td>
+        <td style="text-align:center">${j.talleCamiseta||'—'}</td>
+        <td style="text-align:center;font-weight:700;font-size:15px">${Number(j.cantCamiseta)||0}</td>
+        <td style="text-align:center">${j.talleShort||'—'}</td>
+        <td style="text-align:center;font-weight:700;font-size:15px">${Number(j.cantShort)||0}</td>
+      </tr>`
+    }).join('')
+    const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<title>Remito · ${rep.concepto}</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Calibri,Arial,sans-serif;font-size:13px;color:#111;background:#fff;padding:36px 40px 80px}
+.no-print{text-align:right;margin-bottom:20px}
+.no-print button{background:#121212;color:#f2cb12;border:none;padding:10px 24px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.04em}
+.header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:14px;margin-bottom:22px}
+.logo{display:flex;align-items:center;gap:14px}
+.logo img{height:64px;width:auto}
+.logo-text-name{font-family:'Oswald',Arial,sans-serif;font-size:20px;font-weight:700;letter-spacing:.06em;color:#111;text-transform:uppercase;line-height:1.1;-webkit-text-stroke:.4px #111}
+.logo-text-sub{font-family:'Oswald',Arial,sans-serif;font-size:11px;font-weight:400;letter-spacing:.14em;color:#555;text-transform:uppercase;margin-top:5px}
+.doc-footer{position:fixed;bottom:0;left:0;right:0;padding:14px 24px;border-top:1px solid #ddd;display:flex;justify-content:center;background:#fff}
+.doc-info{text-align:right}
+.doc-title{font-size:18px;font-weight:700;letter-spacing:.04em}
+.doc-date{font-size:11px;color:#666;margin-top:3px}
+.info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px;padding:14px 16px;background:#fafaf7;border:1px solid #e0e0dc;border-radius:8px}
+.info-item label{display:block;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#888;margin-bottom:2px}
+.info-item span{font-size:13px;font-weight:600}
+table{width:100%;border-collapse:collapse;margin-bottom:12px}
+thead tr{background:#121212}
+thead th{padding:9px 12px;text-align:left;color:#f2cb12;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+tbody tr:hover{background:#fffbea!important}
+tbody td{padding:9px 12px;border-bottom:1px solid #eeeeea}
+tfoot tr{background:#f2cb12}
+tfoot td{padding:9px 12px;font-weight:700}
+.totals-note{font-size:11.5px;color:#666;margin-bottom:36px;text-align:right}
+.sigs{display:grid;grid-template-columns:1fr 1fr;gap:60px;margin-top:48px}
+.sig{border-top:1.5px solid #333;padding-top:8px;text-align:center}
+.sig-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.sig-sub{font-size:10px;color:#888;margin-top:2px}
+@media print{.no-print{display:none}body{padding:16px 20px 80px}}
+</style></head><body>
+<div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
+<div class="header">
+  <div class="logo">
+    <img src="${window.location.origin}/escudo_blanco.png" alt="CAP">
+    <div>
+      <div class="logo-text-name">CLUB ATLÉTICO PEÑAROL</div>
+      <div class="logo-text-sub">Entregas de indumentaria</div>
+    </div>
+  </div>
+  <div class="doc-info">
+    <div class="doc-title" style="font-family:'Oswald',Arial,sans-serif;font-size:18px;font-weight:600;letter-spacing:.04em;">REMITO DE ENVÍO</div>
+    <div class="doc-date">Fecha de ingreso: ${rep.fecha||'—'}${rep.fechaPartido?' · Fecha partido: '+rep.fechaPartido:''}</div>
+  </div>
+</div>
+<div class="info-grid">
+  <div class="info-item" style="grid-column:1/3"><label>Concepto</label><span>${rep.concepto||'—'}</span></div>
+  <div class="info-item"><label>Torneo</label><span>${torneo||'—'}</span></div>
+  ${rep.tipoCamisetaJugador?`<div class="info-item"><label>Equipo Jugadores</label><span>${rep.tipoCamisetaJugador}</span></div>`:'<div></div>'}
+  ${rep.tipoCamisetaGolero?`<div class="info-item"><label>Equipo Goleros</label><span>${rep.tipoCamisetaGolero}</span></div>`:'<div></div>'}
+</div>
+<table>
+  <thead><tr>
+    <th>Nº</th><th>Nombre</th><th>Posición</th><th>Tipo Camiseta</th>
+    <th>Talle Cam.</th><th style="text-align:center">Camisetas</th>
+    <th>Talle Short</th><th style="text-align:center">Shorts</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+  <tfoot><tr>
+    <td colspan="5" style="text-align:right">TOTAL</td>
+    <td style="text-align:center;font-size:15px">${totCam}</td>
+    <td></td>
+    <td style="text-align:center;font-size:15px">${totSht}</td>
+  </tr></tfoot>
+</table>
+<div class="totals-note">${totCam+totSht} prenda${totCam+totSht!==1?'s':''} en total &nbsp;·&nbsp; ${totCam} camiseta${totCam!==1?'s':''} &nbsp;·&nbsp; ${totSht} short${totSht!==1?'s':''}</div>
+<div class="sigs">
+  <div class="sig"><div class="sig-label">Entregado por</div><div class="sig-sub">Firma y aclaración</div></div>
+  <div class="sig"><div class="sig-label">Recibido por</div><div class="sig-sub">Firma y aclaración</div></div>
+</div>
+<div class="doc-footer">
+  <img src="${window.location.origin}/logo_horizontal.png" style="height:36px;width:auto;" alt="Club Atlético Peñarol">
+</div>
+</body></html>`
+    const win = window.open('','_blank')
+    if (win) { win.document.write(html); win.document.close() }
+  }
+
+  const saveDisciplinaEdit = (deliveryId) => {
+    if (!disciplinaEdit?.trim()) { showToast('Ingresá la disciplina.'); return }
+    setDb(s => ({...s, deliveries:s.deliveries.map(d=>d.id===deliveryId?{...d,disciplina:disciplinaEdit.trim()}:d)}))
+    setDisciplinaEdit(null)
+    showToast('Disciplina actualizada.')
+  }
+  const saveEditDelivery = () => {
+    if (!editDelivery?.persona?.trim()) { showToast('El nombre no puede estar vacío.'); return }
+    const capturedLines = (editDelivery.lines || []).filter(l => l.qty > 0)
+    if (capturedLines.length === 0) { showToast('La entrega debe tener al menos un artículo.'); return }
+    const delId = editDelivery.id
+    const { receptor, persona, fecha, paga, obs } = editDelivery
+    const currentDel = db.deliveries.find(d => d.id === delId)
+    if (!currentDel) { showToast('Error: entrega no encontrada. Recargá la página.'); return }
+    const findArt = (arts, code, ubic) => {
+      let a = arts.find(x => String(x.code) === String(code) && (!ubic || String(x.ubic) === String(ubic)))
+      if (!a) a = arts.find(x => String(x.code) === String(code))
+      return a
+    }
+    const articles = db.articles.map(a => ({...a, sizes: a.sizes.map(z => ({...z}))}))
+    // Paso 1: restaurar stock de la entrega original
+    currentDel.lines.forEach(l => {
+      const a = findArt(articles, l.code, l.ubic)
+      if (!a) return
+      let z = a.sizes.find(x => x.talle === l.talle)
+      if (!z) { z = {talle: l.talle, qty: 0}; a.sizes.push(z) }
+      z.qty += l.qty
+    })
+    // Paso 2: descontar las cantidades nuevas
+    capturedLines.forEach(l => {
+      const a = findArt(articles, l.code, l.ubic)
+      if (!a) return
+      let z = a.sizes.find(x => x.talle === l.talle)
+      if (!z) { z = {talle: l.talle, qty: 0}; a.sizes.push(z) }
+      z.qty = Math.max(0, z.qty - l.qty)
+    })
+    const updatedPaga = receptor === 'Protocolo' ? paga : null
+    const updatedMonto = receptor === 'Protocolo' && paga === 'si'
+      ? capturedLines.reduce((sum, l) => { const art = findArt(articles, l.code, l.ubic); return sum + (art?.precio||0) * l.qty }, 0) * 0.5
+      : null
+    const newDb = {
+      ...db,
+      articles,
+      deliveries: db.deliveries.map(d => {
+        if (d.id !== delId) return d
+        return {...d, receptor, persona:persona.trim(), fecha, paga:updatedPaga, monto:updatedMonto, obs:obs?.trim()||undefined, lines:capturedLines}
+      })
+    }
+    setDb(newDb)
+    saveToSupabase(newDb)
+    setEditDelivery(null)
+    showToast('Entrega actualizada.')
+  }
+  const saveRepConcepto = () => {
+    if (!repConceptoEdit?.trim()) { showToast('El concepto no puede estar vacío.'); return }
+    const nuevoConcepto = repConceptoEdit.trim()
+    setDb(s => {
+      const oldRep = (s.reposiciones||[]).find(r=>r.id===repDetail.id)
+      const repoAlertas = currentUser?.role === 'receptor_reposiciones' && oldRep && oldRep.concepto !== nuevoConcepto
+        ? [{id:Date.now(), tipo:'editar', concepto:nuevoConcepto, detalle:`cambió el nombre de «${oldRep.concepto}» a «${nuevoConcepto}»`, por:currentUser?.displayName||session, fecha:today()}, ...(s.repoAlertas||[])]
+        : (s.repoAlertas||[])
+      return {...s, reposiciones:(s.reposiciones||[]).map(r=>r.id===repDetail.id?{...r,concepto:nuevoConcepto}:r), repoAlertas}
+    })
+    setRepDetail(p => ({...p, concepto:nuevoConcepto}))
+    setRepConceptoEdit(null)
+    showToast('Concepto actualizado.')
+  }
+  const saveDescExtra = () => {
+    if (!descExtraForm.jugadorNombre) { showToast('Seleccioná un jugador.'); return }
+    const fecha = descExtraForm.fecha || today()
+    if (descExtraForm.id) {
+      if (!descExtraForm.articulo) { showToast('Seleccioná una prenda.'); return }
+      setDb(s => ({...s, descExtras:(s.descExtras||[]).map(e=>e.id===descExtraForm.id?{...descExtraForm,fecha}:e)}))
+      showToast('Descuento actualizado.')
+    } else {
+      const validas = (descExtraForm.prendas||[]).filter(p=>p.articulo&&p.precio>0)
+      if (!validas.length) { showToast('Seleccioná al menos una prenda.'); return }
+      const base = Date.now()
+      const nuevos = validas.map((p,i)=>({id:base+i,fecha,jugadorNombre:descExtraForm.jugadorNombre,jugadorNumero:descExtraForm.jugadorNumero,articulo:p.articulo,precio:p.precio,cantidad:p.cantidad||1}))
+      setDb(s => ({...s, descExtras:[...(s.descExtras||[]), ...nuevos]}))
+      showToast(nuevos.length>1?`${nuevos.length} descuentos registrados.`:'Descuento adicional registrado.')
+    }
+    setDescExtraModal(false)
+  }
+  const deleteDescExtra = (id) => {
+    setDb(s => ({...s, descExtras:(s.descExtras||[]).filter(e=>e.id!==id)}))
+    showToast('Descuento eliminado.')
+  }
+  const savePlantelJugador = () => {
+    if (!plantelForm.nombre.trim()) { showToast('Ingresá el nombre del jugador.'); return }
+    setDb(s => {
+      const list = s.plantel || []
+      if (plantelForm.id !== null) {
+        return {...s, plantel:list.map(j=>j.id===plantelForm.id?{...plantelForm}:j)}
+      }
+      const newId = list.length > 0 ? Math.max(...list.map(j=>j.id))+1 : 1
+      return {...s, plantel:[...list, {...plantelForm, id:newId}]}
+    })
+    setPlantelModal(false)
+    showToast(plantelForm.id!==null ? 'Jugador actualizado.' : 'Jugador agregado al plantel.')
+  }
+  const mergeEntriesByUbic = (code, ubic) => {
+    setDb(s => {
+      const toMerge = s.articles.filter(a => a.code === code && a.ubic === ubic)
+      if (toMerge.length < 2) return s
+      const keeper = toMerge[0]
+      const mergedSizes = TALLE_ORDER.map(t => {
+        const qty = toMerge.reduce((sum, a) => sum + (a.sizes.find(z => z.talle === t)?.qty || 0), 0)
+        const min = Math.max(...toMerge.map(a => a.sizes.find(z => z.talle === t)?.min || 0))
+        return { talle: t, qty, min }
+      }).filter(s => toMerge.some(a => a.sizes.find(z => z.talle === s.talle)))
+      const photos = (() => { const e = toMerge.find(x => x.photos?.length || x.photo); return e ? (e.photos?.length ? e.photos : [e.photo]) : [] })()
+      const removeIds = new Set(toMerge.slice(1).map(a => a.id))
+      return {
+        ...s,
+        articles: s.articles
+          .filter(a => !removeIds.has(a.id))
+          .map(a => a.id === keeper.id ? { ...a, sizes: mergedSizes, photos } : a)
+      }
+    })
+    showToast('Registros unificados.')
+  }
+  const deletePlantelJugador = (id) => {
+    setDb(s => ({...s, plantel:(s.plantel||[]).filter(j=>j.id!==id)}))
+    showToast('Jugador eliminado.')
+  }
+  const utiFiltered = (db.camisetasUtileria || []).filter(c =>
+    (!utiFilter      || c.competicion === utiFilter) &&
+    (!utiFilterJugador || (c.jugador||'').toLowerCase().includes(utiFilterJugador.trim().toLowerCase())) &&
+    (!utiFilterTipo  || c.tipo === utiFilterTipo) &&
+    (!utiFilterTemp  || c.temporada === utiFilterTemp) &&
+    (!utiFilterModelo|| c.modelo === utiFilterModelo) &&
+    (!utiFilterUbic  || c.ubic === utiFilterUbic)
+  )
+
   const receptorCards = RECEPTORES.map(name => {
-    const ds = deliveries.filter(d => d.receptor===name)
+    const ds = deliveries.filter(d => d.receptor===name && d.status !== 'pendiente_separar')
     const unidades = ds.reduce((s,d) => s+d.lines.reduce((x,l)=>x+l.qty,0),0)
-    return { name, ini:ini(name), count:ds.length, unidades }
+    const monto = ds.reduce((s,d) => s+d.lines.reduce((x,l)=>{
+      const art = articles.find(a=>a.code===l.code)
+      return x+(art?.precio||0)*l.qty
+    },0),0)
+    return { name, ini:ini(name), count:ds.length, unidades, monto }
   })
 
   // selA: for modals that operate on a specific entry (selectedId)
@@ -666,19 +1875,26 @@ export default function App() {
       ubic: selEntries.map(e => e.ubic || '—').join(' · '),
       movs,
       noMovs: movs.length === 0,
+      photos: (() => { const e = selEntries.find(x => x.photos?.length || x.photo); return e ? (e.photos?.length ? e.photos : [e.photo]) : [] })(),
     }
   }
 
   // nd derived
-  const ndA = byCode(nd.cCode)
-  const ndTalleOptions = ndA ? ndA.sizes.map(s => ({value:s.talle, label:s.talle+' ('+s.qty+' disp.)'})) : []
+  const ndUbics = nd.cCode ? [...new Set(db.articles.filter(a => a.code === nd.cCode).map(a => a.ubic).filter(Boolean))] : []
+  const ndHasMultiUbic = ndUbics.length > 1
+  const effectiveUbic = nd.cUbic || (ndUbics.length === 1 ? ndUbics[0] : '')
+  const ndArts = nd.cCode ? db.articles.filter(a => a.code === nd.cCode && (!effectiveUbic || a.ubic === effectiveUbic)) : []
+  const ndA = ndArts[0] || null
+  const ndTalleOptions = ndArts.length > 0
+    ? TALLE_ORDER.map(t => ({ value:t, qty: ndArts.reduce((s,a) => s+(a.sizes.find(z=>z.talle===t)?.qty||0), 0) })).filter(s=>s.qty>0).map(s=>({value:s.value,label:s.value+' ('+s.qty+' disp.)'}))
+    : []
   let stockHint = ''
-  if(nd.cCode && nd.cTalle && ndA) { const z=ndA.sizes.find(s=>s.talle===nd.cTalle); if(z) stockHint='Disponible: '+z.qty+' u. en talle '+nd.cTalle }
+  if(nd.cCode && nd.cTalle && ndArts.length > 0) { const qty=ndArts.reduce((s,a)=>s+(a.sizes.find(z=>z.talle===nd.cTalle)?.qty||0),0); if(qty>0) stockHint='Disponible: '+qty+' u. en talle '+nd.cTalle+(effectiveUbic?' · Ubic. '+effectiveUbic:'') }
   const ndTotal = nd.lines.reduce((s,l) => s+l.qty, 0)
   const ndMonto = nd.receptor === 'Protocolo' && nd.paga === 'si'
     ? nd.lines.reduce((s,l) => { const art=articles.find(a=>a.code===l.code); return s+(art?.precio||0)*l.qty }, 0) * 0.5
     : 0
-  const ndOk = nd.persona && nd.persona.trim() && nd.receptor && nd.lines.length > 0
+  const ndOk = nd.persona && nd.persona.trim() && nd.receptor && nd.lines.length > 0 && (nd.receptor !== 'Deportes Anexos' || nd.disciplina.trim())
 
   const repTalleOptions = selA ? selA.sizes.map(s => ({value:s.talle, label:s.talle})) : []
   const ajTalleOptions = selA ? selA.sizes.map(s => ({value:s.talle, label:s.talle+' (sistema: '+s.qty+')'})) : []
@@ -690,14 +1906,14 @@ export default function App() {
       <div style={{background:'#1a1a1a',borderRadius:12,padding:'36px 32px',width:'100%',maxWidth:420,boxShadow:'0 20px 60px rgba(0,0,0,.5)'}}>
         <div style={{display:'flex',flexDirection:'column',alignItems:'center',marginBottom:28}}>
           <img src="/escudo.png" alt="Peñarol" style={{height:56,marginBottom:14}} />
-          <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:18,color:'#FFD200',letterSpacing:'.05em'}}>INDUMENTARIA PEÑAROL</div>
+          <div style={{fontFamily:'Oswald,sans-serif',fontSize:18,color:'#f2cb12',letterSpacing:'.05em'}}>INDUMENTARIA PEÑAROL</div>
         </div>
 
         {/* Tabs login / registro — oculto en vistas auxiliares */}
         {(loginView === 'login' || loginView === 'register') && (
           <div style={{display:'flex',borderBottom:'1px solid #2a2a2a',marginBottom:24}}>
             {[['login','Ingresar'],['register','Registrarse']].map(([v,label]) => (
-              <button key={v} onClick={()=>setLoginView(v)} style={{flex:1,padding:'10px 0',background:'none',border:'none',cursor:'pointer',fontWeight:700,fontSize:13,color:loginView===v?'#FFD200':'#8a8a82',borderBottom:loginView===v?'2px solid #FFD200':'2px solid transparent',transition:'all .15s'}}>
+              <button key={v} onClick={()=>setLoginView(v)} style={{flex:1,padding:'10px 0',background:'none',border:'none',cursor:'pointer',fontWeight:700,fontSize:13,color:loginView===v?'#f2cb12':'#8a8a82',borderBottom:loginView===v?'2px solid #f2cb12':'2px solid transparent',transition:'all .15s'}}>
                 {label}
               </button>
             ))}
@@ -755,7 +1971,7 @@ export default function App() {
               <label className="field-label" style={{color:'#8a8a82'}}>CORREO ELECTRÓNICO</label>
               <input className="field-input" type="email" value={regForm.email} onChange={e=>setRegForm(p=>({...p,email:e.target.value,err:''}))} placeholder="correo@ejemplo.com" autoComplete="email" />
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+            <div className="form-cols-2">
               <div className="form-group">
                 <label className="field-label" style={{color:'#8a8a82'}}>TELÉFONO</label>
                 <input className="field-input" type="tel" value={regForm.telefono} onChange={e=>setRegForm(p=>({...p,telefono:e.target.value,err:''}))} placeholder="09X XXX XXX" />
@@ -768,21 +1984,25 @@ export default function App() {
                 </select>
               </div>
             </div>
+            {!CARGOS_SIN_SECTOR.includes(regForm.cargo) && (
             <div className="form-group">
               <label className="field-label" style={{color:'#8a8a82'}}>SECTOR</label>
-              <select className="field-input" value={regForm.categoria} onChange={e=>setRegForm(p=>({...p,categoria:e.target.value,err:''}))}>
+              <select className="field-input" value={regForm.categoria} onChange={e=>setRegForm(p=>({...p,categoria:e.target.value,division:'',err:''}))}>
                 <option value="">Seleccioná tu sector…</option>
                 {OCUPACIONES.map(o => <option key={o} value={o}>{o}</option>)}
               </select>
             </div>
-            <div className="form-group">
-              <label className="field-label" style={{color:'#8a8a82'}}>DIVISIÓN</label>
-              <select className="field-input" value={regForm.division} onChange={e=>setRegForm(p=>({...p,division:e.target.value,err:''}))}>
-                <option value="">Seleccioná tu división…</option>
-                {DIVISIONES.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
-            </div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+            )}
+            {!CARGOS_SIN_SECTOR.includes(regForm.cargo) && ['Juveniles','Juveniles Femenino'].includes(regForm.categoria) && regForm.cargo !== 'Coordinación' && (
+              <div className="form-group">
+                <label className="field-label" style={{color:'#8a8a82'}}>DIVISIÓN</label>
+                <select className="field-input" value={regForm.division} onChange={e=>setRegForm(p=>({...p,division:e.target.value,err:''}))}>
+                  <option value="">Seleccioná tu división…</option>
+                  {(regForm.categoria === 'Juveniles Femenino' ? DIVISIONES_FEM : DIVISIONES).map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+            )}
+            <div className="form-cols-2">
               <div className="form-group">
                 <label className="field-label" style={{color:'#8a8a82'}}>CONTRASEÑA</label>
                 <input className="field-input" type="password" value={regForm.pass} onChange={e=>setRegForm(p=>({...p,pass:e.target.value,err:''}))} placeholder="Mín. 6 caracteres" />
@@ -814,7 +2034,7 @@ export default function App() {
   if (loading) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',flexDirection:'column',gap:16,background:'#121212'}}>
       <img src="/escudo.png" alt="Peñarol" style={{height:64,opacity:.9}} />
-      <div style={{color:'#FFD200',fontFamily:'Archivo Black,sans-serif',fontSize:14,letterSpacing:'.1em'}}>CARGANDO…</div>
+      <div style={{color:'#f2cb12',fontFamily:'Oswald,sans-serif',fontSize:14,letterSpacing:'.1em'}}>CARGANDO…</div>
     </div>
   )
 
@@ -825,29 +2045,193 @@ export default function App() {
     const historial  = myDeliveries.filter(d => (d.status||'aceptado') !== 'pendiente')
     const rCodeName  = db.articles.reduce((acc, a) => { acc[a.code] = a.name; return acc }, {})
     return (
-      <div style={{minHeight:'100dvh',background:'#F6F6F4',fontFamily:'Archivo,sans-serif'}}>
-        {/* Header */}
-        <div style={{background:'#121212',padding:'18px 24px',display:'flex',alignItems:'center',gap:16}}>
-          <img src="/escudo.png" alt="Peñarol" style={{height:44}} />
-          <div style={{flex:1}}>
-            <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:14,color:'#FFD200',letterSpacing:'.05em'}}>DEPÓSITO · INDUMENTARIA</div>
-            <div style={{fontSize:13,color:'#fff',marginTop:2}}>Hola, <b>{currentUser?.displayName || session}</b></div>
-          </div>
-          <button onClick={doLogout} style={{background:'#2a2a2a',border:'1px solid #3a3a3a',color:'#ccc',borderRadius:8,padding:'8px 14px',cursor:'pointer',fontSize:13}}>Cerrar sesión</button>
-        </div>
+      <div className="app-shell">
+        <div className={`mobile-overlay${sidebarOpen?' open':''}`} onClick={() => setSidebarOpen(false)} />
 
-        <div style={{maxWidth:680,margin:'0 auto',padding:'28px 16px',display:'flex',flexDirection:'column',gap:28}}>
+        <aside className={`sidebar${sidebarOpen?' open':''}`}>
+          <div className="sidebar-logo">
+            <img src="/escudo_marca.png" alt="Club Atlético Peñarol" />
+            <div className="sidebar-logo-text">
+              <div className="name">CLUB ATLÉTICO PEÑAROL</div>
+              <div className="sub">INDUMENTARIA</div>
+            </div>
+          </div>
+          <nav className="sidebar-nav">
+            <button className={`nav-item${receptorTab==='entregas'?' active':''}`} onClick={() => { setReceptorTab('entregas'); setSidebarOpen(false) }}>
+              <span className="nav-dot" />MIS ENTREGAS
+            </button>
+            {isReceptorReposiciones && (
+              <button className={`nav-item${receptorTab==='reposiciones'?' active':''}`} onClick={() => { setReceptorTab('reposiciones'); setSidebarOpen(false) }}>
+                <span className="nav-dot" />REPOSICIONES
+              </button>
+            )}
+            {isReceptorReposiciones && (
+              <button className={`nav-item${receptorTab==='extras'?' active':''}`} onClick={() => { setReceptorTab('extras'); setSidebarOpen(false) }}>
+                <span className="nav-dot" />DESC. EXTRAS{(db.descExtras||[]).length>0?` (${(db.descExtras||[]).length})`:''}
+              </button>
+            )}
+            <button className={`nav-item${receptorTab==='plantel'?' active':''}`} onClick={() => { setReceptorTab('plantel'); setSidebarOpen(false) }}>
+              <span className="nav-dot" />PLANTEL
+            </button>
+          </nav>
+          <div style={{flex:1}} />
+          <div className="sidebar-user" style={{flexDirection:'column',gap:10}}>
+            <div style={{display:'flex',alignItems:'center',gap:11,minWidth:0}}>
+              <div className="user-avatar">{ini(currentUser?.displayName||session||'')}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div className="user-name" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{currentUser?.displayName||session}</div>
+                <div className="user-role">{ROLE_LABELS[currentUser?.role]||currentUser?.role}</div>
+              </div>
+            </div>
+            <div style={{display:'flex',justifyContent:'flex-end',gap:2}}>
+              <button title="Sincronizar" onClick={() => saveToSupabase(db).then(ok => showToast(ok ? 'Datos sincronizados.' : 'Error al sincronizar.'))} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 6px'}}>↺</button>
+              <button title="Cerrar sesión" onClick={doLogout} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 6px'}}>⏻</button>
+            </div>
+          </div>
+        </aside>
+
+        <div className="main-area">
+          <header className="topbar">
+            <button className="hamburger" onClick={() => setSidebarOpen(o=>!o)} aria-label="Menú">
+              <span/><span/><span/>
+            </button>
+            <div className="topbar-title">
+              {{'entregas':'MIS ENTREGAS','reposiciones':'REPOSICIONES','plantel':'PLANTEL'}[receptorTab]}
+            </div>
+          </header>
+          <div className="content">
+
+        {receptorTab === 'reposiciones' && isReceptorReposiciones && (
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            {(() => {
+              const descCam = j => j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
+              const descSht = j => j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
+              const totalCamTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
+              const totalShtTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
+              const totalEquipos  = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
+              const totalShorts   = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
+              const totalExtras   = (db.descExtras||[]).reduce((acc,e)=>acc+(e.cantidad||1),0)
+              const totalDinero   = totalEquipos * PRECIO_CAMISETA + totalShorts * PRECIO_SHORT
+              const mesActualKey  = (() => { const p = today().split('/'); return p[1]+'/'+p[2] })()
+              const repsDelMesActual = (db.reposiciones||[]).filter(r => {
+                const p = (r.fechaPartido||r.fecha||'').split('/')
+                return p.length===3 && p[1]+'/'+p[2] === mesActualKey
+              })
+              const totalEquiposMes = repsDelMesActual.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
+              const totalShortsMes  = repsDelMesActual.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
+              const totalExtrasMes  = (db.descExtras||[]).filter(e=>{ const p=e.fecha.split('/'); return p.length===3&&p[1]+'/'+p[2]===mesActualKey }).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
+              const totalDineroMes  = totalEquiposMes * PRECIO_CAMISETA + totalShortsMes * PRECIO_SHORT + totalExtrasMes
+              return (
+                <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
+                  <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setShowPartidosModal(true)}>
+                    <div className="kpi-label">PARTIDOS REGISTRADOS</div>
+                    <div className="kpi-value">{new Set((db.reposiciones||[]).map(r=>(r.torneo&&r.fechaTorneo!=null&&r.fechaTorneo!=='')?r.torneo+'|'+r.fechaTorneo:'id:'+r.id)).size}</div>
+                    <div className="kpi-sub">partidos únicos</div>
+                  </div>
+                  <div className="kpi-card" style={{alignSelf:'flex-start',cursor:'pointer',background:'#D6D6D0',border:'1px solid #121212'}} onClick={()=>setRepResumen('ambos')}>
+                    <div className="kpi-label">INDUMENTARIA A DESCONTAR {['','ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'][Number(mesActualKey.split('/')[0])]}</div>
+                    <div style={{display:'flex',alignItems:'flex-end',gap:24,marginTop:6}}>
+                      <div><div className="kpi-value">{totalEquipos}</div><div className="kpi-sub">camisetas →</div></div>
+                      <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/>
+                      <div><div className="kpi-value">{totalShorts}</div><div className="kpi-sub">shorts →</div></div>
+                      <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/><div><div className="kpi-value">{totalExtras}</div><div className="kpi-sub">extras →</div></div>
+                    </div>
+                  </div>
+                  <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#f2cb12'}} onClick={()=>{ setResumenMesSel(mesActualKey); setRepResumen('ambos') }}>
+                    <div className="kpi-label" style={{color:'#f2cb12'}}>DESCUENTOS {['','ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'][Number(mesActualKey.split('/')[0])]}</div>
+                    <div className="kpi-value" style={{color:'#f2cb12'}}>$ {totalDineroMes.toLocaleString('es-UY')}</div>
+                    <div className="kpi-sub" style={{color:'#f2cb12'}}>ver detalle →</div>
+                  </div>
+                  <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setReceptorTab('plantel')}>
+                    <div className="kpi-label">PLANTEL</div>
+                    <div className="kpi-value">{(db.plantel||[]).filter(j=>j.nombre.trim().toLowerCase()!=='libre').length}</div>
+                    <div className="kpi-sub">jugadores registrados →</div>
+                  </div>
+                  <div style={{display:'flex',flexDirection:'column',gap:8,alignSelf:'flex-start'}}>
+                    <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed'}}>+ Nueva reposición</button>
+                    <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',fecha:'',prendas:[{articulo:'',precio:0,cantidad:1}]});setDescExtraModal(true)}}>+ Descuento</button>
+                  </div>
+                </div>
+              )
+            })()}
+            {!(db.plantel||[]).length && (
+              <div style={{fontSize:13,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:8,padding:'10px 14px'}}>
+                Configurá el plantel primero para poder registrar reposiciones.
+              </div>
+            )}
+            {(db.reposiciones||[]).length === 0
+              ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay reposiciones registradas aún.</div>
+              : (() => {
+                const torneos = [...new Set((db.reposiciones||[]).map(r=>r.torneo).filter(Boolean))]
+                const filtered = (db.reposiciones||[]).filter(r => !repFilterTorneo || r.torneo === repFilterTorneo)
+                return (
+                  <>
+                    {torneos.length > 0 && (
+                      <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                        <button className={`chip${repFilterTorneo===''?' active':''}`} onClick={() => setRepFilterTorneo('')}>Todos</button>
+                        {torneos.map(t => (
+                          <button key={t} className={`chip${repFilterTorneo===t?' active':''}`} onClick={() => setRepFilterTorneo(t)}>{t}</button>
+                        ))}
+                      </div>
+                    )}
+                    <div className="card" style={{padding:0,overflow:'hidden'}}>
+                      <div className="table-header" style={{gridTemplateColumns:'110px 1fr 70px 70px 120px 36px'}}>
+                        <div>FECHA</div><div>CONCEPTO</div><div style={{textAlign:'right'}}>CAM.</div><div style={{textAlign:'right'}}>SHT.</div><div style={{textAlign:'right'}}>DESCUENTOS</div><div/>
+                      </div>
+                      {filtered.length === 0
+                        ? <div style={{color:'#8a8a82',fontSize:13,textAlign:'center',padding:'24px 0'}}>Sin reposiciones para este torneo.</div>
+                        : filtered.map(r => {
+                          const totCam = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
+                          const totSht = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
+                          const equipoStr = [r.tipoCamisetaJugador, r.tipoCamisetaGolero].filter(Boolean).join(' / ')
+                          const totalDesc = (r.jugadores||[]).reduce((s,j)=>{
+                            const dc = j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
+                            const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
+                            return s + (dc ? (Number(j.cantCamiseta)||0)*PRECIO_CAMISETA : 0) + (ds ? (Number(j.cantShort)||0)*PRECIO_SHORT : 0)
+                          }, 0)
+                          const _isFinal = r.fechaTorneo!=null&&r.fechaTorneo!==''&&(r.fechaTorneo==='Final'||r.fechaTorneo==='NaN'||Number.isNaN(r.fechaTorneo))
+                          const torneoStr = [_isFinal?'Final':null, r.torneo, !_isFinal&&r.fechaTorneo!=null&&r.fechaTorneo!==''?'F.'+r.fechaTorneo:null].filter(Boolean).join(' ')
+                          return (
+                          <div key={r.id} className="table-row" style={{gridTemplateColumns:'110px 1fr 70px 70px 120px 36px',cursor:'pointer',padding:'10px 20px'}} onClick={() => setRepDetail(r)}>
+                            <div>
+                              <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#1a1a1a',fontWeight:700}}>{r.fecha}</div>
+                              {r.fechaPartido && <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#1a1a1a',marginTop:2}}>P: {r.fechaPartido}</div>}
+                            </div>
+                            <div style={{minWidth:0}}>
+                              <div style={{fontWeight:600,fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                                {r.concepto}{torneoStr ? <span style={{fontWeight:400}}> — {torneoStr}</span> : ''}
+                              </div>
+                              {equipoStr && <div style={{fontSize:11,color:'#8a8a82',marginTop:2}}>{equipoStr}</div>}
+                            </div>
+                            <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totCam>0?'#1a1a1a':'#ccc'}}>{totCam>0?totCam:'—'}</div>
+                            <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totSht>0?'#1a1a1a':'#ccc'}}>{totSht>0?totSht:'—'}</div>
+                            <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:totalDesc>0?'#1a1a1a':'#ccc'}}>{totalDesc>0?'$'+totalDesc.toLocaleString('es-UY'):'—'}</div>
+                            <div style={{textAlign:'right',color:'#8a8a82',fontSize:18,lineHeight:1}}>›</div>
+                          </div>
+                          )
+                        })
+                      }
+                    </div>
+                  </>
+                )
+              })()
+            }
+          </div>
+        )}
+
+        {receptorTab === 'entregas' && (
+        <div style={{maxWidth:680,display:'flex',flexDirection:'column',gap:28}}>
 
           {/* Pendientes */}
           <div>
-            <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:13,color:'#8a8a82',letterSpacing:'.08em',marginBottom:14}}>PENDIENTES DE CONFIRMACIÓN</div>
+            <div style={{fontFamily:'Oswald,sans-serif',fontSize:13,color:'#8a8a82',letterSpacing:'.08em',marginBottom:14}}>PENDIENTES DE CONFIRMACIÓN</div>
             {pendientes.length === 0 && (
               <div style={{background:'#fff',borderRadius:12,padding:'20px 20px',textAlign:'center',color:'#8a8a82',fontSize:13.5,border:'1px solid #E7E7E3'}}>Sin entregas pendientes.</div>
             )}
             {pendientes.map(d => (
               <div key={d.id} style={{background:'#fff',borderRadius:12,border:'1px solid #E7E7E3',marginBottom:12,overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,.06)'}}>
                 <div style={{padding:'14px 18px',borderBottom:'1px solid #F0F0EC',display:'flex',alignItems:'center',gap:12}}>
-                  <span style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200',borderRadius:6,padding:'2px 9px',fontSize:12,fontWeight:700}}>Pendiente</span>
+                  <span style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12',borderRadius:6,padding:'2px 9px',fontSize:12,fontWeight:700}}>Pendiente</span>
                   <span style={{fontSize:12.5,color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>{d.fecha}</span>
                   <span style={{fontSize:12.5,color:'#6a6a62',flex:1,textAlign:'right'}}>{d.receptor}</span>
                 </div>
@@ -862,7 +2246,7 @@ export default function App() {
                 </div>
                 <div style={{padding:'12px 18px',borderTop:'1px solid #F0F0EC',display:'flex',gap:10}}>
                   <button onClick={() => receptorAceptar(d.id)} style={{flex:1,background:'#2e9b5e',color:'#fff',border:'none',borderRadius:8,padding:'10px 0',fontWeight:700,fontSize:14,cursor:'pointer'}}>✓ Aceptar</button>
-                  <button onClick={() => receptorRechazar(d.id)} style={{flex:1,background:'#C2473D',color:'#fff',border:'none',borderRadius:8,padding:'10px 0',fontWeight:700,fontSize:14,cursor:'pointer'}}>✕ Rechazar</button>
+                  <button onClick={() => setRechazarModal({ delId: d.id, motivo: '' })} style={{flex:1,background:'#C2473D',color:'#fff',border:'none',borderRadius:8,padding:'10px 0',fontWeight:700,fontSize:14,cursor:'pointer'}}>✕ Rechazar</button>
                 </div>
               </div>
             ))}
@@ -870,15 +2254,15 @@ export default function App() {
 
           {/* Historial */}
           <div>
-            <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:13,color:'#8a8a82',letterSpacing:'.08em',marginBottom:14}}>HISTORIAL</div>
+            <div style={{fontFamily:'Oswald,sans-serif',fontSize:13,color:'#8a8a82',letterSpacing:'.08em',marginBottom:14}}>HISTORIAL</div>
             {historial.length === 0 && (
               <div style={{background:'#fff',borderRadius:12,padding:'20px 20px',textAlign:'center',color:'#8a8a82',fontSize:13.5,border:'1px solid #E7E7E3'}}>Sin entregas en el historial.</div>
             )}
             {historial.map(d => {
               const st = d.status || 'aceptado'
-              const stColor = st === 'aceptado' ? '#2e9b5e' : '#C2473D'
-              const stBg    = st === 'aceptado' ? '#EDF7F2' : '#FBEAE8'
-              const stLabel = st === 'aceptado' ? 'Aceptado' : 'Rechazado'
+              const stColor = st==='aceptado'?'#2e9b5e':st==='pendiente_separar'?'#B45309':'#C2473D'
+              const stBg    = st==='aceptado'?'#EDF7F2':st==='pendiente_separar'?'#FFF3E0':'#FBEAE8'
+              const stLabel = st==='aceptado'?'Aceptado':st==='pendiente_separar'?'Pend. separar':'Rechazado'
               return (
                 <div key={d.id} style={{background:'#fff',borderRadius:12,border:'1px solid #E7E7E3',marginBottom:12,overflow:'hidden',boxShadow:'0 1px 4px rgba(0,0,0,.06)'}}>
                   <div style={{padding:'14px 18px',borderBottom:'1px solid #F0F0EC',display:'flex',alignItems:'center',gap:12}}>
@@ -886,6 +2270,11 @@ export default function App() {
                     <span style={{fontSize:12.5,color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>{d.fecha}</span>
                     {d.confirmedAt && <span style={{fontSize:11.5,color:'#8a8a82',flex:1,textAlign:'right'}}>Confirmado: {d.confirmedAt}</span>}
                   </div>
+                  {st === 'rechazado' && d.motivoRechazo && (
+                    <div style={{padding:'8px 18px',background:'#FBEAE8',borderBottom:'1px solid #f5c6c3',fontSize:12.5,color:'#C2473D'}}>
+                      <b>Motivo:</b> {d.motivoRechazo}
+                    </div>
+                  )}
                   <div style={{padding:'14px 18px'}}>
                     {d.lines.map((l,i) => (
                       <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'5px 0',borderBottom:i<d.lines.length-1?'1px solid #F5F5F0':'none'}}>
@@ -900,14 +2289,965 @@ export default function App() {
             })}
           </div>
         </div>
+        )}
+
+        {receptorTab === 'extras' && isReceptorReposiciones && (
+          <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            <div style={{display:'flex',justifyContent:'flex-end'}}>
+              <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',fecha:'',prendas:[{articulo:'',precio:0,cantidad:1}]});setDescExtraModal(true)}}>+ Descuento</button>
+            </div>
+            {(db.descExtras||[]).length === 0
+              ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>Sin descuentos adicionales registrados.</div>
+              : (() => {
+                  const _sorted = [...(db.descExtras||[])].sort((a,b)=>{const[da,ma,ya]=a.fecha.split('/');const[db2,mb,yb]=b.fecha.split('/');return(yb-ya)||((mb-ma)||(db2-da))})
+                  const _gMap = {}; const _gOrder = []
+                  _sorted.forEach(e=>{ const k=e.jugadorNombre+'|'+e.fecha; if(!_gMap[k]){_gMap[k]={k,fecha:e.fecha,jugadorNombre:e.jugadorNombre,jugadorNumero:e.jugadorNumero,items:[]};_gOrder.push(k)} _gMap[k].items.push(e) })
+                  return (
+                    <div className="card" style={{padding:0,overflow:'hidden'}}>
+                      <div style={{overflowX:'auto'}}>
+                        <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                          <thead>
+                            <tr style={{background:'#2a2a2a',color:'#f2cb12'}}>
+                              <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>FECHA</th>
+                              <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>JUGADOR</th>
+                              <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>PRENDAS</th>
+                              <th style={{padding:'7px 12px',textAlign:'right',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>TOTAL</th>
+                              <th style={{padding:'7px 12px'}}></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {_gOrder.map((k,gi)=>{
+                              const g=_gMap[k]
+                              const total=g.items.reduce((s,e)=>s+e.precio*(e.cantidad||1),0)
+                              const expanded=extrasExpandedKey===k
+                              const resumen=g.items.map(e=>`${e.articulo}${(e.cantidad||1)>1?' ×'+(e.cantidad||1):''}`).join(', ')
+                              return (
+                                <Fragment key={k}>
+                                  <tr onClick={()=>setExtrasExpandedKey(expanded?null:k)} style={{borderBottom:'1px solid #F0F0EC',background:gi%2===0?'#fff':'#FAFAF8',cursor:'pointer'}}>
+                                    <td style={{padding:'8px 12px',fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>{g.fecha}</td>
+                                    <td style={{padding:'8px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
+                                      <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#8a8a82',marginRight:6}}>{g.jugadorNumero}</span>{g.jugadorNombre}
+                                    </td>
+                                    <td style={{padding:'8px 12px',fontSize:12,color:'#5a5a50'}}>{resumen}</td>
+                                    <td style={{padding:'8px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>$ {total.toLocaleString('es-UY')}</td>
+                                    <td style={{padding:'8px 10px',textAlign:'right',fontSize:11,color:'#8a8a82'}}>{expanded?'▲':'▼'}</td>
+                                  </tr>
+                                  {expanded && g.items.map(e=>(
+                                    <tr key={e.id} style={{borderBottom:'1px solid #F0F0EC',background:'#F5F5F0'}}>
+                                      <td style={{padding:'5px 12px'}}></td>
+                                      <td style={{padding:'5px 12px'}}></td>
+                                      <td style={{padding:'5px 12px 5px 24px',fontSize:12}}>{e.articulo} <span style={{color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>×{e.cantidad||1}</span></td>
+                                      <td style={{padding:'5px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:12}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</td>
+                                      <td style={{padding:'5px 6px',textAlign:'right',whiteSpace:'nowrap'}}>
+                                        <button onClick={ev=>{ev.stopPropagation();setDescExtraForm({...e});setDescExtraModal(true)}} title="Editar" style={{background:'none',border:'none',cursor:'pointer',color:'#5a5a50',fontSize:14,padding:'2px 6px'}}>✎</button>
+                                        <button onClick={ev=>{ev.stopPropagation();deleteDescExtra(e.id)}} title="Eliminar" style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:16,padding:'2px 6px',lineHeight:1}}>×</button>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </Fragment>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )
+                })()
+            }
+          </div>
+        )}
+
+        {receptorTab === 'plantel' && (
+          <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            <div style={{display:'flex',justifyContent:'flex-end'}}>
+              <button className="btn btn-dark" onClick={() => { setPlantelForm({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',cantCamiseta:1,talleShort:'L',cantShort:1}); setPlantelModal(true) }}>+ Jugador</button>
+            </div>
+            {(db.plantel||[]).length === 0
+              ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay jugadores en el plantel.</div>
+              : (() => {
+                  const jugadoresPlantel = (db.plantel||[]).filter(j => j.nombre.trim().toLowerCase() !== 'libre')
+                  const contarTalles = campo => {
+                    const counts = {}
+                    jugadoresPlantel.forEach(j => { const t = j[campo]; if(t) counts[t] = (counts[t]||0)+1 })
+                    return Object.entries(counts).sort((a,b) => TALLE_ORDER.indexOf(a[0]) - TALLE_ORDER.indexOf(b[0]))
+                  }
+                  const tallesCam = contarTalles('talleCamiseta')
+                  const tallesSht = contarTalles('talleShort')
+                  const maxCam = Math.max(...tallesCam.map(([,v])=>v), 1)
+                  const maxSht = Math.max(...tallesSht.map(([,v])=>v), 1)
+                  const BarFila = ({talle, qty, max, campo}) => (
+                    <div onClick={() => setTalleDetalle({campo, talle})}
+                      style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,cursor:'pointer',borderRadius:6,padding:'2px 0'}}>
+                      <div style={{width:28,fontWeight:700,fontSize:13,textAlign:'right',flexShrink:0}}>{talle}</div>
+                      <div style={{flex:1,background:'#ECECE8',borderRadius:4,height:22,overflow:'hidden'}}>
+                        <div style={{width:`${(qty/max)*100}%`,background:'#f2cb12',height:'100%',borderRadius:4,minWidth:4}}/>
+                      </div>
+                      <div style={{width:20,fontWeight:700,fontSize:13,flexShrink:0}}>{qty}</div>
+                    </div>
+                  )
+                  return (
+                    <div style={{display:'flex',gap:16,alignItems:'flex-start',flexWrap:'wrap'}}>
+                      <div className="card" style={{padding:0,overflow:'hidden',flexShrink:0,overflowX:'auto'}}>
+                        <div style={{display:'grid',gridTemplateColumns:'50px max-content 80px 90px 90px 60px'}}>
+                          {['Nº','NOMBRE','POSICIÓN','CAMISETA','SHORT',''].map((h,i)=>(
+                            <div key={i} style={{padding:'11px 20px',background:'#121212',color:'#f2cb12',fontWeight:700,fontSize:11,letterSpacing:'.04em',whiteSpace:'nowrap'}}>{h}</div>
+                          ))}
+                          {(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => {
+                            const isLibre = j.nombre.trim().toLowerCase()==='libre'
+                            const isGolero = j.posicion==='Golero'
+                            const baseBg = isLibre?'#3a3a3a':isGolero?'#A5D6A7':'#fff'
+                            const textColor = isLibre?'#888':'#1a1a1a'
+                            const cell = {background:baseBg,padding:'13px 20px',borderBottom:'1px solid #F0F0EC',fontSize:13.5,color:textColor,display:'flex',alignItems:'center'}
+                            return (
+                              <Fragment key={j.id}>
+                                <div style={{...cell,fontWeight:800,fontSize:15}}>{j.numero||'—'}</div>
+                                <div style={{...cell,fontWeight:700,fontStyle:isLibre?'italic':undefined,textTransform:isLibre?undefined:'uppercase',whiteSpace:'nowrap'}}>{j.nombre}</div>
+                                <div style={{...cell,fontSize:12}}>{j.posicion||'Jugador'}</div>
+                                <div style={cell}>{j.talleCamiseta}{(j.cantCamiseta||1)>1?<span style={{color:'#8a8a82',fontSize:11,marginLeft:4}}>×{j.cantCamiseta}</span>:null}</div>
+                                <div style={cell}>{j.talleShort}{(j.cantShort||1)>1?<span style={{color:'#8a8a82',fontSize:11,marginLeft:4}}>×{j.cantShort}</span>:null}</div>
+                                <div style={{...cell,gap:6,justifyContent:'flex-end',cursor:'default'}}>
+                                  <button onClick={e=>{e.stopPropagation();setPlantelForm({...j,cantCamiseta:j.cantCamiseta||1,cantShort:j.cantShort||1});setPlantelModal(true)}} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button>
+                                  <button onClick={e=>{e.stopPropagation();deletePlantelJugador(j.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'#C2473D',fontSize:16,fontWeight:700,padding:'2px 4px'}}>×</button>
+                                </div>
+                              </Fragment>
+                            )
+                          })}
+                        </div>
+                      </div>
+                      <div style={{display:'flex',flexDirection:'column',gap:12,flexShrink:0}}>
+                        <div className="card" style={{padding:'16px 20px',minWidth:200}}>
+                          <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:12,textAlign:'center'}}>TALLES CAMISETA</div>
+                          {tallesCam.map(([t,q]) => <BarFila key={t} talle={t} qty={q} max={maxCam} campo="talleCamiseta"/>)}
+                        </div>
+                        <div className="card" style={{padding:'16px 20px',minWidth:200}}>
+                          <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:12,textAlign:'center'}}>TALLES SHORT</div>
+                          {tallesSht.map(([t,q]) => <BarFila key={t} talle={t} qty={q} max={maxSht} campo="talleShort"/>)}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()
+            }
+          </div>
+        )}
+
+        {/* Rechazar modal */}
+        {rechazarModal.delId !== null && (
+          <div className="modal-overlay" onClick={() => setRechazarModal({ delId: null, motivo: '' })}>
+            <div className="modal-box" onClick={e => e.stopPropagation()} style={{maxWidth:420}}>
+              <div className="modal-header">
+                <div className="modal-title">Motivo de rechazo</div>
+                <button className="modal-close" onClick={() => setRechazarModal({ delId: null, motivo: '' })}>×</button>
+              </div>
+              <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:14}}>
+                <p style={{margin:0,fontSize:13.5,color:'#6a6a62'}}>Explicá brevemente por qué rechazás esta entrega.</p>
+                <div className="form-group">
+                  <label className="field-label">Motivo</label>
+                  <textarea
+                    className="field-input"
+                    rows={3}
+                    style={{resize:'vertical',fontFamily:'inherit'}}
+                    placeholder="Ej: Talle incorrecto, artículo dañado…"
+                    value={rechazarModal.motivo}
+                    onChange={e => setRechazarModal(p => ({...p, motivo: e.target.value}))}
+                  />
+                </div>
+                {!rechazarModal.motivo.trim() && (
+                  <div style={{fontSize:12,color:'#8a8a82'}}>El motivo es obligatorio para rechazar.</div>
+                )}
+                <div style={{display:'flex',gap:10}}>
+                  <button className="btn btn-ghost" style={{flex:1}} onClick={() => setRechazarModal({ delId: null, motivo: '' })}>Cancelar</button>
+                  <button
+                    style={{flex:1,padding:'10px 0',borderRadius:8,border:'none',cursor:rechazarModal.motivo.trim()?'pointer':'not-allowed',fontWeight:700,fontSize:14,background:rechazarModal.motivo.trim()?'#C2473D':'#e0a09a',color:'#fff'}}
+                    onClick={() => { if(rechazarModal.motivo.trim()) receptorRechazar(rechazarModal.delId, rechazarModal.motivo.trim()) }}
+                  >✕ Rechazar entrega</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: Nueva/Editar reposición (rol Receptor + Reposiciones) */}
+        {repModal && (
+          <div className="modal-backdrop" onClick={() => setRepModal(false)}>
+            <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:600,width:'96%'}}>
+              <div className="modal-header">
+                <div className="modal-title">{repForm.editId ? 'Editar reposición' : 'Nueva reposición'}</div>
+                <button className="modal-close" onClick={() => setRepModal(false)}>×</button>
+              </div>
+              <div className="modal-body" style={{maxHeight:'70vh',overflowY:'auto'}}>
+                <div className="form-group">
+                  <label className="field-label">Concepto</label>
+                  <input className="field-input" value={repForm.concepto} onChange={e => setRepForm(p=>({...p,concepto:e.target.value}))} placeholder="Ej. Reposición vs. Danubio" autoFocus />
+                </div>
+                {/* Torneo y Fecha */}
+                <div style={{display:'flex',gap:12,marginTop:4,alignItems:'flex-end'}}>
+                  <div className="form-group" style={{flex:1,marginBottom:0}}>
+                    <label className="field-label">Torneo</label>
+                    <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                      {['APERTURA','CLAUSURA','INTERMEDIO','COPA AUF','LIBERTADORES','SUDAMERICANA'].map(t=>(
+                        <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,torneo:t,fechaTorneo:(TORNEO_FECHAS[t]||['1'])[0]}))}
+                          style={{padding:'6px 10px',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:11,cursor:'pointer',
+                            borderColor:repForm.torneo===t?'#f2cb12':'#ECECE8',
+                            background:repForm.torneo===t?'#FFF8D6':'#fff',
+                            color:repForm.torneo===t?'#7a5800':'#8a8a82'}}>
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="form-group" style={{marginBottom:0}}>
+                    <label className="field-label">Fecha</label>
+                    <select className="field-input" value={repForm.fechaTorneo} onChange={e=>setRepForm(p=>({...p,fechaTorneo:e.target.value}))}>
+                      {(TORNEO_FECHAS[repForm.torneo]||[]).map(f=><option key={f} value={f}>{f}</option>)}
+                    </select>
+                  </div>
+                </div>
+                {/* Fecha Partido — solo para reposiciones con descuento cross-mes */}
+                {/reposici[oó]n/i.test(repForm.concepto) && (
+                <div className="form-group" style={{marginTop:10}}>
+                  <label className="field-label">Fecha Partido <span style={{fontWeight:400,color:'#8a8a82'}}>(DD/MM/YYYY — opcional, define el mes para descuentos)</span></label>
+                  <input className="field-input" value={repForm.fechaPartido||''} onChange={e=>setRepForm(p=>({...p,fechaPartido:e.target.value}))} placeholder="Ej. 31/07/2025" style={{maxWidth:160}} />
+                </div>
+                )}
+                {/* Selector de tipo de camiseta — uno por posición */}
+                <div style={{display:'flex',gap:16,marginTop:14}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',marginBottom:6}}>EQUIPO JUGADORES</div>
+                    <div style={{display:'flex',gap:6}}>
+                      {REP_TIPOS_JUGADOR.map(t=>(
+                        <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,tipoCamisetaJugador:t}))}
+                          style={{flex:1,padding:'6px 4px',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:11,cursor:'pointer',
+                            borderColor:repForm.tipoCamisetaJugador===t?'#f2cb12':'#ECECE8',
+                            background:repForm.tipoCamisetaJugador===t?'#FFF8D6':'#fff',
+                            color:repForm.tipoCamisetaJugador===t?'#7a5800':'#8a8a82'}}>
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',marginBottom:6}}>EQUIPO GOLEROS</div>
+                    <div style={{display:'flex',gap:6}}>
+                      {REP_TIPOS_GOLERO.map(t=>(
+                        <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,tipoCamisetaGolero:t}))}
+                          style={{flex:1,padding:'6px 4px',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:11,cursor:'pointer',
+                            borderColor:repForm.tipoCamisetaGolero===t?'#f2cb12':'#ECECE8',
+                            background:repForm.tipoCamisetaGolero===t?'#FFF8D6':'#fff',
+                            color:repForm.tipoCamisetaGolero===t?'#7a5800':'#8a8a82'}}>
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{marginTop:16}}>
+                  <div style={{display:'grid',gridTemplateColumns:'40px 1fr 62px 38px 62px 38px',gap:4,marginBottom:4,fontSize:10,fontWeight:700,color:'#8a8a82',padding:'4px 6px',background:'#F5F5F0',borderRadius:6}}>
+                    <div>Nº</div><div>NOMBRE</div><div style={{textAlign:'center'}}>CAM.</div><div style={{textAlign:'center'}}>DC</div><div style={{textAlign:'center'}}>SHT.</div><div style={{textAlign:'center'}}>DS</div>
+                  </div>
+                  {repForm.rows.map((r, i) => {
+                    const hasQty = Number(r.cantCamiseta)>0 || Number(r.cantShort)>0
+                    const isLibre = r.nombre.trim().toLowerCase()==='libre'
+                    const dcam = r.descuentoCamiseta !== false
+                    const dsht = r.descuentoShort !== false
+                    const toggle = (field) => setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,[field]:!x[field]}:x)}))
+                    return (
+                      <div key={i} style={{display:'grid',gridTemplateColumns:'40px 1fr 62px 38px 62px 38px',gap:4,marginBottom:3,alignItems:'center',padding:'5px 6px',borderRadius:6,
+                        background:isLibre?'#3a3a3a':hasQty?'#FFFDF0':'transparent',border:hasQty?'1px solid #f2cb12':'1px solid transparent'}}>
+                        <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,color:isLibre?'#888':undefined}}>{r.numero||'—'}</div>
+                        <div>
+                          <span style={{fontWeight:600,fontSize:13,color:isLibre?'#888':undefined,fontStyle:isLibre?'italic':undefined}}>{r.nombre}</span>
+                          {!isLibre && <span style={{fontSize:10,color:'#aaa',marginLeft:6}}>{r.posicion||'Jugador'}</span>}
+                        </div>
+                        <input className="field-input mono" type="number" min="0" value={r.cantCamiseta}
+                          onChange={e=>setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,cantCamiseta:e.target.value}:x)}))}
+                          placeholder="0" style={{textAlign:'center',padding:'5px 2px'}} />
+                        {!isLibre
+                          ? <button type="button" onClick={()=>toggle('descuentoCamiseta')}
+                              style={{padding:'4px 2px',borderRadius:5,border:'2px solid',fontWeight:700,fontSize:10,cursor:'pointer',width:'100%',
+                                borderColor:dcam?'#2d6a4f':'#ccc',background:dcam?'#d8f3dc':'#f5f5f5',color:dcam?'#1b4332':'#999'}}>
+                              {dcam?'SÍ':'NO'}
+                            </button>
+                          : <div/>}
+                        <input className="field-input mono" type="number" min="0" value={r.cantShort}
+                          onChange={e=>setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,cantShort:e.target.value}:x)}))}
+                          placeholder="0" style={{textAlign:'center',padding:'5px 2px'}} />
+                        {!isLibre
+                          ? <button type="button" onClick={()=>toggle('descuentoShort')}
+                              style={{padding:'4px 2px',borderRadius:5,border:'2px solid',fontWeight:700,fontSize:10,cursor:'pointer',width:'100%',
+                                borderColor:dsht?'#2d6a4f':'#ccc',background:dsht?'#d8f3dc':'#f5f5f5',color:dsht?'#1b4332':'#999'}}>
+                              {dsht?'SÍ':'NO'}
+                            </button>
+                          : <div/>}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={() => setRepModal(false)}>Cancelar</button>
+                <button className="btn btn-dark" onClick={saveReposicion}>{repForm.editId ? 'Guardar cambios' : 'Guardar reposición'}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: Detalle Reposición (rol Receptor + Reposiciones) */}
+        {repDetail && (
+          <div className="modal-backdrop" onClick={() => setRepDetail(null)}>
+            <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:580,width:'96%'}}>
+              <div className="modal-header">
+                <div style={{flex:1,minWidth:0}}>
+                  {repConceptoEdit !== null ? (
+                    <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                      <input className="field-input" value={repConceptoEdit} onChange={e=>setRepConceptoEdit(e.target.value)}
+                        onKeyDown={e=>{if(e.key==='Enter')saveRepConcepto();if(e.key==='Escape')setRepConceptoEdit(null)}}
+                        autoFocus style={{fontWeight:700,fontSize:16,flex:1}} />
+                      <button className="btn btn-dark" style={{padding:'6px 12px',fontSize:13}} onClick={saveRepConcepto}>✓</button>
+                      <button className="btn btn-ghost" style={{padding:'6px 10px',fontSize:13}} onClick={()=>setRepConceptoEdit(null)}>✕</button>
+                    </div>
+                  ) : (
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <div className="modal-title">{repDetail.concepto}</div>
+                      <button onClick={()=>setRepConceptoEdit(repDetail.concepto)} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px',lineHeight:1}}>✎</button>
+                    </div>
+                  )}
+                  <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>
+                    {repDetail.fecha}
+                    {repDetail.torneo && <span style={{marginLeft:8,fontWeight:700,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:4,padding:'1px 7px',fontSize:11}}>
+                      {(()=>{const _f=repDetail.fechaTorneo;const _fin=_f&&(_f==='Final'||_f==='NaN'||Number.isNaN(_f));return _fin?'Final '+repDetail.torneo:repDetail.torneo+(_f?' · Fecha '+_f:'')})()}
+                    </span>}
+                  </div>
+                  {repDetail.creadoPor && <div style={{fontSize:11.5,color:'#8a8a82',marginTop:2}}>Creado por: {repDetail.creadoPor}</div>}
+                </div>
+                <button className="modal-close" onClick={() => { setRepConceptoEdit(null); setRepDetail(null) }}>×</button>
+              </div>
+              <div className="modal-body" style={{maxHeight:'60vh',overflowY:'auto'}}>
+                {/* Tipos de camiseta usados en esta reposición */}
+                {(repDetail.tipoCamisetaJugador||repDetail.tipoCamisetaGolero) && (
+                  <div style={{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap'}}>
+                    {repDetail.tipoCamisetaJugador && (
+                      <span style={{fontSize:12,fontWeight:700,background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:5,padding:'3px 10px'}}>
+                        Jugadores: {repDetail.tipoCamisetaJugador}
+                      </span>
+                    )}
+                    {repDetail.tipoCamisetaGolero && (
+                      <span style={{fontSize:12,fontWeight:700,background:'#F0F0EC',border:'1px solid #ccc',borderRadius:5,padding:'3px 10px'}}>
+                        Goleros: {repDetail.tipoCamisetaGolero}
+                      </span>
+                    )}
+                  </div>
+                )}
+                <div style={{display:'grid',gridTemplateColumns:'40px 1fr 80px 80px',gap:6,marginBottom:4,fontSize:10,fontWeight:700,color:'#8a8a82',background:'#F5F5F0',borderRadius:6,padding:'5px 6px'}}>
+                  <div>Nº</div><div>NOMBRE</div><div style={{textAlign:'center'}}>CAMISETA</div><div style={{textAlign:'center'}}>SHORT</div>
+                </div>
+                {(repDetail.jugadores||[]).map((j,i) => {
+                  const goleroRowBg = j.posicion==='Golero'
+                    ? j.tipoCamiseta==='NEGRO'   ? {background:'#d0d0d0',borderBottom:'1px solid #bbb'}
+                    : j.tipoCamiseta==='NARANJA'  ? {background:'#FFE5CC',borderBottom:'1px solid #FFB870'}
+                    : j.tipoCamiseta==='CREMA'    ? {background:'#FFF8E8',borderBottom:'1px solid #EDE0C0'}
+                    : {borderBottom:'1px solid #F5F5F0'}
+                    : {borderBottom:'1px solid #F5F5F0'}
+                  return (
+                    <div key={i} style={{display:'grid',gridTemplateColumns:'40px 1fr 80px 80px',gap:6,padding:'6px 6px',fontSize:13,alignItems:'center',...goleroRowBg}}>
+                      <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#6a6a62'}}>{j.numero||'—'}</div>
+                      <div>
+                        <div style={{fontWeight:500}}>{j.nombre||'—'}</div>
+                        {j.talleCamiseta && <div style={{fontSize:10,color:'#8a8a82',marginTop:1}}>CAM {j.talleCamiseta} · SHORT {j.talleShort}</div>}
+                      </div>
+                      <div style={{textAlign:'center',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:j.cantCamiseta>0?'#1a1a1a':'#ccc'}}>
+                        {j.cantCamiseta>0?j.cantCamiseta:'—'}
+                      </div>
+                      <div style={{textAlign:'center',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:j.cantShort>0?'#1a1a1a':'#ccc'}}>
+                        {j.cantShort>0?j.cantShort:'—'}
+                      </div>
+                    </div>
+                  )
+                })}
+                {(() => {
+                  const totCam = (repDetail.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
+                  const totSht = (repDetail.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
+                  return <div style={{marginTop:10,fontSize:12,color:'#8a8a82',textAlign:'right'}}>
+                    {totCam > 0 && <span>{totCam} camiseta{totCam!==1?'s':''}</span>}
+                    {totCam > 0 && totSht > 0 && <span style={{margin:'0 6px'}}>·</span>}
+                    {totSht > 0 && <span>{totSht} short{totSht!==1?'s':''}</span>}
+                  </div>
+                })()}
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={() => setRepDetail(null)}>Cerrar</button>
+                <button className="btn btn-ghost" style={{border:'1px solid #2d6a4f',color:'#2d6a4f'}} onClick={() => exportRepToExcel(repDetail)}>↓ Excel</button>
+                <button className="btn btn-dark" onClick={() => openRepEdit(repDetail)}>Editar</button>
+                <button style={{padding:'8px 16px',borderRadius:7,border:'1px solid #C2473D',background:'#FBEAE8',color:'#C2473D',fontWeight:700,cursor:'pointer'}}
+                  onClick={() => { if(window.confirm('¿Eliminar esta reposición?')) deleteReposicion(repDetail.id) }}>Eliminar</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: Desglose camisetas/shorts enviados por tipo (receptor) */}
+        {repDesglose && (() => {
+          const esCam = repDesglose === 'camisetas'
+          const titulo = esCam ? 'Camisetas enviadas por tipo' : 'Shorts enviados por tipo'
+          const desglose = {}
+          ;(db.reposiciones||[]).forEach(r => {
+            ;(r.jugadores||[]).forEach(j => {
+              const tipo = j.tipoCamiseta || '(sin tipo)'
+              const qty = esCam ? (Number(j.cantCamiseta)||0) : (Number(j.cantShort)||0)
+              if (qty > 0) desglose[tipo] = (desglose[tipo]||0) + qty
+            })
+          })
+          const filas = Object.entries(desglose).sort((a,b)=>b[1]-a[1])
+          const totalGeneral = filas.reduce((s,[,v])=>s+v,0)
+          const jugTipos = [...REP_TIPOS_JUGADOR]
+          const golTipos = [...REP_TIPOS_GOLERO]
+          const filasJug = filas.filter(([t])=>jugTipos.includes(t))
+          const filasGol = filas.filter(([t])=>golTipos.includes(t))
+          const filasOtros = filas.filter(([t])=>!jugTipos.includes(t)&&!golTipos.includes(t))
+          const TIPO_COLORS = {
+            'TRADICIONAL': {bg:'repeating-linear-gradient(45deg,#f2cb12,#f2cb12 28px,#121212 28px,#121212 56px)', color:'#fff', badge:true},
+            'AMARILLA':    {bg:'#f2cb12', color:'#121212'},
+            'VERDE':       {bg:'#2d6a4f', color:'#fff'},
+            'NEGRO':       {bg:'#2a2a2a', color:'#fff'},
+            'NARANJA':     {bg:'#EA580C', color:'#121212'},
+            'CREMA':       {bg:'#F5ECD7', color:'#121212'},
+          }
+          const renderFila = ([tipo, qty]) => {
+            const c = TIPO_COLORS[tipo] || {bg:'#F5F5F0', color:'#121212'}
+            return (
+              <div key={tipo} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 16px',borderRadius:8,marginBottom:6,background:c.bg}}>
+                {c.badge
+                  ? <span style={{fontWeight:700,fontSize:13,color:'#fff',background:'#121212',padding:'3px 10px',borderRadius:20}}>{tipo}</span>
+                  : <span style={{fontWeight:700,fontSize:14,color:c.color}}>{tipo}</span>
+                }
+                {c.badge
+                  ? <span style={{fontFamily:'Oswald,sans-serif',fontSize:22,color:'#121212',background:'#f2cb12',padding:'2px 14px',borderRadius:20}}>{qty}</span>
+                  : <span style={{fontFamily:'Oswald,sans-serif',fontSize:22,color:c.color}}>{qty}</span>
+                }
+              </div>
+            )
+          }
+          return (
+            <div className="modal-backdrop" onClick={()=>setRepDesglose(null)}>
+              <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:400,width:'96%'}}>
+                <div className="modal-header">
+                  <div className="modal-title">{titulo}</div>
+                  <button className="modal-close" onClick={()=>setRepDesglose(null)}>×</button>
+                </div>
+                <div className="modal-body">
+                  {filasJug.length > 0 && <>
+                    <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginBottom:4}}>JUGADORES</div>
+                    {filasJug.map(renderFila)}
+                  </>}
+                  {filasGol.length > 0 && <>
+                    <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginTop:16,marginBottom:4}}>GOLEROS</div>
+                    {filasGol.map(renderFila)}
+                  </>}
+                  {filasOtros.length > 0 && <>
+                    <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginTop:16,marginBottom:4}}>OTROS</div>
+                    {filasOtros.map(renderFila)}
+                  </>}
+                  {filas.length === 0 && <div style={{textAlign:'center',color:'#8a8a82',padding:'24px 0'}}>Sin datos.</div>}
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:16,paddingTop:12,borderTop:'2px solid #121212'}}>
+                    <span style={{fontWeight:700,fontSize:13}}>TOTAL</span>
+                    <span style={{fontFamily:'Oswald,sans-serif',fontSize:26}}>{totalGeneral}</span>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-ghost" onClick={()=>setRepDesglose(null)}>Cerrar</button>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* Modal: Descuento adicional (receptor) */}
+        {descExtraModal && (
+          <div className="modal-backdrop" onClick={()=>setDescExtraModal(false)}>
+            <div className="modal modal-sm" onClick={e=>e.stopPropagation()}>
+              <div className="modal-header">
+                <div className="modal-title">{descExtraForm.id?'Editar descuento':'Descuento adicional'}</div>
+                <button className="modal-close" onClick={()=>setDescExtraModal(false)}>×</button>
+              </div>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label className="field-label">Fecha</label>
+                  <input className="field-input" type="text" placeholder={today()} value={descExtraForm.fecha} onChange={e=>setDescExtraForm(p=>({...p,fecha:e.target.value}))} />
+                </div>
+                <div className="form-group">
+                  <label className="field-label">Jugador</label>
+                  <select className="field-input" value={descExtraForm.jugadorNombre} onChange={e=>{const j=(db.plantel||[]).find(p=>p.nombre===e.target.value);setDescExtraForm(p=>({...p,jugadorNombre:e.target.value,jugadorNumero:j?.numero||''}))}}>
+                    <option value="">Seleccionar jugador…</option>
+                    {(db.plantel||[]).filter(j=>j.nombre?.trim().toLowerCase()!=='libre').sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j=>(<option key={j.id} value={j.nombre}>{j.numero} — {j.nombre}</option>))}
+                  </select>
+                </div>
+                {descExtraForm.id ? (<>
+                  <div className="form-group">
+                    <label className="field-label">Prenda</label>
+                    <select className="field-input" value={descExtraForm.articulo} onChange={e=>{const p=EXTRAS_PRENDAS.find(p=>p.nombre===e.target.value);setDescExtraForm(f=>({...f,articulo:e.target.value,precio:p?.precio||0}))}}>
+                      <option value="">Seleccionar prenda…</option>
+                      {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre}</option>))}
+                    </select>
+                  </div>
+                  <div style={{display:'flex',gap:12}}>
+                    <div className="form-group" style={{flex:1}}>
+                      <label className="field-label">Precio unitario</label>
+                      <input className="field-input mono" type="number" value={descExtraForm.precio} readOnly style={{background:'#F5F5F0',color:'#5a5a52'}} />
+                    </div>
+                    <div className="form-group" style={{width:80}}>
+                      <label className="field-label">Cant.</label>
+                      <input className="field-input mono" type="number" min="1" value={descExtraForm.cantidad} onChange={e=>setDescExtraForm(p=>({...p,cantidad:Math.max(1,parseInt(e.target.value)||1)}))} style={{textAlign:'center'}} />
+                    </div>
+                  </div>
+                  {descExtraForm.precio>0 && (
+                    <div style={{textAlign:'right',fontWeight:700,fontSize:14,fontFamily:'IBM Plex Mono,monospace',color:'#121212'}}>
+                      Total: $ {(descExtraForm.precio*(descExtraForm.cantidad||1)).toLocaleString('es-UY')}
+                    </div>
+                  )}
+                </>) : (<>
+                  <div style={{borderTop:'1px solid #ECECE8',marginTop:4,paddingTop:12}}>
+                    <div style={{fontSize:11,fontWeight:700,letterSpacing:'.04em',color:'#8a8a82',marginBottom:8}}>PRENDAS</div>
+                    {(descExtraForm.prendas||[]).map((pr,i)=>(
+                      <div key={i} style={{display:'flex',gap:8,alignItems:'center',marginBottom:8}}>
+                        <select style={{flex:1,padding:'6px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,background:'#fff'}}
+                          value={pr.articulo}
+                          onChange={e=>{const found=EXTRAS_PRENDAS.find(p=>p.nombre===e.target.value);setDescExtraForm(f=>({...f,prendas:f.prendas.map((p,j)=>j===i?{...p,articulo:e.target.value,precio:found?.precio||0}:p)}))}}>
+                          <option value="">Seleccionar prenda…</option>
+                          {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre}</option>))}
+                        </select>
+                        <input style={{width:52,padding:'6px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,textAlign:'center'}}
+                          type="number" min="1" value={pr.cantidad}
+                          onChange={e=>setDescExtraForm(f=>({...f,prendas:f.prendas.map((p,j)=>j===i?{...p,cantidad:Math.max(1,parseInt(e.target.value)||1)}:p)}))} />
+                        {(descExtraForm.prendas||[]).length>1 && (
+                          <button onClick={()=>setDescExtraForm(f=>({...f,prendas:f.prendas.filter((_,j)=>j!==i)}))}
+                            style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:18,lineHeight:1,padding:'0 4px',flexShrink:0}}>×</button>
+                        )}
+                      </div>
+                    ))}
+                    <button onClick={()=>setDescExtraForm(f=>({...f,prendas:[...(f.prendas||[]),{articulo:'',precio:0,cantidad:1}]}))}
+                      style={{fontSize:12,color:'#5a5a52',background:'none',border:'1px dashed #ccc',borderRadius:6,padding:'5px 12px',cursor:'pointer',width:'100%',marginTop:2}}>
+                      + Agregar prenda
+                    </button>
+                  </div>
+                  {(descExtraForm.prendas||[]).some(p=>p.precio>0) && (
+                    <div style={{textAlign:'right',fontWeight:700,fontSize:14,fontFamily:'IBM Plex Mono,monospace',color:'#121212',marginTop:10}}>
+                      Total: $ {(descExtraForm.prendas||[]).reduce((s,p)=>s+p.precio*(p.cantidad||1),0).toLocaleString('es-UY')}
+                    </div>
+                  )}
+                </>)}
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={()=>setDescExtraModal(false)}>Cancelar</button>
+                <button className="btn btn-dark" onClick={saveDescExtra}>Guardar</button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Modal: Resumen descuentos por jugador (receptor) */}
+        {repResumen && (() => {
+          const MESES_ES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+          const repsValidas = db.reposiciones||[]
+          const mesesMap = {}
+          repsValidas.forEach(r => {
+            const p = (r.fechaPartido||r.fecha||'').split('/')
+            const key = p.length===3 ? p[1]+'/'+p[2] : (r.fechaPartido||r.fecha)||'?'
+            if (!mesesMap[key]) mesesMap[key] = []
+            mesesMap[key].push(r)
+          })
+          const mesActualKey = (() => { const p = today().split('/'); return p[1]+'/'+p[2] })()
+          if (!mesesMap[mesActualKey]) mesesMap[mesActualKey] = []
+          const mesesOrdenados = Object.keys(mesesMap).sort((a,b)=>{
+            const [ma,ya] = a.split('/').map(Number)
+            const [mb,yb] = b.split('/').map(Number)
+            return ya!==yb ? ya-yb : ma-mb
+          })
+          const mesMostrado = (resumenMesSel && mesesMap[resumenMesSel]) ? resumenMesSel : (mesesMap[mesActualKey] ? mesActualKey : mesesOrdenados[mesesOrdenados.length-1])
+          const calcMes = mesKey => {
+            const repsDelMes = mesesMap[mesKey] || []
+            const extrasDelMes = (db.descExtras||[]).filter(e => { const p=e.fecha.split('/'); return p.length===3&&p[1]+'/'+p[2]===mesKey })
+            const jugMapMes = {}
+            ;(db.plantel||[]).filter(p=>p.nombre?.trim().toLowerCase()!=='libre').forEach(p => {
+              jugMapMes[p.nombre.trim()] = {numero:p.numero||'—', nombre:p.nombre.trim()}
+            })
+            repsDelMes.forEach(r => (r.jugadores||[]).forEach(j => {
+              if (!jugMapMes[j.nombre]) jugMapMes[j.nombre] = {numero:j.numero||'—', nombre:j.nombre}
+            }))
+            extrasDelMes.forEach(e => { if (!jugMapMes[e.jugadorNombre]) jugMapMes[e.jugadorNombre] = {numero:e.jugadorNumero||'—', nombre:e.jugadorNombre} })
+            const jugsMes = Object.values(jugMapMes).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0))
+            const getCam = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const dc=j.descuentoCamiseta!==undefined?j.descuentoCamiseta!==false:j.descuento!==false;return acc+(dc?Number(j.cantCamiseta)||0:0)},0)
+            const getSht = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const ds=j.descuentoShort!==undefined?j.descuentoShort!==false:j.descuento!==false;return acc+(ds?Number(j.cantShort)||0:0)},0)
+            const getExtras = nombre => extrasDelMes.filter(e=>e.jugadorNombre===nombre).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
+            const filas = jugsMes.map(j=>({...j,cam:getCam(j.nombre),sht:getSht(j.nombre),extras:getExtras(j.nombre)})).map(f=>({...f,desc:f.cam*PRECIO_DESC_CAMISETA+f.sht*PRECIO_DESC_SHORT+f.extras}))
+            const totCam = filas.reduce((s,f)=>s+f.cam,0)
+            const totSht = filas.reduce((s,f)=>s+f.sht,0)
+            const totExtras = filas.reduce((s,f)=>s+f.extras,0)
+            const totDesc = filas.reduce((s,f)=>s+f.desc,0)
+            return {filas, totCam, totSht, totExtras, totDesc}
+          }
+          const {filas, totCam, totSht, totExtras, totDesc} = mesMostrado ? calcMes(mesMostrado) : {filas:[],totCam:0,totSht:0,totExtras:0,totDesc:0}
+          const [mmMostrado, yyyyMostrado] = (mesMostrado||'').split('/')
+          const mesNombreMostrado = mesMostrado ? `${MESES_ES[Number(mmMostrado)]||mmMostrado} ${yyyyMostrado}` : ''
+          const datosPorMes = mesesOrdenados.map(mesKey => {
+            const [mm, yyyy] = mesKey.split('/')
+            const mesNombre = `${MESES_ES[Number(mm)]||mm} ${yyyy}`
+            const {filas, totCam, totSht, totExtras, totDesc} = calcMes(mesKey)
+            return {mesKey, mesNombre, filas, totCam, totSht, totExtras, totDesc}
+          })
+          const exportResumenExcel = async () => {
+            const wb = new ExcelJS.Workbook()
+            const YELLOW   = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
+            const FILL_SUB = {type:'pattern',pattern:'solid',fgColor:{argb:'FFF5F2E8'}}
+            const FILL_WHT = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFFFF'}}
+            const F_BOLD   = {name:'Calibri',size:11,bold:true}
+            const F_NORM   = {name:'Calibri',size:11}
+            const CENTER   = {horizontal:'center',vertical:'middle'}
+            const BORDER   = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
+            const MONEY_FMT = '"$" #,##0'
+            const style = (cell,fill,font) => { cell.fill=fill; cell.font=font; cell.alignment=CENTER; cell.border=BORDER }
+            datosPorMes.forEach(({mesNombre, filas, totDesc}) => {
+              const nombreHoja = mesNombre.replace(/[\\/:*?"<>|[\]]/g,'-').slice(0,31) || 'Mes'
+              const ws = wb.addWorksheet(nombreHoja)
+              ws.columns = [{width:8.5},{width:24},{width:13},{width:10},{width:13},{width:13}]
+              ws.mergeCells('A1:F1')
+              style(ws.getCell('A1'), YELLOW, F_BOLD); ws.getCell('A1').value = mesNombre.toUpperCase(); ws.getRow(1).height = 20
+              ;['Nº','JUGADOR','CAMISETAS','SHORTS','EXTRAS','DESCUENTO'].forEach((h,i) => {
+                const c = ws.getRow(2).getCell(i+1); style(c, YELLOW, F_BOLD); c.value = h
+              })
+              ws.getRow(2).height = 20
+              filas.forEach((f,idx) => {
+                const r = ws.getRow(idx+3)
+                r.height = 18
+                ;[f.numero||'—', f.nombre, f.cam||0, f.sht||0, f.extras||0, f.desc||0].forEach((v,i) => {
+                  const c = r.getCell(i+1); style(c, i===5?FILL_GRAY:FILL_WHT, i===5?F_BOLD:F_NORM); c.value = v
+                  if (i===4||i===5) c.numFmt = MONEY_FMT
+                })
+              })
+              const totN = filas.length + 3
+              ws.mergeCells(`A${totN}:E${totN}`)
+              ws.getRow(totN).height = 20
+              style(ws.getRow(totN).getCell(1), FILL_SUB, F_BOLD); ws.getRow(totN).getCell(1).value = 'TOTAL DESCUENTOS'
+              const totCell = ws.getRow(totN).getCell(6)
+              style(totCell, FILL_SUB, F_BOLD); totCell.value = totDesc; totCell.numFmt = MONEY_FMT
+            })
+            const buf = await wb.xlsx.writeBuffer()
+            const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a'); a.href=url; a.download='descuentos-mensuales-peniarol.xlsx'; a.click()
+            URL.revokeObjectURL(url)
+          }
+          return (
+            <div className="modal-backdrop" onClick={()=>setRepResumen(null)}>
+              <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:580,width:'96%'}}>
+                <div className="modal-header">
+                  <div className="modal-title">Descuentos — {mesNombreMostrado}</div>
+                  <button className="modal-close" onClick={()=>setRepResumen(null)}>×</button>
+                </div>
+                <div className="modal-body" style={{padding:0}}>
+                  {mesesOrdenados.length === 0
+                    ? <div style={{padding:32,textAlign:'center',color:'#888',fontSize:14}}>Sin datos</div>
+                    : <>
+                      {mesesOrdenados.length > 1 && (
+                        <div style={{display:'flex',gap:6,flexWrap:'wrap',padding:'10px 16px',borderBottom:'1px solid #ECECE8',background:'#F8F8F4'}}>
+                          {mesesOrdenados.map(key => {
+                            const [mm,yyyy] = key.split('/')
+                            const label = `${MESES_ES[Number(mm)]||mm} ${yyyy}`
+                            const activo = key === mesMostrado
+                            return (
+                              <button key={key} onClick={e=>{e.stopPropagation();setResumenMesSel(key)}}
+                                style={{padding:'5px 12px',borderRadius:20,border:'1.5px solid',fontSize:12,fontWeight:700,cursor:'pointer',
+                                  borderColor:activo?'#121212':'#D0D0CC',
+                                  background:activo?'#121212':'#fff',
+                                  color:activo?'#f2cb12':'#5a5a52'}}>
+                                {label}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )}
+                      <div style={{maxHeight:'55vh',overflowY:'auto'}}>
+                        <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                          <thead>
+                            <tr style={{background:'#2a2a2a',color:'#f2cb12'}}>
+                              <th style={{padding:'6px 12px',textAlign:'left',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>JUGADOR</th>
+                              <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>CAMISETAS</th>
+                              <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>SHORTS</th>
+                              <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>EXTRAS</th>
+                              <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>DESCUENTO</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filas.length === 0
+                              ? <tr><td colSpan={5} style={{padding:'28px 0',textAlign:'center',color:'#8a8a82',fontSize:13}}>Sin descuentos este mes.</td></tr>
+                              : filas.map((f,i)=>(
+                                <tr key={i} style={{borderBottom:'1px solid #F0F0EC',background:i%2===0?'#fff':'#FAFAF8'}}>
+                                  <td style={{padding:'7px 12px',fontWeight:500,whiteSpace:'nowrap',cursor:'pointer'}} onClick={()=>setRankingDetalle(f.nombre)}>
+                                    <span style={{fontFamily:'IBM Plex Mono,monospace',color:'#121212',marginRight:8,fontSize:11}}>{f.numero}</span>
+                                    <span style={{textDecoration:'underline',textDecorationStyle:'dotted',textUnderlineOffset:3}}>{f.nombre}</span>
+                                  </td>
+                                  <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.cam}</td>
+                                  <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.sht}</td>
+                                  <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.extras>0?`$ ${f.extras.toLocaleString('es-UY')}`:'-'}</td>
+                                  <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,background:'#FFF8D6'}}>$ {f.desc.toLocaleString('es-UY')}</td>
+                                </tr>
+                              ))
+                            }
+                            <tr style={{background:'#121212'}}>
+                              <td style={{padding:'7px 12px',fontSize:11,fontWeight:700,letterSpacing:'.04em',color:'#f2cb12'}}>TOTAL</td>
+                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>{totCam}</td>
+                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>{totSht}</td>
+                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>{totExtras>0?`$ ${totExtras.toLocaleString('es-UY')}`:'-'}</td>
+                              <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>$ {totDesc.toLocaleString('es-UY')}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  }
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-ghost" onClick={()=>setRepResumen(null)}>Cerrar</button>
+                  <button className="btn btn-ghost" style={{border:'1px solid #2d6a4f',color:'#2d6a4f'}} disabled={mesesOrdenados.length===0} onClick={exportResumenExcel}>↓ Excel</button>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
+        {talleDetalle && (() => {
+          const esCam = talleDetalle.campo === 'talleCamiseta'
+          const lista = (db.plantel||[])
+            .filter(j => j.nombre.trim().toLowerCase() !== 'libre' && j[talleDetalle.campo] === talleDetalle.talle)
+            .sort((a,b) => (Number(a.numero)||0) - (Number(b.numero)||0))
+          return (
+            <div className="modal-backdrop" onClick={() => setTalleDetalle(null)}>
+              <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:380,width:'96%'}}>
+                <div className="modal-header">
+                  <div className="modal-title">{esCam ? 'Camiseta' : 'Short'} talle {talleDetalle.talle}</div>
+                  <button className="modal-close" onClick={() => setTalleDetalle(null)}>×</button>
+                </div>
+                <div className="modal-body" style={{padding:0}}>
+                  {lista.map(j => (
+                    <div key={j.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 20px',borderBottom:'1px solid #ECECE8',
+                      background: j.posicion === 'Golero' ? '#A5D6A7' : undefined}}>
+                      <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,width:28,flexShrink:0}}>{j.numero||'—'}</span>
+                      <span style={{fontWeight:700,fontSize:14,textTransform:'uppercase'}}>{j.nombre}</span>
+                      <span style={{marginLeft:'auto',fontSize:11,color:'#8a8a82'}}>{j.posicion||'Jugador'}</span>
+                    </div>
+                  ))}
+                  {lista.length === 0 && <div style={{padding:24,textAlign:'center',color:'#8a8a82'}}>Sin jugadores.</div>}
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-ghost" onClick={() => setTalleDetalle(null)}>Cerrar</button>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
+        {plantelModal && (
+          <div className="modal-backdrop" onClick={() => setPlantelModal(false)}>
+            <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <div className="modal-title">{plantelForm.id !== null ? 'Editar jugador' : 'Agregar jugador'}</div>
+                <button className="modal-close" onClick={() => setPlantelModal(false)}>×</button>
+              </div>
+              <div className="modal-body">
+                <div style={{display:'flex',gap:12}}>
+                  <div className="form-group" style={{width:80}}>
+                    <label className="field-label">Número</label>
+                    <input className="field-input mono" type="number" min="1" max="99" value={plantelForm.numero}
+                      onChange={e => setPlantelForm(p=>({...p,numero:e.target.value}))}
+                      placeholder="10" style={{textAlign:'center'}} />
+                  </div>
+                  <div className="form-group" style={{flex:1}}>
+                    <label className="field-label">Nombre completo</label>
+                    <input className="field-input" value={plantelForm.nombre}
+                      onChange={e => setPlantelForm(p=>({...p,nombre:e.target.value}))}
+                      placeholder="Ej. Maximiliano Olivera" autoFocus />
+                  </div>
+                </div>
+                <div style={{display:'flex',gap:8,marginTop:4}}>
+                  {['Jugador','Golero'].map(pos => (
+                    <button key={pos} type="button"
+                      onClick={() => setPlantelForm(p=>({...p,posicion:pos}))}
+                      style={{flex:1,padding:'8px 0',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:13,cursor:'pointer',
+                        borderColor: plantelForm.posicion===pos ? '#f2cb12' : '#ECECE8',
+                        background: plantelForm.posicion===pos ? '#FFF8D6' : '#fff',
+                        color: plantelForm.posicion===pos ? '#7a5800' : '#8a8a82'}}>
+                      {pos}
+                    </button>
+                  ))}
+                </div>
+                <div style={{display:'flex',gap:12,marginTop:4}}>
+                  <div className="form-group" style={{flex:1}}>
+                    <label className="field-label">Talle Camiseta</label>
+                    <select className="field-input" value={plantelForm.talleCamiseta} onChange={e => setPlantelForm(p=>({...p,talleCamiseta:e.target.value}))}>
+                      {TALLES_ADULTO.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group" style={{width:72}}>
+                    <label className="field-label">Cant.</label>
+                    <input className="field-input mono" type="number" min="1" max="99" value={plantelForm.cantCamiseta||1}
+                      onChange={e => setPlantelForm(p=>({...p,cantCamiseta:Math.max(1,parseInt(e.target.value)||1)}))}
+                      style={{textAlign:'center'}} />
+                  </div>
+                  <div className="form-group" style={{flex:1}}>
+                    <label className="field-label">Talle Short</label>
+                    <select className="field-input" value={plantelForm.talleShort} onChange={e => setPlantelForm(p=>({...p,talleShort:e.target.value}))}>
+                      {TALLES_ADULTO.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group" style={{width:72}}>
+                    <label className="field-label">Cant.</label>
+                    <input className="field-input mono" type="number" min="1" max="99" value={plantelForm.cantShort||1}
+                      onChange={e => setPlantelForm(p=>({...p,cantShort:Math.max(1,parseInt(e.target.value)||1)}))}
+                      style={{textAlign:'center'}} />
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={() => setPlantelModal(false)}>Cancelar</button>
+                <button className="btn btn-dark" onClick={savePlantelJugador}>Guardar</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Toast */}
+        {/* Modal: Detalle jugador en descuentos (receptor) */}
+        {rankingDetalle && (() => {
+          const nombre = rankingDetalle
+          const jug = (db.plantel||[]).find(j => j.nombre?.trim().toLowerCase() === nombre.toLowerCase())
+          const filas = (db.reposiciones||[]).flatMap(r => {
+            const j = (r.jugadores||[]).find(jj => jj.nombre?.trim().toLowerCase() === nombre.toLowerCase())
+            if (!j) return []
+            const dc = j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
+            const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
+            const cam = dc ? Number(j.cantCamiseta)||0 : 0
+            const sht = ds ? Number(j.cantShort)||0 : 0
+            if (cam === 0 && sht === 0) return []
+            return [{label: r.concepto||'Sin nombre', fecha: r.fecha||'', torneo: r.torneo||'', cam, sht, monto: cam*PRECIO_CAMISETA + sht*PRECIO_SHORT}]
+          })
+          const totCam = filas.reduce((s,f)=>s+f.cam,0)
+          const totSht = filas.reduce((s,f)=>s+f.sht,0)
+          const totMonto = filas.reduce((s,f)=>s+f.monto,0)
+          const extrasJug = (db.descExtras||[]).filter(e => e.jugadorNombre?.trim().toLowerCase() === nombre.toLowerCase())
+          const totExtrasItems = extrasJug.reduce((s,e) => s + e.precio*(e.cantidad||1), 0)
+          return (
+            <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:1100,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setRankingDetalle(null)}>
+              <div style={{background:'#fff',borderRadius:12,padding:28,minWidth:360,maxWidth:500,boxShadow:'0 8px 32px rgba(0,0,0,0.18)',maxHeight:'80vh',display:'flex',flexDirection:'column'}} onClick={e=>e.stopPropagation()}>
+                <div style={{display:'flex',alignItems:'baseline',gap:10,marginBottom:4}}>
+                  {jug?.numero && <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:22,color:'#121212'}}>{jug.numero}</span>}
+                  <span style={{fontWeight:700,fontSize:16,textTransform:'uppercase'}}>{nombre}</span>
+                </div>
+                <div style={{fontSize:12,color:'#999',marginBottom:16}}>{jug?.posicion||''}</div>
+                <div style={{overflowY:'auto',flex:1}}>
+                  <table style={{width:'100%',borderCollapse:'collapse',tableLayout:'fixed'}}>
+                    <colgroup><col style={{width:'auto'}}/><col style={{width:52}}/><col style={{width:52}}/><col style={{width:80}}/></colgroup>
+                    <thead>
+                      <tr style={{borderBottom:'2px solid #ECECE8'}}>
+                        <th style={{padding:'0 0 6px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',textAlign:'left'}}>REPOSICIÓN</th>
+                        <th style={{padding:'0 0 6px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',textAlign:'center'}}>CAM</th>
+                        <th style={{padding:'0 0 6px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',textAlign:'center'}}>SHO</th>
+                        <th style={{padding:'0 0 6px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',textAlign:'right'}}>MONTO</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filas.length === 0
+                        ? <tr><td colSpan={4} style={{color:'#999',fontSize:13,padding:'20px 0',textAlign:'center'}}>Sin registros</td></tr>
+                        : filas.map((f,i) => (
+                          <tr key={i} style={{borderBottom:'1px solid #ECECE8'}}>
+                            <td style={{padding:'7px 8px 7px 0',verticalAlign:'middle'}}>
+                              {f.fecha && <div style={{fontSize:11,fontWeight:700,color:'#121212',marginBottom:1}}>{f.fecha}</div>}
+                              <div style={{fontWeight:500,fontSize:12,textTransform:'uppercase',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'#555'}}>{f.label}{f.torneo ? ` · ${f.torneo}` : ''}</div>
+                            </td>
+                            <td style={{padding:'7px 4px',textAlign:'center',fontWeight:700,fontSize:13,verticalAlign:'middle'}}>{f.cam}</td>
+                            <td style={{padding:'7px 4px',textAlign:'center',fontWeight:700,fontSize:13,verticalAlign:'middle'}}>{f.sht}</td>
+                            <td style={{padding:'7px 0 7px 4px',fontFamily:'IBM Plex Mono,monospace',fontSize:12,fontWeight:600,textAlign:'right',whiteSpace:'nowrap',verticalAlign:'middle'}}>$ {f.monto.toLocaleString('es-UY')}</td>
+                          </tr>
+                        ))
+                      }
+                    </tbody>
+                    <tfoot>
+                      <tr style={{borderTop:'2px solid #121212'}}>
+                        <td style={{padding:'8px 8px 0 0',fontWeight:700,fontSize:12}}>TOTAL</td>
+                        <td style={{padding:'8px 4px 0',textAlign:'center'}}><span style={{fontWeight:700,fontSize:14,background:'#f2cb12',borderRadius:20,padding:'2px 6px'}}>{totCam}</span></td>
+                        <td style={{padding:'8px 4px 0',textAlign:'center'}}><span style={{fontWeight:700,fontSize:14,background:'#f2cb12',borderRadius:20,padding:'2px 6px'}}>{totSht}</span></td>
+                        <td style={{padding:'8px 0 0 4px',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,textAlign:'right',whiteSpace:'nowrap'}}>$ {totMonto.toLocaleString('es-UY')}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                {extrasJug.length > 0 && (<>
+                  <div style={{fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',paddingTop:12,paddingBottom:4,borderBottom:'2px solid #ECECE8',marginTop:8}}>DESCUENTOS EXTRA</div>
+                  <div style={{overflowY:'auto',maxHeight:160}}>
+                    {extrasJug.map((e,i) => (
+                      <div key={i} style={{display:'grid',gridTemplateColumns:'1fr auto',gap:'0 10px',alignItems:'center',padding:'6px 0',borderBottom:'1px solid #ECECE8'}}>
+                        <div>
+                          {e.fecha && <div style={{fontSize:11,fontWeight:700,color:'#121212',marginBottom:1}}>{e.fecha}</div>}
+                          <div style={{fontWeight:500,fontSize:12,color:'#555',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{e.articulo}{(e.cantidad||1)>1?` × ${e.cantidad}`:''}</div>
+                        </div>
+                        <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,fontWeight:600,textAlign:'right',whiteSpace:'nowrap'}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0 0',borderTop:'2px solid #121212',marginTop:4}}>
+                    <span style={{fontWeight:700,fontSize:12}}>TOTAL EXTRAS</span>
+                    <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,whiteSpace:'nowrap'}}>$ {totExtrasItems.toLocaleString('es-UY')}</span>
+                  </div>
+                </>)}
+                <button onClick={()=>setRankingDetalle(null)} style={{marginTop:16,width:'100%',padding:'9px 0',border:'1px solid #D0D0CC',borderRadius:8,background:'#fff',cursor:'pointer',fontSize:13,color:'#666'}}>Cerrar</button>
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* Modal: Partidos Registrados (receptor) */}
+        {showPartidosModal && (
+          <div className="modal-backdrop" onClick={()=>setShowPartidosModal(false)}>
+            <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:560}}>
+              <div className="modal-header">
+                <div className="modal-title">Partidos Registrados</div>
+                <button className="modal-close" onClick={()=>setShowPartidosModal(false)}>×</button>
+              </div>
+              <div className="modal-body" style={{padding:0,maxHeight:'60vh',overflowY:'auto'}}>
+                {(() => {
+                  const seen = new Set()
+                  const partidos = []
+                  ;(db.reposiciones||[]).forEach(r => {
+                    const key = (r.torneo&&r.fechaTorneo!=null&&r.fechaTorneo!=='') ? r.torneo+'|'+r.fechaTorneo : 'id:'+r.id
+                    if (!seen.has(key)) { seen.add(key); partidos.push(r) }
+                  })
+                  partidos.sort((a,b)=>{const[da,ma,ya]=(a.fechaPartido||a.fecha||'').split('/');const[db2,mb,yb]=(b.fechaPartido||b.fecha||'').split('/');return(yb-ya)||((mb-ma)||(db2-da))})
+                  if (!partidos.length) return <div style={{padding:'20px',color:'#8a8a82',textAlign:'center'}}>Sin partidos registrados.</div>
+                  return partidos.map((r,i) => {
+                    const _f = r.fechaTorneo
+                    const _fin = _f!=null&&_f!==''&&(_f==='Final'||_f==='NaN'||Number.isNaN(_f))
+                    const instancia = _fin ? 'Final' : (_f!=null&&_f!=='' ? 'Fecha '+_f : '')
+                    const rival = r.concepto ? r.concepto.replace(/^Reposici[oó]n\.?\s*/i,'').trim() : ''
+                    return (
+                      <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 16px',borderBottom:i<partidos.length-1?'1px solid #F0F0EC':'none',background:i%2===0?'#fff':'#FAFAF8'}}>
+                        <span style={{fontSize:12,color:'#8a8a82',minWidth:76,fontVariantNumeric:'tabular-nums'}}>{r.fechaPartido||r.fecha}</span>
+                        <span style={{flex:1,fontWeight:600,fontSize:13.5}}>{rival||r.concepto}</span>
+                        {r.torneo && <span style={{fontSize:11,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:4,padding:'1px 7px',fontWeight:600,whiteSpace:'nowrap'}}>{r.torneo}{instancia?' · '+instancia:''}</span>}
+                      </div>
+                    )
+                  })
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
+
         {toast && (
           <div className="toast">
             <span className="toast-dot"/>
             {toast}
           </div>
         )}
+        </div>
+        </div>
       </div>
     )
   }
@@ -920,33 +3260,84 @@ export default function App() {
       {/* Sidebar */}
       <aside className={`sidebar${sidebarOpen?' open':''}`}>
         <div className="sidebar-logo">
-          <img src="/escudo.png" alt="Peñarol" />
+          <img src="/escudo_marca.png" alt="Club Atlético Peñarol" />
           <div className="sidebar-logo-text">
-            <div className="name">PEÑAROL</div>
-            <div className="sub">DEPÓSITO · INDUMENTARIA</div>
+            <div className="name">CLUB ATLÉTICO PEÑAROL</div>
+            <div className="sub">CAMPEÓN DEL SIGLO</div>
           </div>
         </div>
         <nav className="sidebar-nav">
-          {[['panel','PANEL'],['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES'],['usuarios-reg','USUARIOS REGISTRADOS']].map(([key,label]) => {
+          {/* PANEL PRINCIPAL top-level */}
+          {(() => { const isActive = view==='panel'; return (
+            <button className={`nav-item${isActive?' active':''}`} onClick={() => goView('panel')}>
+              <span className="nav-dot" />
+              PANEL PRINCIPAL
+            </button>
+          )})()}
+          {/* Grupo DEPÓSITO */}
+          {(() => { const isGrpActive = ['inventario','detalle','entregas','movimientos','receptores','utileria'].includes(view); return (
+            <button className={`nav-item${isGrpActive?' active':''}`} onClick={() => setDepositosOpen(o => !o)}>
+              <span className="nav-dot" />
+              DEPÓSITO
+              <span style={{marginLeft:'auto',fontSize:10,opacity:0.6}}>{depositosOpen ? '▾' : '▸'}</span>
+            </button>
+          )})()}
+          {depositosOpen && [['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES'],['utileria','CAMISETAS UTILERÍA']].map(([key,label]) => {
             const isActive = view===key||(key==='inventario'&&view==='detalle')
+            return (
+              <button key={key} className={`nav-item nav-item-sub${isActive?' active':''}`} onClick={() => goView(key)}>
+                <span className="nav-dot" />
+                {label}
+              </button>
+            )
+          })}
+          {/* Grupo REPOSICIÓN CAMISETAS */}
+          {(() => { const isGrpActive = view==='reposiciones'; return (
+            <button className={`nav-item${isGrpActive?' active':''}`} onClick={() => setReposicionesOpen(o=>!o)}>
+              <span className="nav-dot" />
+              REPOSICIÓN CAMISETAS
+              <span style={{marginLeft:'auto',fontSize:10,opacity:0.6}}>{reposicionesOpen ? '▾' : '▸'}</span>
+            </button>
+          )})()}
+          {reposicionesOpen && [
+            ['reposiciones','REPOSICIONES Y DESCUENTOS'],
+            ['extras','DESCUENTOS EXTRA'],
+            ['plantel',`PLANTEL${(db.plantel||[]).filter(j=>j.nombre?.trim().toLowerCase()!=='libre').length>0?' ('+((db.plantel||[]).filter(j=>j.nombre?.trim().toLowerCase()!=='libre').length)+')':''}`],
+          ].map(([k,l]) => (
+            <button key={k} className={`nav-item nav-item-sub${view==='reposiciones'&&repTab===k?' active':''}`} onClick={() => { goView('reposiciones'); setRepTab(k); setSidebarOpen(false) }}>
+              <span className="nav-dot" />
+              {l}
+            </button>
+          ))}
+          {/* Items top-level */}
+          {[['contrato-puma','CONTRATO PUMA'],['usuarios-reg','USUARIOS REGISTRADOS']].map(([key,label]) => {
+            const isActive = view===key
             return (
               <button key={key} className={`nav-item${isActive?' active':''}`} onClick={() => goView(key)}>
                 <span className="nav-dot" />
                 {label}
-                {isActive && <img src="/escudo.png" alt="" style={{height:20,width:'auto',marginLeft:'auto',opacity:0.85}} />}
               </button>
             )
           })}
         </nav>
-        <div className="sidebar-user">
-          <div className="user-avatar">{ini(session||'')}</div>
-          <div style={{flex:1,minWidth:0}}>
-            <div className="user-name">{(session||'').toUpperCase()}</div>
-            <div className="user-role">Gestión de depósito</div>
+        <div style={{flex:1}} />
+        <div style={{padding:'14px 18px 12px',borderTop:'1px solid #1e1e1e'}}>
+          <img src="/iconos_penarol.png" alt="Peñarol" style={{width:'100%',display:'block',opacity:.9}} />
+        </div>
+        <div className="sidebar-user" style={{flexDirection:'column',gap:10}}>
+          <div style={{display:'flex',alignItems:'center',gap:11,minWidth:0}} title={`${currentUser?.displayName || session}\n${session}`}>
+            <div className="user-avatar" style={{flexShrink:0}}>{ini(currentUser?.displayName || session || '')}</div>
+            <div style={{flex:1,minWidth:0}}>
+              <div className="user-name" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{currentUser?.displayName || session}</div>
+              <div className="user-role" style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{session}</div>
+            </div>
           </div>
-          <button title="Cambiar contraseña" onClick={()=>{setChangePassForm({current:'',newPass:'',newPass2:'',err:''});setModal('cambiar-pass')}} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:16,padding:'0 4px',flexShrink:0}}>🔑</button>
-          <button title="Gestionar usuarios" onClick={openUserMgmt} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 4px',flexShrink:0}}>⚙</button>
-          <button title="Cerrar sesión" onClick={doLogout} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 4px',flexShrink:0}}>⏻</button>
+          <div style={{display:'flex',justifyContent:'flex-end',gap:2}}>
+            <button title="Sincronizar con servidor" onClick={() => saveToSupabase(db).then(ok => showToast(ok ? 'Datos sincronizados.' : 'Error al sincronizar.'))} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 6px'}}>↺</button>
+            <button title="Cambiar contraseña" onClick={()=>{setChangePassForm({current:'',newPass:'',newPass2:'',err:''});setModal('cambiar-pass')}} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:16,padding:'0 6px'}}>🔑</button>
+            <button title="Gestionar usuarios" onClick={openUserMgmt} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 6px'}}>⚙</button>
+            <button title="Cerrar sesión" onClick={doLogout} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 6px'}}>⏻</button>
+          </div>
         </div>
       </aside>
 
@@ -956,18 +3347,25 @@ export default function App() {
           <button className="hamburger" onClick={() => setSidebarOpen(o=>!o)} aria-label="Menú">
             <span/><span/><span/>
           </button>
-          <img src="/1891_Amarillo.jpg" alt="1891" style={{height:28,width:'auto'}} />
           <div className="topbar-title">
-            {{panel:'PANEL',inventario:'INVENTARIO',detalle:'DETALLE',entregas:'ENTREGAS',movimientos:'MOVIMIENTOS',receptores:'RECEPTORES','usuarios-reg':'USUARIOS REGISTRADOS'}[view]}
+            {{panel:'PANEL PRINCIPAL',inventario:'INVENTARIO',detalle:'DETALLE',entregas:'ENTREGAS',movimientos:'MOVIMIENTOS',receptores:'RECEPTORES','usuarios-reg':'USUARIOS REGISTRADOS',utileria:'CAMISETAS UTILERÍA',reposiciones:'REPOSICIÓN CAMISETAS','contrato-puma':'CONTRATO PUMA'}[view]}
           </div>
           <div className="topbar-spacer" />
           <div className="search-box">
             <span className="search-icon" />
-            <input value={search} onChange={e => { setSearch(e.target.value); if((view==='panel'||view==='detalle')&&e.target.value) setView('inventario') }} placeholder="Buscar…" />
+            <input
+              value={view==='entregas' ? delFilterPersona : view==='utileria' ? utiFilterJugador : search}
+              onChange={e => {
+                if (view==='entregas') { setDelFilterPersona(e.target.value) }
+                else if (view==='utileria') { setUtiFilterJugador(e.target.value) }
+                else { setSearch(e.target.value); if((view==='panel'||view==='detalle')&&e.target.value) setView('inventario') }
+              }}
+              placeholder={view==='entregas' ? 'Buscar integrante…' : view==='utileria' ? 'Buscar jugador…' : 'Buscar artículo…'}
+            />
           </div>
-          <button className="btn btn-ghost" onClick={openArticulo}><span>+</span><span> Artículo</span></button>
-          <button className="btn btn-ghost" onClick={openDevolucion}><span>↩</span><span> Dev.</span></button>
-          <button className="btn btn-yellow" onClick={openEntrega}><span>+</span><span> Entrega</span></button>
+          {!isSoloVista && <button className="btn btn-ghost" onClick={openArticulo}>+<span className="btn-label"> Artículo</span></button>}
+          {!isSoloVista && <button className="btn btn-ghost" onClick={openDevolucion}>↩<span className="btn-label"> Dev.</span></button>}
+          {!isSoloVista && <button className="btn btn-yellow" onClick={openEntrega}>+<span className="btn-label"> Entrega</span></button>}
         </header>
 
         <div className="content">
@@ -976,12 +3374,11 @@ export default function App() {
             <>
               <div className="kpi-grid">
                 <div className="kpi-card"><div className="kpi-label">ARTÍCULOS</div><div className="kpi-value">{kpis.articulos}</div><div className="kpi-sub">referencias activas</div></div>
-                <div className="kpi-card"><div className="kpi-label">UNIDADES EN STOCK</div><div className="kpi-value">{kpis.unidades}</div><div className="kpi-sub">suma de todos los talles</div></div>
+
+                <div className="kpi-card" style={{cursor:'pointer'}} onClick={()=>setShowUnidadesDesglose(true)}><div className="kpi-label">UNIDADES EN STOCK</div><div className="kpi-value">{kpis.unidades}</div><div className="kpi-sub">suma de todos los talles →</div></div>
 
                 <div className="kpi-card"><div className="kpi-label">MONTO TOTAL EN ARTÍCULOS</div><div className="kpi-value" style={{fontSize:24}}>$ {kpis.valorStock.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</div></div>
-                <div className="kpi-card"><div className="kpi-label">PRENDAS DE ENTRENAMIENTO</div><div className="kpi-value">{kpis.entrenamiento}</div><div className="kpi-sub">unidades en stock</div></div>
-                <div className="kpi-card"><div className="kpi-label">PRENDAS DE JUEGO</div><div className="kpi-value">{kpis.juego}</div><div className="kpi-sub">unidades en stock</div></div>
-                <div className="kpi-card"><div className="kpi-label">PRENDAS CASUAL</div><div className="kpi-value">{kpis.casual}</div><div className="kpi-sub">unidades en stock</div></div>
+
               </div>
               <div className="panel-grid">
                 <div className="card">
@@ -1004,18 +3401,70 @@ export default function App() {
                     </div>
                   ))}
                 </div>
+                {!isSoloVista && pendingSeparar.length > 0 && (
+                  <div className="card" style={{border:'2px solid #F59E0B',marginBottom:16}}>
+                    <div className="card-header">
+                      <div className="card-title" style={{color:'#B45309'}}>⚠ Pedidos pendientes de separar</div>
+                      <div className="card-spacer"/>
+                      <span className="badge" style={{background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B'}}>{pendingSeparar.length}</span>
+                      {!isSoloVista && pendingSeparar.some(d => !db.movimientos.some(m => m.delId === d.id)) && (
+                        <button className="btn btn-ghost" style={{fontSize:11,padding:'3px 8px',color:'#B45309',border:'1px solid #F59E0B'}} onClick={migrarStockPendientes}>Descontar stock</button>
+                      )}
+                      <button className="back-link" style={{color:'#B45309',margin:0}} onClick={() => goView('entregas')}>Ver todas →</button>
+                    </div>
+                    {pendingSeparar.map(d => (
+                      <div key={d.id} className="table-row" style={{gridTemplateColumns:'34px 1fr auto'}}>
+                        <div className="avatar" style={{background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B',fontSize:13,fontWeight:800}}>!</div>
+                        <div style={{minWidth:0}}>
+                          <div style={{fontWeight:600,fontSize:13.5,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.persona}</div>
+                          <div style={{fontSize:11.5,color:'#8a8a82'}}>{d.receptor}{d.disciplina?' · '+d.disciplina:''} · {d.lines.reduce((s,l)=>s+l.qty,0)} unidades</div>
+                        </div>
+                        <div style={{textAlign:'right',flexShrink:0}}>
+                          <span style={{background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B',borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700}}>Pend. separar</span>
+                          <div style={{fontSize:11,color:'#8a8a82',marginTop:3}}>{d.fecha}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {currentUser?.role === 'admin' && (db.repoAlertas||[]).length > 0 && (
+                  <div className="card" style={{border:'2px solid #F59E0B',marginBottom:16}}>
+                    <div className="card-header">
+                      <div className="card-title" style={{color:'#B45309'}}>⚠ Cambios en Reposiciones</div>
+                      <div className="card-spacer"/>
+                      <span className="badge" style={{background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B'}}>{(db.repoAlertas||[]).length}</span>
+                      <button className="back-link" style={{color:'#B45309',margin:0}} onClick={() => goView('reposiciones')}>Ver →</button>
+                    </div>
+                    {(db.repoAlertas||[]).map(a => {
+                      const verbo = a.tipo==='crear' ? 'agregó' : a.tipo==='editar' ? 'editó' : 'eliminó'
+                      const accion = a.detalle || `${verbo} la reposición`
+                      return (
+                        <div key={a.id} className="table-row" style={{gridTemplateColumns:'34px 1fr auto'}}>
+                          <div className="avatar" style={{background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B',fontSize:13,fontWeight:800}}>!</div>
+                          <div style={{minWidth:0}}>
+                            <div style={{fontWeight:600,fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                              {a.por} {verbo} «{a.concepto}»
+                            </div>
+                            <div style={{fontSize:11.5,color:'#8a8a82',marginTop:1}}>{accion}</div>
+                          </div>
+                          <div style={{textAlign:'right',flexShrink:0,fontSize:11,color:'#8a8a82',whiteSpace:'nowrap',marginLeft:8}}>{a.fecha}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
                 <div className="card">
                   <div className="card-header">
                     <div className="card-title">Entregas pendientes de respuesta</div>
                     <div className="card-spacer"/>
-                    {pendingDeliveries.length > 0 && <span className="badge" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200'}}>{pendingDeliveries.length}</span>}
+                    {pendingDeliveries.length > 0 && <span className="badge" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12'}}>{pendingDeliveries.length}</span>}
                     <button className="back-link" style={{color:'#9a7d00',margin:0}} onClick={() => goView('entregas')}>Ver todas →</button>
                   </div>
                   {pendingDeliveries.length === 0
                     ? <div className="empty">No hay entregas pendientes de confirmación.</div>
                     : pendingDeliveries.map(d => (
                       <div key={d.id} className="table-row" style={{gridTemplateColumns:'34px 1fr auto'}}>
-                        <div className="avatar" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200'}}>{d.ini}</div>
+                        <div className="avatar" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12'}}>{d.ini}</div>
                         <div style={{minWidth:0}}>
                           <div style={{fontWeight:600,fontSize:13.5,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.displayName}</div>
                           <div style={{fontSize:11.5,color:'#8a8a82'}}>
@@ -1023,42 +3472,66 @@ export default function App() {
                           </div>
                         </div>
                         <div style={{textAlign:'right',flexShrink:0}}>
-                          <span style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200',borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700}}>Pendiente</span>
+                          <span style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12',borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700}}>Pendiente</span>
                           <div style={{fontSize:11,color:'#8a8a82',marginTop:3}}>{d.fecha}</div>
                         </div>
                       </div>
                     ))
                   }
                 </div>
-                {!isReceptor && pendingApprovals.length > 0 && (
+{!isReceptor && (() => {
+                  const myPending = db.deliveries.filter(d => d.toUser === session && (d.status||'aceptado') === 'pendiente')
+                  if (!myPending.length) return null
+                  return (
+                    <div className="card" style={{marginTop:16}}>
+                      <div className="card-header">
+                        <div className="card-title">Entregas pendientes de confirmación</div>
+                        <div className="card-spacer"/>
+                        <span className="badge" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12'}}>{myPending.length}</span>
+                      </div>
+                      {myPending.map(d => (
+                        <div key={d.id} className="table-row" style={{gridTemplateColumns:'1fr auto'}}>
+                          <div>
+                            <div style={{fontWeight:600,fontSize:13.5}}>Entrega #{d.id} — {d.receptor}</div>
+                            <div style={{fontSize:11.5,color:'#8a8a82'}}>{d.fecha} · {d.lines.length} artículo{d.lines.length!==1?'s':''}</div>
+                          </div>
+                          <div style={{display:'flex',gap:6}}>
+                            <button onClick={()=>receptorAceptar(d.id)} style={{padding:'4px 10px',borderRadius:5,border:'none',cursor:'pointer',fontWeight:700,fontSize:11.5,background:'#2e9b5e',color:'#fff'}}>✓ Aceptar</button>
+                            <button onClick={()=>setRechazarModal({delId:d.id,motivo:''})} style={{padding:'4px 10px',borderRadius:5,border:'1px solid #C2473D',cursor:'pointer',fontWeight:700,fontSize:11.5,background:'none',color:'#C2473D'}}>✕ Rechazar</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })()}
+                {!isReceptor && !isSoloVista && pendingApprovals.length > 0 && (
                   <div className="card" style={{marginTop:16}}>
                     <div className="card-header">
                       <div className="card-title">Solicitudes de acceso pendientes</div>
                       <div className="card-spacer"/>
-                      <span className="badge" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200'}}>{pendingApprovals.length}</span>
+                      <span className="badge" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12'}}>{pendingApprovals.length}</span>
                       <button className="back-link" style={{color:'#9a7d00',margin:0}} onClick={() => goView('usuarios-reg')}>Ver →</button>
                     </div>
                     {pendingApprovals.map(u => (
                       <div key={u.username} className="table-row" style={{gridTemplateColumns:'34px 1fr auto'}}>
-                        <div className="avatar" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200',opacity:.8}}>{ini(u.displayName||u.username)}</div>
+                        <div className="avatar" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12',opacity:.8}}>{ini(u.displayName||u.username)}</div>
                         <div style={{minWidth:0}}>
                           <div style={{fontWeight:600,fontSize:13.5,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{u.displayName||u.username}</div>
                           <div style={{fontSize:11.5,color:'#8a8a82'}}>{u.cargo}{u.categoria ? ' · '+u.categoria : ''}</div>
                         </div>
                         <div style={{display:'flex',gap:6,flexShrink:0}}>
-                          <button onClick={()=>approveUser(u.username)} style={{padding:'4px 10px',borderRadius:5,border:'none',cursor:'pointer',fontWeight:700,fontSize:11.5,background:'#FFD200',color:'#121212'}}>Aprobar</button>
+                          <button onClick={()=>approveUser(u.username)} style={{padding:'4px 10px',borderRadius:5,border:'none',cursor:'pointer',fontWeight:700,fontSize:11.5,background:'#f2cb12',color:'#121212'}}>Aprobar</button>
                           <button onClick={()=>rejectUser(u.username)} style={{padding:'4px 10px',borderRadius:5,border:'1px solid #C2473D',cursor:'pointer',fontWeight:700,fontSize:11.5,background:'none',color:'#C2473D'}}>Rechazar</button>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
-              </div>
-              <div className="card" style={{marginTop:16}}>
+                <div className="card">
                 <div className="card-header">
                   <div className="card-title">⚠ Talles duplicados en múltiples ubicaciones</div>
                   <div className="card-spacer"/>
-                  {dupList.length > 0 && <span className="badge" style={{background:'#FFF0C2',color:'#7a5800',border:'1px solid #FFD200'}}>{dupList.length} artículo{dupList.length>1?'s':''}</span>}
+                  {dupList.length > 0 && <span className="badge" style={{background:'#FFF0C2',color:'#7a5800',border:'1px solid #f2cb12'}}>{dupList.length} artículo{dupList.length>1?'s':''}</span>}
                 </div>
                 {dupList.length === 0 && <div className="empty">No hay artículos en ubicaciones repetidas.</div>}
                 {dupList.map(d => (
@@ -1077,6 +3550,7 @@ export default function App() {
                   </div>
                 ))}
               </div>
+              </div>
             </>
           )}
 
@@ -1087,6 +3561,12 @@ export default function App() {
                 {['Todas',...CATEGORIAS].map(c => (
                   <button key={c} className={`chip${cat===c?' active':''}`} onClick={() => setCat(c)}>{c}</button>
                 ))}
+                <select className="field-input" style={{height:32,fontSize:12.5,padding:'0 8px',minWidth:110,maxWidth:140}}
+                  value={filterUbic} onChange={e => setFilterUbic(e.target.value)}>
+                  <option value="">Ubicación…</option>
+                  {availableUbics.map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+                {filterUbic && <button className="chip active" onClick={()=>setFilterUbic('')}>× {filterUbic}</button>}
                 <div style={{flex:1}}/>
                 <button className="btn btn-ghost" style={{fontSize:12.5,padding:'5px 12px'}} onClick={exportExcel}>↓ Exportar Excel</button>
               </div>
@@ -1097,8 +3577,10 @@ export default function App() {
                   <div className="inv-col-cat">CATEGORÍA</div>
                   <div className="inv-col-sizes">TALLES</div>
                   <div style={{textAlign:'right'}}>STOCK</div>
+                  <div style={{textAlign:'center'}}>FOTO</div>
                   <div style={{textAlign:'right'}}>ESTADO</div>
                   <div className="inv-col-precio" style={{textAlign:'right'}}>PRECIO SOCIO</div>
+                  <div/>
                 </div>
                 {invRows.map(r => (
                   <div key={r.code} className="table-row clickable inv-cols" onClick={() => openDetail(r.code)}>
@@ -1108,12 +3590,27 @@ export default function App() {
                     <div className="inv-col-cat" style={{color:'#1a1a1a'}}>{r.cat}</div>
                     <div className="inv-col-sizes" style={{color:'#1a1a1a'}}>{r.sizesLabel}</div>
                     <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{r.totalFmt}</div>
+                    <div style={{textAlign:'center'}}>
+                      {(() => { const ph = r.photos?.length ? r.photos : (r.photo ? [r.photo] : []); return ph.length
+                        ? <button onClick={e=>{e.stopPropagation();setPhotoPreview({photos:ph,name:r.name,idx:0})}} style={{padding:'3px 9px',borderRadius:5,border:'1px solid #E0E0DA',background:'#F5F5F0',fontSize:11.5,fontWeight:600,cursor:'pointer',color:'#1a1a1a'}}>Ver foto{ph.length>1?` (${ph.length})`:''}</button>
+                        : <span style={{color:'#ccc'}}>—</span> })()}
+                    </div>
                     <div style={{textAlign:'right',display:'flex',gap:4,justifyContent:'flex-end',flexWrap:'wrap'}}>
                       {r.low && <span className="badge low">Bajo mín.</span>}
                     </div>
                     <div className="inv-col-precio mono" style={{textAlign:'right',fontSize:12.5,color:'#1a1a1a'}}>
                       {r.precio > 0 ? '$ '+r.precio.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}
                     </div>
+                    {!isSoloVista
+                      ? <div onClick={e => e.stopPropagation()} style={{display:'flex',justifyContent:'center',alignItems:'center'}}>
+                          <button title="Entrega múltiple"
+                            onClick={() => { setCartPickerCode(r.code); setCartPickerTalle(''); setCartPickerQty('') }}
+                            style={{width:28,height:28,borderRadius:6,border:'1.5px solid #E0E0DA',background:cartLines.some(l=>l.code===r.code)?'#f2cb12':'#F5F5F0',color:cartLines.some(l=>l.code===r.code)?'#121212':'#7a7a72',fontSize:16,lineHeight:1,cursor:'pointer',fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',padding:0}}>
+                            +
+                          </button>
+                        </div>
+                      : <div/>
+                    }
                   </div>
                 ))}
                 {invRows.length === 0 && <div className="empty">{search ? `Sin resultados para «${search}».` : 'Sin artículos. Creá el primero con + Artículo.'}</div>}
@@ -1139,59 +3636,91 @@ export default function App() {
                         </div>
                       </div>
                       <div style={{textAlign:'right',flexShrink:0}}>
-                        <div style={{fontFamily:'Archivo Black,sans-serif',fontSize:30,lineHeight:1}}>{detail.totalFmt}</div>
+                        <div style={{fontFamily:'Oswald,sans-serif',fontSize:30,lineHeight:1}}>{detail.totalFmt}</div>
                         <div style={{fontSize:11.5,color:'#8a8a82',marginTop:4}}>unidades totales</div>
                         {detail.precio > 0 && <div style={{marginTop:8,fontSize:13,fontWeight:700,color:'#1a1a1a'}}>$ {detail.precio.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>}
+                        <button onClick={exportProductoExcel} style={{marginTop:10,padding:'5px 12px',borderRadius:6,border:'1px solid #2d6a4f',background:'#fff',color:'#2d6a4f',fontSize:12,fontWeight:700,cursor:'pointer'}}>↓ Excel</button>
                       </div>
                     </div>
                   </div>
 
                   {/* Stock por ubicación */}
                   <div style={{padding:'18px 24px'}}>
-                    {detail.entries.map((entry, idx) => {
+                    {(() => {
+                      const visibleEntries = detail.entries.filter(e => e.sizes.reduce((s, z) => s + z.qty, 0) > 0)
+                      const ubicCounts = {}
+                      visibleEntries.forEach(e => { ubicCounts[e.ubic] = (ubicCounts[e.ubic]||0) + 1 })
+                      return visibleEntries.map((entry, idx) => {
                       const entryTot = entry.sizes.reduce((s, z) => s + z.qty, 0)
+                      const hasDup = ubicCounts[entry.ubic] > 1
                       return (
                         <div key={entry.id}>
                           {idx > 0 && <div style={{borderTop:'1px solid #E7E7E3',margin:'20px 0'}} />}
-                          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
-                            <span className="ubic-badge" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200',fontWeight:700}}>
+                          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14,flexWrap:'wrap'}}>
+                            <span className="ubic-badge" style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12',fontWeight:700}}>
                               <span style={{fontSize:11,color:'#9a7d00',fontFamily:'Archivo,sans-serif'}}>UBIC. </span>{entry.ubic}
                             </span>
                             <span style={{fontSize:12.5,color:'#8a8a82'}}>{fmt(entryTot)} u.</span>
+                            {hasDup && !isSoloVista && idx === 0 && (
+                              <button onClick={() => mergeEntriesByUbic(detail.code, entry.ubic)}
+                                style={{marginLeft:'auto',padding:'4px 12px',borderRadius:6,border:'1px solid #C2473D',background:'#FBEAE8',color:'#C2473D',fontSize:12,fontWeight:700,cursor:'pointer'}}>
+                                ⚠ Unificar registros duplicados
+                              </button>
+                            )}
                           </div>
                           <div style={{fontSize:12,color:'#8a8a82',fontWeight:700,letterSpacing:'.04em',marginBottom:14}}>STOCK POR TALLE</div>
                           {entry.sizes.map(s => (
                             <div key={s.talle} className="bar-row">
                               <div style={{width:46,fontWeight:700,fontSize:13.5}}>{s.talle}</div>
-                              <div className="bar-track"><div className="bar-fill" style={{width:s.pct+'%',background:s.isLow||s.qty<=0?'#C2473D':'#FFD200'}} /></div>
+                              <div className="bar-track"><div className="bar-fill" style={{width:s.pct+'%',background:s.isLow||s.qty<=0?'#C2473D':'#f2cb12'}} /></div>
                               <div style={{textAlign:'right',flexShrink:0}}>
                                 <div className="mono" style={{fontWeight:600,fontSize:13.5}}>{s.qty}</div>
                                 <div style={{fontSize:10.5,color:'#8a8a82'}}>mín {s.min}</div>
                               </div>
                             </div>
                           ))}
-                          {/* Botones por ubicación */}
-                          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:16}}>
-                            <button className="btn btn-yellow" onClick={() => { setSelectedId(entry.id); openReponer() }}>＋ Registrar entrada</button>
-                            <button className="btn btn-dark" onClick={() => { setSelectedId(entry.id); openAjuste() }}>Ajustar stock</button>
-                            <button className="btn btn-ghost" onClick={() => { setSelectedId(entry.id); openMover() }}>⇄ Cambiar de ubicación</button>
-                          </div>
+                          {/* Botones por ubicación — solo para multi-entrada */}
+                          {detail.entries.length > 1 && (
+                            <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:16}}>
+                              {!isSoloVista && <button className="btn btn-green-light" onClick={() => { setSelectedId(entry.id); openReponer() }}>＋ Registrar entrada</button>}
+                              {!isSoloVista && <button className="btn btn-gray-light" onClick={() => { setSelectedId(entry.id); openAjuste() }}>Ajustar stock</button>}
+                              {!isSoloVista && <button className="btn btn-gray-dark" onClick={() => { setSelectedId(entry.id); openMover() }}>⇄ Cambiar de ubicación</button>}
+                            </div>
+                          )}
                         </div>
                       )
-                    })}
+                    })})()}
 
-                    {/* Acciones globales */}
-                    <div className="detail-actions" style={{marginTop:24,paddingTop:20,borderTop:'1px solid #E7E7E3'}}>
-                      <button className="btn btn-ghost" onClick={openEntregaFromDetail}>Registrar entrega</button>
-                      <button className="btn btn-ghost" onClick={openDevolucionFromDetail}>↩ Devolución</button>
-                      <button className="btn btn-ghost btn-full" onClick={() => { setSelectedId(detail.entries[0].id); openEdit() }}>✎ Editar artículo</button>
+                    {/* Acciones unificadas */}
+                    <div className="detail-actions" style={{marginTop:20,paddingTop:20,borderTop:'1px solid #E7E7E3'}}>
+                      {!isSoloVista && <button className="btn btn-yellow" onClick={openEntregaFromDetail}>Registrar entrega</button>}
+                      {!isSoloVista && <button className="btn btn-black-yellow" onClick={() => { setCartPickerCode(selectedCode); setCartPickerTalle(''); setCartPickerQty('') }}>+ Entrega múltiple</button>}
+                      {!isSoloVista && <button className="btn btn-ghost" onClick={openDevolucionFromDetail}>↩ Devolución</button>}
+                      {detail.entries.length === 1 && !isSoloVista && <button className="btn btn-green-light" onClick={() => { setSelectedId(detail.entries[0].id); openReponer() }}>＋ Registrar entrada</button>}
+                      {detail.entries.length === 1 && !isSoloVista && <button className="btn btn-gray-light" onClick={() => { setSelectedId(detail.entries[0].id); openAjuste() }}>Ajustar stock</button>}
+                      {detail.entries.length === 1 && !isSoloVista && <button className="btn btn-gray-dark" onClick={() => { setSelectedId(detail.entries[0].id); openMover() }}>⇄ Cambiar de ubicación</button>}
+                      {!isSoloVista && <button className="btn btn-ghost btn-full" onClick={() => { setSelectedId(detail.entries[0].id); openEdit() }}>✎ Editar artículo</button>}
                     </div>
                   </div>
                 </div>
                 <div className="card">
+                  {detail.photos?.length > 0 && (
+                    <div style={{padding:'16px 20px',borderBottom:'1px solid #F0F0EC'}}>
+                      {detail.photos.length === 1
+                        ? <div style={{display:'flex',justifyContent:'center'}}>
+                            <img src={detail.photos[0]} alt={detail.name} style={{display:'block',maxWidth:'100%',maxHeight:400,borderRadius:8,border:'1px solid #E0E0DA',cursor:'pointer'}} onClick={()=>setPhotoPreview({photos:detail.photos,name:detail.name,idx:0})} />
+                          </div>
+                        : <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(120px,1fr))',gap:8}}>
+                            {detail.photos.map((src,i) => (
+                              <img key={i} src={src} alt={`${detail.name} ${i+1}`} onClick={()=>setPhotoPreview({photos:detail.photos,name:detail.name,idx:i})} style={{width:'100%',aspectRatio:'1',objectFit:'cover',borderRadius:8,border:'1px solid #E0E0DA',cursor:'pointer'}} />
+                            ))}
+                          </div>
+                      }
+                    </div>
+                  )}
                   <div className="card-header"><div className="card-title">Movimientos</div></div>
                   {detail.noMovs && <div className="empty">Sin movimientos registrados.</div>}
-                  {detail.movs.map(m => (
+                  {(movsExpanded ? detail.movs : detail.movs.slice(0,4)).map(m => (
                     <div key={m.id} style={{display:'flex',alignItems:'center',gap:12,padding:'13px 20px',borderBottom:'1px solid #F0F0EC'}}>
                       <span style={{width:9,height:9,borderRadius:'50%',flexShrink:0,background:m.tipo==='entrada'?'#2e9b5e':'#C2473D'}} />
                       <div style={{flex:1,minWidth:0}}>
@@ -1201,9 +3730,14 @@ export default function App() {
                       <div className="mono" style={{fontWeight:700,fontSize:14,color:m.tipo==='entrada'?'#2e9b5e':'#C2473D',flexShrink:0}}>
                         {m.tipo==='entrada'?'+':'−'}{m.qty}
                       </div>
-                      <button className="btn-del" onClick={() => m.delId ? askDeleteDelivery(m.delId) : askDeleteMov(m.id)}>✕</button>
+                      {!isSoloVista && <button className="btn-del" onClick={() => m.delId ? askDeleteDelivery(m.delId) : askDeleteMov(m.id)}>✕</button>}
                     </div>
                   ))}
+                  {detail.movs.length > 4 && (
+                    <button onClick={() => setMovsExpanded(p=>!p)} style={{width:'100%',padding:'11px',border:'none',background:'none',cursor:'pointer',fontSize:12.5,color:'#8a8a82',fontWeight:600,borderTop:'1px solid #F0F0EC'}}>
+                      {movsExpanded ? 'Ver menos ▲' : `Ver todos (${detail.movs.length}) ▼`}
+                    </button>
+                  )}
                 </div>
               </div>
             </>
@@ -1212,48 +3746,167 @@ export default function App() {
           {/* ENTREGAS */}
           {view === 'entregas' && (
             <>
-              <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginBottom:12}}>
+              <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginBottom:delFilterReceptor==='Deportes Anexos'?6:12}}>
                 <div style={{display:'flex',gap:6,flexWrap:'wrap',flex:1}}>
-                  <button className={`chip${delFilterReceptor===''?' active':''}`} onClick={() => setDelFilterReceptor('')}>Todos</button>
-                  {deliveryReceptores.map(r => (
-                    <button key={r} className={`chip${delFilterReceptor===r?' active':''}`} onClick={() => setDelFilterReceptor(r)}>{r}</button>
+                  <button className={`chip${delFilterReceptor===''?' active':''}`} onClick={() => { setDelFilterReceptor(''); setDelFilterDisciplina(''); setDelFilterPaga('') }}>Todos</button>
+                  {deliveryReceptoresOrdenados.map(r => (
+                    <button key={r} className={`chip${delFilterReceptor===r?' active':''}`} onClick={() => { setDelFilterReceptor(r); setDelFilterDisciplina(''); setDelFilterPaga('') }}>{r}</button>
                   ))}
                 </div>
-                <input className="field-input" style={{width:200,flexShrink:0}} placeholder="Buscar integrante…" value={delFilterPersona} onChange={e => setDelFilterPersona(e.target.value)} />
               </div>
+              {delFilterReceptor==='Deportes Anexos' && deportesAnexosDisciplinas.length > 0 && (
+                <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:12}}>
+                  <button className={`chip${delFilterDisciplina===''?' active':''}`} onClick={() => setDelFilterDisciplina('')}>Todas</button>
+                  {deportesAnexosDisciplinas.map(d => (
+                    <button key={d} className={`chip${delFilterDisciplina===d?' active':''}`} onClick={() => setDelFilterDisciplina(d)}>{d}</button>
+                  ))}
+                </div>
+              )}
+              {delFilterReceptor==='Protocolo' && (() => {
+                const totalRec = deliveryRows.filter(d => d.receptor==='Protocolo' && d.paga==='si' && (!delFilterPersona || d.persona.toLowerCase().includes(delFilterPersona.toLowerCase()))).reduce((s,d) => s+(d.monto||0), 0)
+                return (
+                  <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center',marginBottom:12}}>
+                    <span style={{fontSize:12,color:'#8a8a82',fontWeight:600}}>Paga:</span>
+                    <button className={`chip${delFilterPaga===''?' active':''}`} onClick={() => setDelFilterPaga('')}>Todos</button>
+                    <button className={`chip${delFilterPaga==='si'?' active':''}`} onClick={() => setDelFilterPaga('si')}>SÍ</button>
+                    <button className={`chip${delFilterPaga==='no'?' active':''}`} onClick={() => setDelFilterPaga('no')}>NO</button>
+                    {totalRec > 0 && <span style={{marginLeft:'auto',fontSize:12,fontWeight:700,color:'#2e9b5e'}}>Recaudado: $ {totalRec.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>}
+                  </div>
+                )
+              })()}
+            {delFilterPersona && delFilterReceptor !== REP_FILTER && filteredDeliveryRows.length > 0 && (() => {
+              const totalPrendas = filteredDeliveryRows.reduce((s,d) => s+d.totalUd, 0)
+              const artMap = {}
+              filteredDeliveryRows.forEach(d => (d.lines||[]).forEach(l => {
+                const key = (codeName[l.code]||l.code) + (l.talle ? ' ' + l.talle : '')
+                artMap[key] = (artMap[key]||0) + l.qty
+              }))
+              const artList = Object.entries(artMap).sort((a,b) => b[1]-a[1])
+              return (
+                <div style={{background:'#F5F5F0',border:'1px solid #E0E0DA',borderRadius:10,padding:'14px 18px',marginBottom:8}}>
+                  <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:artList.length?12:0,flexWrap:'wrap'}}>
+                    <div style={{fontWeight:700,fontSize:14}}>{filteredDeliveryRows[0].persona}</div>
+                    <div style={{background:'#121212',color:'#f2cb12',borderRadius:6,padding:'3px 10px',fontWeight:700,fontSize:13,fontFamily:'IBM Plex Mono,monospace',whiteSpace:'nowrap'}}>
+                      {totalPrendas} prenda{totalPrendas!==1?'s':''} entregada{totalPrendas!==1?'s':''}
+                    </div>
+                    <div style={{fontSize:12,color:'#8a8a82'}}>{filteredDeliveryRows.length} entrega{filteredDeliveryRows.length!==1?'s':''}</div>
+                  </div>
+                  {artList.length > 0 && (
+                    <div style={{display:'flex',flexWrap:'wrap',gap:'6px 10px'}}>
+                      {artList.map(([art, qty]) => (
+                        <span key={art} style={{fontSize:12,background:'#fff',border:'1px solid #E0E0DA',borderRadius:5,padding:'3px 9px',color:'#3a3a32'}}>
+                          <span style={{fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:'#121212',marginRight:5}}>×{qty}</span>{art}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
             <div className="card table-wrap">
               <div className="card-header">
-                <div className="card-title">Historial de entregas</div>
+                <div className="card-title">{delFilterReceptor===REP_FILTER ? 'Reposiciones 1° División' : 'Historial de entregas'}</div>
                 <div className="card-spacer"/>
-                <span style={{fontSize:12.5,color:'#8a8a82'}}>{filteredDeliveryRows.length} de {kpis.entregas} entregas</span>
+                <span style={{fontSize:12.5,color:'#8a8a82'}}>
+                  {delFilterReceptor===REP_FILTER
+                    ? `${filteredRepRows.length} de ${(db.reposiciones||[]).length} reposiciones`
+                    : `${filteredDeliveryRows.length} de ${kpis.entregas} entregas`}
+                </span>
+                {delFilterReceptor!==REP_FILTER && (
+                  remitoSelIds !== null
+                    ? <button onClick={() => setRemitoSelIds(null)} style={{marginLeft:10,padding:'5px 12px',borderRadius:6,border:'1px solid #ccc',background:'#f5f5f0',color:'#666',fontSize:12,fontWeight:600,cursor:'pointer'}}>Cancelar</button>
+                    : <button className="btn btn-ghost" style={{border:'1px solid #7a5800',color:'#7a5800'}} onClick={() => setRemitoSelIds(new Set())}>↓ Remito</button>
+                )}
               </div>
-              <div className="table-header del-cols">
+              <div className={`table-header ${delFilterReceptor==='Deportes Anexos'?'del-cols-disc':'del-cols'}`}>
                 <div>FECHA</div><div>INTEGRANTE / GRUPO</div>
+                {delFilterReceptor==='Deportes Anexos' && <div>DISCIPLINA</div>}
                 <div className="del-col-detail">DETALLE</div>
-                <div style={{textAlign:'right'}}>UNID.</div><div/>
+                <div style={{textAlign:'center'}}>TOTAL</div>
+                <div className="del-col-por">USUARIO</div>
+                <div style={{textAlign:'right'}}>ESTADO</div><div/>
               </div>
-              {filteredDeliveryRows.map(d => (
-                <div key={d.id} className="table-row del-cols">
-                  <div className="mono" style={{fontSize:12.5,color:'#6a6a62'}}>{d.fecha}</div>
-                  <div style={{display:'flex',alignItems:'center',gap:11,minWidth:0}}>
-                    <div className="avatar lg">{d.ini}</div>
-                    <div style={{minWidth:0}}>
-                      <div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.persona}</div>
-                      <div style={{fontSize:11.5,color:'#8a8a82'}}>
-                        {d.receptor}
-                        {d.paga !== null && d.paga !== undefined && <span style={{marginLeft:6,fontWeight:600,color:d.paga==='si'?'#2e9b5e':'#C2473D'}}>· Paga: {d.paga==='si'?'Sí':'No'}{d.paga==='si'&&d.monto>0?' — $ '+d.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}):''}</span>}
+              {delFilterReceptor===REP_FILTER
+                ? filteredRepRows.map(d => (
+                    <div key={d.id} className="table-row del-cols clickable" onClick={() => setRepDetail(d._rep)}>
+                      <div className="mono" style={{fontSize:12.5,color:'#6a6a62'}}>{d.fecha}</div>
+                      <div style={{display:'flex',alignItems:'center',gap:11,minWidth:0}}>
+                        <div className="avatar lg">{d.ini}</div>
+                        <div style={{minWidth:0}}>
+                          <div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.persona}</div>
+                          {d.subLabel && <div style={{fontSize:11.5,color:'#8a8a82'}}>{d.subLabel}</div>}
+                        </div>
+                      </div>
+                      <div className="del-col-detail" style={{color:'#6a6a62',fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.resumen}</div>
+                      <div style={{textAlign:'center',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{d.totalUd}</div>
+                      <div className="del-col-por" style={{fontSize:12.5,color:'#8a8a82',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.creadoPor || '—'}</div>
+                      <div/><div/>
+                    </div>
+                  ))
+                : filteredDeliveryRows.map(d => {
+                    const isSelected = remitoSelIds?.has(d.id)
+                    const handleClick = () => {
+                      if (remitoSelIds !== null) {
+                        setRemitoSelIds(prev => {
+                          const next = new Set(prev)
+                          next.has(d.id) ? next.delete(d.id) : next.add(d.id)
+                          return next
+                        })
+                      } else {
+                        setSelectedDeliveryId(d.id)
+                      }
+                    }
+                    return (
+                    <div key={d.id} className={`table-row ${delFilterReceptor==='Deportes Anexos'?'del-cols-disc':'del-cols'} clickable`}
+                      onClick={handleClick}
+                      style={isSelected ? {background:'#FFFBEA',outline:'2px solid #f2cb12',outlineOffset:'-2px'} : {}}>
+                      {remitoSelIds !== null
+                        ? <div style={{display:'flex',alignItems:'center',justifyContent:'center'}}>
+                            <div style={{width:18,height:18,borderRadius:4,border:'2px solid',borderColor:isSelected?'#7a5800':'#ccc',background:isSelected?'#f2cb12':'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:'#7a5800',flexShrink:0}}>
+                              {isSelected ? '✓' : ''}
+                            </div>
+                          </div>
+                        : <div className="mono" style={{fontSize:12.5,color:'#6a6a62'}}>{d.fecha}</div>
+                      }
+                      <div style={{display:'flex',alignItems:'center',gap:11,minWidth:0}}>
+                        {remitoSelIds !== null && <div className="mono" style={{fontSize:11,color:'#8a8a82',whiteSpace:'nowrap'}}>{d.fecha}</div>}
+                        <div className="avatar lg">{d.ini}</div>
+                        <div style={{minWidth:0}}>
+                          <div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.persona}</div>
+                          <div style={{fontSize:11.5,color:'#8a8a82'}}>
+                            {d.receptor}
+                            {d.paga !== null && d.paga !== undefined && <span style={{marginLeft:6,fontWeight:600,color:d.paga==='si'?'#2e9b5e':'#C2473D'}}>· Paga: {d.paga==='si'?'Sí':'No'}{d.paga==='si'&&d.monto>0?' — $ '+d.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}):''}</span>}
+                          </div>
+                        </div>
+                      </div>
+                      {delFilterReceptor==='Deportes Anexos' && <div style={{fontSize:12.5,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.disciplina||<span style={{color:'#ccc'}}>—</span>}</div>}
+                      <div className="del-col-detail" style={{color:'#6a6a62',fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.resumen}</div>
+                      <div style={{textAlign:'center',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{d.totalUd}</div>
+                      <div className="del-col-por" style={{fontSize:12.5,color:'#8a8a82',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.creadoPor || '—'}</div>
+                      <div style={{textAlign:'right'}}>
+                        {(() => { const st=d.status||'aceptado'; const bSt={borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}; return st==='pendiente'?<span style={{...bSt,background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12'}}>Pendiente</span>:st==='rechazado'?<span style={{...bSt,background:'#FBEAE8',color:'#C2473D',border:'1px solid #C2473D'}}>Rechazado</span>:st==='pendiente_separar'?<span style={{...bSt,background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B'}}>Pend. separar</span>:<span style={{...bSt,background:'#EDF7F2',color:'#2e9b5e',border:'1px solid #2e9b5e'}}>Aceptado</span> })()}
+                      </div>
+                      <div style={{display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
+                        {!isSoloVista && remitoSelIds === null && <button className="btn-del" onClick={e => { e.stopPropagation(); askDeleteDelivery(d.id) }}>✕</button>}
                       </div>
                     </div>
-                  </div>
-                  <div className="del-col-detail" style={{color:'#6a6a62',fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.resumen}</div>
-                  <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace'}}>{d.totalUd}</div>
-                  <div style={{display:'flex',justifyContent:'flex-end',alignItems:'center',gap:6}}>
-                    {(() => { const st=d.status||'aceptado'; return st==='pendiente'?<span style={{background:'#FFF8D6',color:'#7a5800',border:'1px solid #FFD200',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Pendiente</span>:st==='rechazado'?<span style={{background:'#FBEAE8',color:'#C2473D',border:'1px solid #C2473D',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Rechazado</span>:<span style={{background:'#EDF7F2',color:'#2e9b5e',border:'1px solid #2e9b5e',borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Aceptado</span> })()}
-                    <button className="btn-del" onClick={() => askDeleteDelivery(d.id)}>✕</button>
-                  </div>
+                    )
+                  })
+              }
+              {(delFilterReceptor===REP_FILTER ? filteredRepRows : filteredDeliveryRows).length === 0 && <div className="empty">{delFilterReceptor===REP_FILTER ? 'No hay reposiciones registradas.' : delFilterReceptor||delFilterPersona ? 'Sin entregas para este filtro.' : 'Sin entregas registradas.'}</div>}
+              {remitoSelIds !== null && remitoSelIds.size > 0 && (
+                <div style={{position:'sticky',bottom:0,background:'#121212',padding:'12px 20px',display:'flex',alignItems:'center',gap:12,borderTop:'2px solid #f2cb12'}}>
+                  <span style={{color:'#f2cb12',fontWeight:700,fontSize:13,flex:1}}>{remitoSelIds.size} entrega{remitoSelIds.size!==1?'s':''} seleccionada{remitoSelIds.size!==1?'s':''}</span>
+                  <button onClick={() => {
+                    const sel = filteredDeliveryRows.filter(d => remitoSelIds.has(d.id))
+                    openPrintWindow(buildRemitoCombinadoHtml(sel))
+                    setRemitoSelIds(null)
+                  }} style={{background:'#f2cb12',color:'#121212',border:'none',padding:'8px 20px',borderRadius:6,fontWeight:700,fontSize:13,cursor:'pointer'}}>
+                    Generar remito
+                  </button>
+                  <button onClick={() => setRemitoSelIds(null)} style={{background:'none',border:'1px solid #555',color:'#aaa',padding:'8px 14px',borderRadius:6,fontSize:12,cursor:'pointer'}}>Cancelar</button>
                 </div>
-              ))}
-              {filteredDeliveryRows.length === 0 && <div className="empty">{delFilterReceptor||delFilterPersona ? 'Sin entregas para este filtro.' : 'Sin entregas registradas.'}</div>}
+              )}
             </div>
             </>
           )}
@@ -1271,6 +3924,7 @@ export default function App() {
                   <div>FECHA</div><div>ARTÍCULO / DETALLE</div>
                   <div className="mov-col-tipo">TIPO</div>
                   <div className="mov-col-talle">TALLE</div>
+                  <div className="mov-col-por">USUARIO</div>
                   <div style={{textAlign:'right'}}>CANT.</div><div/>
                 </div>
                 {movRows.map(m => {
@@ -1286,13 +3940,14 @@ export default function App() {
                       </div>
                       <div className="mov-col-tipo"><span className={`badge ${kindClass}`}>{kindLabel}</span></div>
                       <div className="mov-col-talle" style={{color:'#6a6a62'}}>{m.talle}</div>
+                      <div className="mov-col-por" style={{fontSize:12.5,color:'#8a8a82',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.creadoPor || '—'}</div>
                       <div style={{textAlign:'right'}}>
                         <span className="mono" style={{fontWeight:700,fontSize:14,color:m.tipo==='entrada'?'#2e9b5e':'#C2473D'}}>
                           {m.tipo==='entrada'?'+':'−'}{m.qty}
                         </span>
                       </div>
                       <div style={{display:'flex',justifyContent:'flex-end'}}>
-                        <button className="btn-del" style={{width:28,height:28}} onClick={() => m.delId ? askDeleteDelivery(m.delId) : askDeleteMov(m.id)}>✕</button>
+                        {!isSoloVista && <button className="btn-del" style={{width:28,height:28}} onClick={() => m.delId ? askDeleteDelivery(m.delId) : askDeleteMov(m.id)}>✕</button>}
                       </div>
                     </div>
                   )
@@ -1305,8 +3960,8 @@ export default function App() {
           {/* RECEPTORES */}
           {view === 'usuarios-reg' && (
             <div style={{display:'flex',flexDirection:'column',gap:10,padding:'0 2px'}}>
-              {db.users.map(u => (
-                <div key={u.username} className="card" style={{padding:'16px 20px',display:'flex',alignItems:'center',gap:14,borderLeft: u.status==='pendiente' ? '3px solid #FFD200' : undefined}}>
+              {[...db.users].sort((a,b) => (a.role==='admin'?0:1)-(b.role==='admin'?0:1)).map(u => (
+                <div key={u.username} className="card" style={{padding:'16px 20px',display:'flex',alignItems:'center',gap:14,borderLeft: u.status==='pendiente' ? '3px solid #f2cb12' : undefined}}>
                   <div className="avatar" style={{flexShrink:0,width:42,height:42,fontSize:15,opacity:u.status==='pendiente'?.6:1}}>{ini(u.displayName||u.username)}</div>
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontWeight:700,fontSize:14,display:'flex',alignItems:'center',gap:8}}>
@@ -1322,15 +3977,15 @@ export default function App() {
                       </div>
                     )}
                     {u.telefono && <div style={{fontSize:12,color:'#8a8a82',marginTop:2}}>{u.telefono}</div>}
-                    {u.status==='pendiente' && session==='compras' && (
+                    {u.status==='pendiente' && currentUser?.role==='admin' && (
                       <div style={{display:'flex',gap:8,marginTop:10}}>
-                        <button onClick={()=>approveUser(u.username)} style={{padding:'5px 14px',borderRadius:5,border:'none',cursor:'pointer',fontWeight:700,fontSize:12,background:'#FFD200',color:'#121212'}}>Aprobar</button>
+                        <button onClick={()=>approveUser(u.username)} style={{padding:'5px 14px',borderRadius:5,border:'none',cursor:'pointer',fontWeight:700,fontSize:12,background:'#f2cb12',color:'#121212'}}>Aprobar</button>
                         <button onClick={()=>rejectUser(u.username)} style={{padding:'5px 14px',borderRadius:5,border:'1px solid #C2473D',cursor:'pointer',fontWeight:700,fontSize:12,background:'none',color:'#C2473D'}}>Rechazar</button>
                       </div>
                     )}
                   </div>
-                  <span style={{background:u.role==='admin'?'#121212':'#EDF7F2',color:u.role==='admin'?'#FFD200':'#2e9b5e',border:'1px solid '+(u.role==='admin'?'#3a3a3a':'#2e9b5e'),borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700,flexShrink:0}}>
-                    {u.role==='admin'?'Admin':'Receptor'}
+                  <span style={{background:u.role==='admin'?'#121212':u.role==='solo-vista'?'#FFF4E6':'#EDF7F2',color:u.role==='admin'?'#f2cb12':u.role==='solo-vista'?'#c2560a':'#2e9b5e',border:'1px solid '+(u.role==='admin'?'#3a3a3a':u.role==='solo-vista'?'#e8834a':'#2e9b5e'),borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700,flexShrink:0}}>
+                    {ROLE_LABELS[u.role]||'Receptor'}
                   </span>
                 </div>
               ))}
@@ -1340,20 +3995,2008 @@ export default function App() {
           {view === 'receptores' && (
             <div className="receptor-grid">
               {receptorCards.map(r => (
-                <div key={r.name} className="card" style={{padding:20,display:'flex',gap:14,alignItems:'center'}}>
+                <div key={r.name} className="card" style={{padding:20,display:'flex',gap:14,alignItems:'center',cursor:'pointer'}} onClick={() => setSelectedReceptor(r.name)}>
                   <div className="avatar xl">{r.ini}</div>
                   <div style={{flex:1}}>
                     <div style={{fontWeight:700,fontSize:15}}>{r.name}</div>
                     <div style={{fontSize:12.5,color:'#8a8a82',marginTop:3}}>{r.count} entregas · {r.unidades} unidades</div>
                   </div>
+                  <span style={{color:'#C8C8C0',fontSize:20}}>›</span>
                 </div>
               ))}
+              <div className="card" style={{padding:20,display:'flex',gap:14,alignItems:'center',cursor:'pointer'}} onClick={() => setView('reposiciones')}>
+                <div className="avatar xl" style={{background:'#f2cb12',color:'#121212'}}>R</div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:15}}>Reposiciones Primera División</div>
+                  <div style={{fontSize:12.5,color:'#8a8a82',marginTop:3}}>{(db.reposiciones||[]).length} reposiciones registradas</div>
+                </div>
+                <span style={{color:'#C8C8C0',fontSize:20}}>›</span>
+              </div>
+            </div>
+          )}
+          {/* CAMISETAS UTILERÍA */}
+          {view === 'utileria' && (
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:180}}>
+                <div className="kpi-label">CAMISETAS REGISTRADAS</div>
+                <div className="kpi-value">{(db.camisetasUtileria||[]).length}</div>
+                <div className="kpi-sub">en utilería</div>
+              </div>
+              {(() => {
+                const activeFiltros = [utiFilter,utiFilterJugador,utiFilterTipo,utiFilterTemp,utiFilterModelo,utiFilterUbic].filter(Boolean).length
+                const ubicsUsadas = [...new Set((db.camisetasUtileria||[]).map(c => c.ubic).filter(Boolean))].sort()
+                const clearAll = () => { setUtiFilter(''); setUtiFilterJugador(''); setUtiFilterTipo(''); setUtiFilterTemp(''); setUtiFilterModelo(''); setUtiFilterUbic('') }
+                const modelosOrden = [...new Set([...MODELOS_JUGADOR,...MODELOS_GOLERO])]
+                const modelosDisponibles = modelosOrden.filter(m => (db.camisetasUtileria||[]).some(c => c.modelo === m && (!utiFilterTipo || c.tipo === utiFilterTipo)))
+                const temporadasOrden = ['2012/2013','2013/2014','2015/2016','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025','2026']
+                const temporadasDisponibles = temporadasOrden.filter(t => (db.camisetasUtileria||[]).some(c => c.temporada === t && (!utiFilterTipo || c.tipo === utiFilterTipo)))
+                return (
+                  <div style={{display:'flex',gap:8,alignItems:'flex-start',justifyContent:'space-between'}}>
+                    <div style={{flex:1}}>
+                      {/* Barra colapsable */}
+                      <div style={{display:'flex',gap:8,alignItems:'center',marginBottom: utiFiltersOpen ? 10 : 0}}>
+                        <button onClick={()=>setUtiFiltersOpen(p=>!p)}
+                          style={{display:'flex',alignItems:'center',gap:6,padding:'6px 12px',borderRadius:7,border:'1px solid #D0D0CA',background: utiFiltersOpen?'#121212':'#F5F5F0',color: utiFiltersOpen?'#f2cb12':'#5a5a52',fontWeight:600,fontSize:12.5,cursor:'pointer'}}>
+                          <span style={{fontSize:13}}>{utiFiltersOpen ? '▲' : '▼'}</span>
+                          Filtros
+                          {activeFiltros > 0 && <span style={{background:'#f2cb12',color:'#121212',borderRadius:10,padding:'1px 7px',fontSize:11,fontWeight:800,marginLeft:2}}>{activeFiltros}</span>}
+                        </button>
+                        {activeFiltros > 0 && (
+                          <>
+                            {utiFilter && <span style={{fontSize:12,background:'#121212',color:'#f2cb12',borderRadius:5,padding:'2px 8px',fontWeight:600}}>{utiFilter}</span>}
+                            {utiFilterTipo && <span style={{fontSize:12,background:'#121212',color:'#f2cb12',borderRadius:5,padding:'2px 8px',fontWeight:600}}>{utiFilterTipo}</span>}
+                            {utiFilterTemp && <span style={{fontSize:12,background:'#121212',color:'#f2cb12',borderRadius:5,padding:'2px 8px',fontWeight:600}}>{utiFilterTemp}</span>}
+                            {utiFilterModelo && <span style={{fontSize:12,background:'#121212',color:'#f2cb12',borderRadius:5,padding:'2px 8px',fontWeight:600}}>{utiFilterModelo}</span>}
+                            {utiFilterUbic && <span style={{fontSize:12,background:'#121212',color:'#f2cb12',borderRadius:5,padding:'2px 8px',fontWeight:600,fontFamily:'IBM Plex Mono,monospace'}}>{utiFilterUbic}</span>}
+                            <button onClick={clearAll} style={{fontSize:12,color:'#C2473D',background:'none',border:'none',cursor:'pointer',fontWeight:600,padding:'2px 4px'}}>Limpiar</button>
+                          </>
+                        )}
+                      </div>
+                      {/* Panel de filtros */}
+                      {utiFiltersOpen && (
+                        <div style={{display:'flex',flexDirection:'column',gap:6,background:'#F5F5F0',border:'1px solid #E0E0DA',borderRadius:8,padding:'12px 14px'}}>
+                          <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
+                            <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>COMPETICIÓN</span>
+                            <button className={`chip${utiFilter===''?' active':''}`} onClick={()=>setUtiFilter('')}>Todas</button>
+                            {COMPETICIONES.map(c => <button key={c} className={`chip${utiFilter===c?' active':''}`} onClick={()=>setUtiFilter(c)}>{c}</button>)}
+                          </div>
+                          <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
+                            <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>TIPO</span>
+                            <button className={`chip${utiFilterTipo===''?' active':''}`} onClick={()=>setUtiFilterTipo('')}>Todos</button>
+                            {['JUGADOR','GOLERO'].map(t => <button key={t} className={`chip${utiFilterTipo===t?' active':''}`} onClick={()=>{
+                              setUtiFilterTipo(t)
+                              const disponiblesNuevo = modelosOrden.filter(m => (db.camisetasUtileria||[]).some(c => c.modelo === m && c.tipo === t))
+                              if (utiFilterModelo && !disponiblesNuevo.includes(utiFilterModelo)) setUtiFilterModelo('')
+                              const tempsNuevo = temporadasOrden.filter(tm => (db.camisetasUtileria||[]).some(c => c.temporada === tm && c.tipo === t))
+                              if (utiFilterTemp && !tempsNuevo.includes(utiFilterTemp)) setUtiFilterTemp('')
+                            }}>{t}</button>)}
+                          </div>
+                          <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
+                            <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>TEMPORADA</span>
+                            <button className={`chip${utiFilterTemp===''?' active':''}`} onClick={()=>setUtiFilterTemp('')}>Todas</button>
+                            {temporadasDisponibles.map(t => <button key={t} className={`chip${utiFilterTemp===t?' active':''}`} onClick={()=>setUtiFilterTemp(t)}>{t}</button>)}
+                          </div>
+                          <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
+                            <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>MODELO</span>
+                            <button className={`chip${utiFilterModelo===''?' active':''}`} onClick={()=>setUtiFilterModelo('')}>Todos</button>
+                            {modelosDisponibles.map(m => <button key={m} className={`chip${utiFilterModelo===m?' active':''}`} onClick={()=>setUtiFilterModelo(m)}>{m}</button>)}
+                          </div>
+                          {ubicsUsadas.length > 0 && (
+                            <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
+                              <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>UBICACIÓN</span>
+                              <button className={`chip${utiFilterUbic===''?' active':''}`} onClick={()=>setUtiFilterUbic('')}>Todas</button>
+                              {ubicsUsadas.map(u => <button key={u} className={`chip${utiFilterUbic===u?' active':''}`} onClick={()=>setUtiFilterUbic(u)} style={{fontFamily:'IBM Plex Mono,monospace'}}>{u}</button>)}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {!isSoloVista && <button className="btn btn-dark" style={{flexShrink:0}} onClick={()=>{ setUtiForm({tipo:'',competicion:COMPETICIONES[0],numero:'',jugador:'',talle:'S',modelo:'',estampado:'',parches:'',detalle:'',temporada:'',cantidad:1,utiEstante:'1',utiAltura:'A',photos:[],id:null}); setUtiModal(true) }}>+ Camiseta</button>}
+                  </div>
+                )
+              })()}
+              <div className="card" style={{overflow:'auto'}}>
+                <div style={{display:'grid',gridTemplateColumns:'44px 74px 62px 90px 46px 44px 1fr 110px 1fr 1fr 50px 60px 65px 28px',background:'#121212',padding:'9px 16px',gap:8,minWidth:1062}}>
+                  {['','TEMP.','USO','MODELO','NRO.','TALLE','JUGADOR','ESTAMPADO','COMPETICIÓN','PARCHES','CANT.','UBIC.','',''].map((h,i) => (
+                    <div key={i} style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:.5,textAlign:[5,7,9,10,11].includes(i)?'center':'left'}}>{h}</div>
+                  ))}
+                </div>
+                {utiFiltered.length === 0
+                  ? <div style={{padding:28,textAlign:'center',color:'#8a8a82',fontSize:13}}>No hay camisetas que coincidan con los filtros.</div>
+                  : utiFiltered.map(c => (
+                      <div key={c.id} onClick={()=>setUtiDetalle(c)} style={{display:'grid',gridTemplateColumns:'44px 74px 62px 90px 46px 44px 1fr 110px 1fr 1fr 50px 60px 65px 28px',padding:'10px 16px',borderBottom:'1px solid #F0F0EC',alignItems:'center',gap:8,minWidth:1062,cursor:'pointer'}}
+                        onMouseEnter={e=>e.currentTarget.style.background='#FAFAF6'} onMouseLeave={e=>e.currentTarget.style.background=''}>
+                        <div>{(c.photos||[]).length > 0
+                          ? <img src={c.photos[0]} alt="foto" style={{width:36,height:36,objectFit:'cover',borderRadius:6,border:'1px solid #E0E0DA',display:'block',cursor:'pointer'}} onClick={e=>{e.stopPropagation(); setPhotoPreview({photos:c.photos,idx:0})}} />
+                          : <div style={{width:36,height:36,borderRadius:6,border:'1px dashed #D0D0CA',background:'#F5F5F0',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,color:'#C0C0BA'}}>📷</div>
+                        }</div>
+                        <div style={{fontSize:12,color:'#1a1a1a',whiteSpace:'nowrap'}}>{c.temporada||<span style={{color:'#ccc'}}>—</span>}</div>
+                        <div>{c.tipo && <span style={{fontSize:10,fontWeight:700,background:c.tipo==='GOLERO'?'#EDF7F2':'#F0F0EC',color:c.tipo==='GOLERO'?'#2e9b5e':'#5a5a52',border:'1px solid '+(c.tipo==='GOLERO'?'#2e9b5e':'#D0D0CA'),borderRadius:4,padding:'2px 5px'}}>{c.tipo}</span>}</div>
+                        <div style={{fontSize:12,fontWeight:600,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.modelo||<span style={{color:'#ccc'}}>—</span>}</div>
+                        <div style={{fontWeight:800,fontSize:17,fontFamily:'IBM Plex Mono,monospace',color:'#1a1a1a'}}>{c.numero}</div>
+                        <div style={{fontSize:13,fontWeight:700,textAlign:'center',color:'#1a1a1a'}}>{c.talle}</div>
+                        <div style={{fontWeight:600,fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'#1a1a1a'}}>
+                          {c.jugador || <span style={{color:'#aaa',fontStyle:'italic',fontWeight:400}}>Sin asignar</span>}
+                        </div>
+                        <div style={{fontSize:12,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textAlign:'center'}}>{c.estampado||<span style={{color:'#ccc'}}>—</span>}</div>
+                        <div style={{fontSize:12,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.competicion||<span style={{color:'#ccc'}}>—</span>}</div>
+                        <div style={{fontSize:12,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textAlign:'center'}}>{c.parches||<span style={{color:'#ccc'}}>—</span>}</div>
+                        <div style={{fontSize:13,fontWeight:700,textAlign:'center',color:'#1a1a1a'}}>{c.cantidad ?? 1}</div>
+                        <div style={{fontSize:11,fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:c.ubic?'#1a1a1a':'#ccc',textAlign:'center'}}>{c.ubic||'—'}</div>
+                        {!isSoloVista && <button className="btn btn-ghost" style={{padding:'4px 10px',fontSize:12}} onClick={e=>{
+                          e.stopPropagation()
+                          const ubicMatch = (c.ubic||'').match(/^(\d+)([A-E])$/)
+                          setUtiForm({...c, photos:c.photos||[], utiEstante:ubicMatch?ubicMatch[1]:'1', utiAltura:ubicMatch?ubicMatch[2]:'A'})
+                          setUtiModal(true)
+                        }}>Editar</button>}
+                        {!isSoloVista && <button onClick={e=>{ e.stopPropagation(); if(window.confirm('¿Desea eliminar esta camiseta?')) deleteUti(c.id) }} style={{background:'none',border:'none',cursor:'pointer',fontSize:18,color:'#C2473D',padding:'0 4px',lineHeight:1}}>×</button>}
+                        {c.detalle && (
+                          <div style={{gridColumn:'1 / -1',fontSize:12.5,color:'#3a3a34',paddingTop:6,borderTop:'1px dashed #D8D8D2',marginTop:4,lineHeight:1.4}}>
+                            <span style={{fontWeight:700,color:'#1a1a1a'}}>Detalle: </span>{c.detalle}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                }
+              </div>
+            </div>
+          )}
+
+          {/* CONTRATO PUMA */}
+          {view === 'contrato-puma' && (() => {
+            const TOTAL_CONTRATO = 17200
+            const RECEPTOR_ORDER = ['Protocolo','1° División','3 División','Juveniles','Femenino','Juveniles Femenino','Basket','Captación','Futbol Sala Masculino','Futbol Sala Femenino','Funcionarios']
+            const RECEPTOR_COLORS = {
+              'Protocolo':             '#7BC67E',
+              '1° División':           '#f2cb12',
+              '3° División':           '#BDBDBD',
+              'Juveniles':             '#5a5a5a',
+              'Femenino':              '#9B59B6',
+              'Juveniles Femenino':    '#C2185B',
+              'Basket':                '#FF7043',
+              'Captación':             '#4FC3F7',
+              'Fútbol Sala Masculino': '#1565C0',
+              'Fútbol Sala Femenino':  '#F48FB1',
+              'Deportes Anexos':       '#E53935',
+              'Funcionarios':          '#90A4AE',
+              'Marketing':             '#26A69A',
+              'Sponsors':              '#8D6E63',
+              'Canjes':                '#78909C',
+            }
+            const repUnidades = (db.reposiciones||[]).reduce((s, r) =>
+              s + (r.jugadores||[]).reduce((a, j) => a + (Number(j.cantCamiseta)||0) + (Number(j.cantShort)||0), 0), 0)
+            const baseData = receptorCards
+              .map(r => {
+                const extra = r.name === '1° División' ? repUnidades : 0
+                const total = r.unidades + extra
+                return { name: r.name, unidades: total, pct: total / TOTAL_CONTRATO * 100, monto: r.monto }
+              })
+            const data = baseData.sort((a, b) => {
+                const ia = RECEPTOR_ORDER.indexOf(a.name)
+                const ib = RECEPTOR_ORDER.indexOf(b.name)
+                if (ia === -1 && ib === -1) return 0
+                if (ia === -1) return 1
+                if (ib === -1) return -1
+                return ia - ib
+              })
+            const totalUsado = data.reduce((s, r) => s + r.unidades, 0)
+            const pctTotal = totalUsado / TOTAL_CONTRATO * 100
+            const maxPct = Math.max(...data.map(r => r.pct), 1)
+            const BAR_HEIGHT = 220
+            return (
+              <div style={{display:'flex',flexDirection:'column',gap:20}}>
+                {/* KPI global */}
+                <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
+                  <div className="kpi-card" style={{minWidth:180}}>
+                    <div className="kpi-label">TOTAL CONTRATO</div>
+                    <div className="kpi-value">{TOTAL_CONTRATO.toLocaleString('es-UY')}</div>
+                    <div className="kpi-sub">unidades totales</div>
+                  </div>
+                  <div className="kpi-card" style={{minWidth:180}}>
+                    <div className="kpi-label">UTILIZADO</div>
+                    <div className="kpi-value">{totalUsado.toLocaleString('es-UY')}</div>
+                    <div className="kpi-sub">{pctTotal.toFixed(1)}% del contrato</div>
+                  </div>
+                  <div className="kpi-card" style={{minWidth:180}}>
+                    <div className="kpi-label">DISPONIBLE</div>
+                    <div className="kpi-value">{(TOTAL_CONTRATO - totalUsado).toLocaleString('es-UY')}</div>
+                    <div className="kpi-sub">{(100 - pctTotal).toFixed(1)}% restante</div>
+                  </div>
+                  <div className="kpi-card" style={{minWidth:180}}>
+                    <div className="kpi-label">MONTO TOTAL ENTREGADO</div>
+                    <div className="kpi-value" style={{fontSize:20}}>$ {data.reduce((s,r)=>s+(r.monto||0),0).toLocaleString('es-UY',{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
+                    <div className="kpi-sub">según precios del inventario</div>
+                  </div>
+                </div>
+
+                {/* Gráfica de barras verticales */}
+                {(() => {
+                  const isMonto = pumaMetric === 'monto'
+                  const maxVal = Math.max(...data.map(r => isMonto ? (r.monto||0) : r.unidades), 1)
+                  const fmtVal = v => isMonto
+                    ? '$ '+v.toLocaleString('es-UY',{minimumFractionDigits:0,maximumFractionDigits:0})
+                    : v.toLocaleString('es-UY')+' uds.'
+                  return (
+                    <div className="card" style={{padding:'20px 24px'}}>
+                      {/* Header con toggle */}
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+                        <div style={{fontWeight:700,fontSize:13}}>
+                          {isMonto ? 'Monto entregado por receptor' : 'Artículos por receptor · % sobre '+TOTAL_CONTRATO.toLocaleString('es-UY')+' totales'}
+                        </div>
+                        <div style={{display:'flex',gap:4,background:'#F0F0EC',borderRadius:8,padding:3}}>
+                          {[['unidades','Artículos'],['monto','Monto $']].map(([key,label]) => (
+                            <button key={key} onClick={() => setPumaMetric(key)}
+                              style={{padding:'4px 14px',borderRadius:6,border:'none',cursor:'pointer',fontSize:12,fontWeight:600,
+                                background: pumaMetric===key ? '#121212' : 'transparent',
+                                color: pumaMetric===key ? '#f2cb12' : '#6a6a62',
+                                transition:'all .15s'}}>
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div style={{display:'flex',alignItems:'flex-end',gap:12,height:BAR_HEIGHT+40,overflowX:'auto',paddingBottom:4}}>
+                        {/* Eje Y */}
+                        <div style={{display:'flex',flexDirection:'column',justifyContent:'space-between',height:BAR_HEIGHT,alignItems:'flex-end',flexShrink:0,paddingRight:6}}>
+                          {[100,75,50,25,0].map(v => (
+                            <span key={v} style={{fontSize:10,color:'#aaa',lineHeight:1}}>
+                              {isMonto
+                                ? '$ '+(maxVal*v/100/1000).toFixed(0)+'k'
+                                : v+'%'}
+                            </span>
+                          ))}
+                        </div>
+                        {/* Líneas guía + barras */}
+                        <div style={{position:'relative',flex:1,height:BAR_HEIGHT,minWidth:0}}>
+                          {[0,25,50,75,100].map(v => (
+                            <div key={v} style={{position:'absolute',left:0,right:0,bottom:`${v}%`,borderTop:'1px dashed #E8E8E0',zIndex:0}} />
+                          ))}
+                          <div style={{display:'flex',alignItems:'flex-end',gap:8,height:'100%',position:'relative',zIndex:1}}>
+                            {data.map(r => {
+                              const val = isMonto ? (r.monto||0) : r.unidades
+                              const barH = (val / maxVal) * BAR_HEIGHT
+                              const color = RECEPTOR_COLORS[r.name]||'#999'
+                              return (
+                                <div key={r.name}
+                                  onClick={() => { setDelFilterReceptor(r.name); setView('entregas') }}
+                                  style={{display:'flex',flexDirection:'column',alignItems:'center',flex:1,minWidth:40,height:'100%',justifyContent:'flex-end',cursor:'pointer'}}
+                                  title={`Ver entregas de ${r.name}`}
+                                >
+                                  <div style={{fontSize:12,fontWeight:800,color,marginBottom:1,whiteSpace:'nowrap',textAlign:'center',background:'rgba(255,255,255,0.85)',borderRadius:4,padding:'1px 4px',lineHeight:1.3}}>
+                                    {isMonto
+                                      ? (val>0 ? '$ '+val.toLocaleString('es-UY',{minimumFractionDigits:0,maximumFractionDigits:0}) : '—')
+                                      : (r.pct.toFixed(1)+'%')}
+                                  </div>
+                                  <div style={{fontSize:11,fontWeight:600,color:'#444',marginBottom:3,whiteSpace:'nowrap',textAlign:'center',background:'rgba(255,255,255,0.85)',borderRadius:4,padding:'0px 3px',lineHeight:1.3}}>
+                                    {isMonto ? (r.unidades>0 ? r.unidades.toLocaleString('es-UY')+' uds.' : '') : (r.unidades.toLocaleString('es-UY')+' uds.')}
+                                  </div>
+                                  <div style={{
+                                    width:'100%', height: barH||2,
+                                    background: color,
+                                    borderRadius:'4px 4px 0 0',
+                                    transition:'height .4s, filter .2s',
+                                    minHeight: val>0 ? 4 : 2,
+                                    opacity: val===0 ? 0.2 : 1
+                                  }}
+                                    onMouseEnter={e => e.currentTarget.style.filter='brightness(1.15)'}
+                                    onMouseLeave={e => e.currentTarget.style.filter=''}
+                                  />
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                      {/* Etiquetas eje X */}
+                      <div style={{display:'flex',gap:8,marginLeft:42,marginTop:8}}>
+                        {data.map(r => (
+                          <div key={r.name} style={{flex:1,minWidth:40,display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
+                            <div style={{width:8,height:8,borderRadius:'50%',background:RECEPTOR_COLORS[r.name]||'#999'}} />
+                            <div style={{fontSize:10,fontWeight:700,color:'#1a1a1a',textAlign:'center',lineHeight:1.2,textTransform:'uppercase'}}>{r.name}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
+              </div>
+            )
+          })()}
+
+          {/* REPOSICIÓN CAMISETAS */}
+          {view === 'reposiciones' && (
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+
+              {/* Tab: Reposiciones */}
+              {repTab === 'reposiciones' && (<>
+                {(() => {
+                  const descCam = j => j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
+                  const descSht = j => j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
+                  const totalEquipos = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
+                  const totalShorts  = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
+                  const totalExtras  = (db.descExtras||[]).reduce((acc,e)=>acc+(e.cantidad||1),0)
+                  const totalDinero  = totalEquipos * PRECIO_CAMISETA + totalShorts * PRECIO_SHORT
+                  const totalCamTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
+                  const totalShtTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
+                  const mesActualKeyAdmin = (() => { const p = today().split('/'); return p[1]+'/'+p[2] })()
+                  const mesNombreAdmin = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][Number(mesActualKeyAdmin.split('/')[0])]
+                  const repsDelMesAdmin = (db.reposiciones||[]).filter(r => { const p=(r.fechaPartido||r.fecha||'').split('/'); return p.length===3&&p[1]+'/'+p[2]===mesActualKeyAdmin })
+                  const totalEquiposMesAdmin = repsDelMesAdmin.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
+                  const totalShortsMesAdmin  = repsDelMesAdmin.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
+                  const totalExtrasMesAdmin  = (db.descExtras||[]).filter(e=>{ const p=e.fecha.split('/'); return p.length===3&&p[1]+'/'+p[2]===mesActualKeyAdmin }).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
+                  const totalDineroMesAdmin  = totalEquiposMesAdmin * PRECIO_CAMISETA + totalShortsMesAdmin * PRECIO_SHORT + totalExtrasMesAdmin
+                  return (
+                    <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setShowPartidosModal(true)}>
+                        <div className="kpi-label">PARTIDOS REGISTRADOS</div>
+                        <div className="kpi-value">{new Set((db.reposiciones||[]).map(r=>(r.torneo&&r.fechaTorneo!=null&&r.fechaTorneo!=='')?r.torneo+'|'+r.fechaTorneo:'id:'+r.id)).size}</div>
+                        <div className="kpi-sub">partidos únicos</div>
+                      </div>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepDesglose('camisetas')}>
+                        <div className="kpi-label">CAMISETAS ENVIADAS</div>
+                        <div className="kpi-value">{totalCamTodas}</div>
+                        <div className="kpi-sub">en todas las entregas →</div>
+                      </div>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepDesglose('shorts')}>
+                        <div className="kpi-label">SHORTS ENVIADOS</div>
+                        <div className="kpi-value">{totalShtTodas}</div>
+                        <div className="kpi-sub">en todas las entregas →</div>
+                      </div>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',cursor:'pointer',background:'#D6D6D0',border:'1px solid #121212'}} onClick={()=>setRepResumen('ambos')}>
+                        <div className="kpi-label">INDUMENTARIA A DESCONTAR {mesNombreAdmin.toUpperCase()}</div>
+                        <div style={{display:'flex',alignItems:'flex-end',gap:24,marginTop:6}}>
+                          <div>
+                            <div className="kpi-value">{totalEquipos}</div>
+                            <div className="kpi-sub">camisetas →</div>
+                          </div>
+                          <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/>
+                          <div>
+                            <div className="kpi-value">{totalShorts}</div>
+                            <div className="kpi-sub">shorts →</div>
+                          </div>
+                          <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/><div><div className="kpi-value">{totalExtras}</div><div className="kpi-sub">extras →</div></div>
+                        </div>
+                      </div>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#f2cb12'}} onClick={()=>{ setResumenMesSel(mesActualKeyAdmin); setRepResumen('ambos') }}>
+                        <div className="kpi-label" style={{color:'#f2cb12'}}>DESCUENTOS {mesNombreAdmin.toUpperCase()}</div>
+                        <div className="kpi-value" style={{color:'#f2cb12'}}>$ {totalDineroMesAdmin.toLocaleString('es-UY')}</div>
+                        <div className="kpi-sub" style={{color:'#f2cb12'}}>ver detalle →</div>
+                      </div>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepTab('plantel')}>
+                        <div className="kpi-label">PLANTEL</div>
+                        <div className="kpi-value">{(db.plantel||[]).filter(j=>j.nombre.trim().toLowerCase()!=='libre').length}</div>
+                        <div className="kpi-sub">jugadores registrados →</div>
+                      </div>
+                      <div style={{display:'flex',flexDirection:'column',gap:8,alignSelf:'flex-start'}}>
+                        <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed'}}>+ Nueva reposición</button>
+                        <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',fecha:'',prendas:[{articulo:'',precio:0,cantidad:1}]});setDescExtraModal(true)}}>+ Descuento</button>
+                      </div>
+                    </div>
+                  )
+                })()}
+                {!(db.plantel||[]).length && (
+                  <div style={{fontSize:13,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:8,padding:'10px 14px'}}>
+                    Configurá el <button onClick={()=>setRepTab('plantel')} style={{background:'none',border:'none',fontWeight:700,color:'#7a5800',cursor:'pointer',padding:0,textDecoration:'underline'}}>plantel</button> primero para poder registrar reposiciones.
+                  </div>
+                )}
+                {(db.reposiciones||[]).length === 0
+                  ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay reposiciones registradas aún.</div>
+                  : (() => {
+                    const torneos = [...new Set((db.reposiciones||[]).map(r=>r.torneo).filter(Boolean))]
+                    const filtered = (db.reposiciones||[]).filter(r => !repFilterTorneo || r.torneo === repFilterTorneo)
+                    return (
+                      <>
+                        {torneos.length > 0 && (
+                          <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                            <button className={`chip${repFilterTorneo===''?' active':''}`} onClick={() => setRepFilterTorneo('')}>Todos</button>
+                            {torneos.map(t => (
+                              <button key={t} className={`chip${repFilterTorneo===t?' active':''}`} onClick={() => setRepFilterTorneo(t)}>{t}</button>
+                            ))}
+                          </div>
+                        )}
+                        <div className="card" style={{padding:0,overflow:'hidden'}}>
+                          <div className="table-header" style={{gridTemplateColumns:'110px 1fr 70px 70px 120px 36px'}}>
+                            <div>FECHA</div><div>CONCEPTO</div><div style={{textAlign:'right'}}>CAM.</div><div style={{textAlign:'right'}}>SHT.</div><div style={{textAlign:'right'}}>DESCUENTOS</div><div/>
+                          </div>
+                          {filtered.length === 0
+                            ? <div style={{color:'#8a8a82',fontSize:13,textAlign:'center',padding:'24px 0'}}>Sin reposiciones para este torneo.</div>
+                            : filtered.map(r => {
+                              const totCam = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
+                              const totSht = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
+                              const equipoStr = [r.tipoCamisetaJugador, r.tipoCamisetaGolero].filter(Boolean).join(' / ')
+                              const totalDesc = (r.jugadores||[]).reduce((s,j)=>{
+                                const dc = j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
+                                const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
+                                return s + (dc ? (Number(j.cantCamiseta)||0)*PRECIO_CAMISETA : 0) + (ds ? (Number(j.cantShort)||0)*PRECIO_SHORT : 0)
+                              }, 0)
+                              const _isFinal = r.fechaTorneo!=null&&r.fechaTorneo!==''&&(r.fechaTorneo==='Final'||r.fechaTorneo==='NaN'||Number.isNaN(r.fechaTorneo))
+                          const torneoStr = [_isFinal?'Final':null, r.torneo, !_isFinal&&r.fechaTorneo!=null&&r.fechaTorneo!==''?'F.'+r.fechaTorneo:null].filter(Boolean).join(' ')
+                              return (
+                              <div key={r.id} className="table-row" style={{gridTemplateColumns:'110px 1fr 70px 70px 120px 36px',cursor:'pointer',padding:'10px 20px'}} onClick={() => setRepDetail(r)}>
+                                <div>
+                                  <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#1a1a1a',fontWeight:700}}>{r.fecha}</div>
+                                  {r.fechaPartido && <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#1a1a1a',marginTop:2}}>P: {r.fechaPartido}</div>}
+                                </div>
+                                <div style={{minWidth:0}}>
+                                  <div style={{fontWeight:600,fontSize:13,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                                    {r.concepto}{torneoStr ? <span style={{fontWeight:400}}> — {torneoStr}</span> : ''}
+                                  </div>
+                                  {equipoStr && <div style={{fontSize:11,color:'#8a8a82',marginTop:2}}>{equipoStr}</div>}
+                                </div>
+                                <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totCam>0?'#1a1a1a':'#ccc'}}>{totCam>0?totCam:'—'}</div>
+                                <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totSht>0?'#1a1a1a':'#ccc'}}>{totSht>0?totSht:'—'}</div>
+                                <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:totalDesc>0?'#1a1a1a':'#ccc'}}>{totalDesc>0?'$'+totalDesc.toLocaleString('es-UY'):'—'}</div>
+                                <div style={{textAlign:'right',color:'#8a8a82',fontSize:18,lineHeight:1}}>›</div>
+                              </div>
+                              )
+                            })
+                          }
+                        </div>
+                      </>
+                    )
+                  })()
+                }
+              </>)}
+
+              {/* Tab: Extras */}
+              {repTab === 'extras' && (() => {
+                  const descCam = j => j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
+                  const descSht = j => j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
+                  const totalEquipos = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
+                  const totalShorts  = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
+                  const totalExtras  = (db.descExtras||[]).reduce((acc,e)=>acc+(e.cantidad||1),0)
+                  const totalCamTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
+                  const totalShtTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
+                  const mesActualKeyAdmin = (() => { const p = today().split('/'); return p[1]+'/'+p[2] })()
+                  const mesNombreAdmin = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][Number(mesActualKeyAdmin.split('/')[0])]
+                  const repsDelMesAdmin = (db.reposiciones||[]).filter(r => { const p=(r.fechaPartido||r.fecha||'').split('/'); return p.length===3&&p[1]+'/'+p[2]===mesActualKeyAdmin })
+                  const totalEquiposMesAdmin = repsDelMesAdmin.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
+                  const totalShortsMesAdmin  = repsDelMesAdmin.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
+                  const totalExtrasMesAdmin  = (db.descExtras||[]).filter(e=>{ const p=e.fecha.split('/'); return p.length===3&&p[1]+'/'+p[2]===mesActualKeyAdmin }).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
+                  const totalDineroMesAdmin  = totalEquiposMesAdmin * PRECIO_CAMISETA + totalShortsMesAdmin * PRECIO_SHORT + totalExtrasMesAdmin
+                  return (
+                <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:12,alignItems:'flex-start'}}>
+                    <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setShowPartidosModal(true)}>
+                      <div className="kpi-label">PARTIDOS REGISTRADOS</div>
+                      <div className="kpi-value">{new Set((db.reposiciones||[]).map(r=>(r.torneo&&r.fechaTorneo!=null&&r.fechaTorneo!=='')?r.torneo+'|'+r.fechaTorneo:'id:'+r.id)).size}</div>
+                      <div className="kpi-sub">partidos únicos</div>
+                    </div>
+                    <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepDesglose('camisetas')}>
+                      <div className="kpi-label">CAMISETAS ENVIADAS</div>
+                      <div className="kpi-value">{totalCamTodas}</div>
+                      <div className="kpi-sub">en todas las entregas →</div>
+                    </div>
+                    <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepDesglose('shorts')}>
+                      <div className="kpi-label">SHORTS ENVIADOS</div>
+                      <div className="kpi-value">{totalShtTodas}</div>
+                      <div className="kpi-sub">en todas las entregas →</div>
+                    </div>
+                    <div className="kpi-card" style={{alignSelf:'flex-start',cursor:'pointer',background:'#D6D6D0',border:'1px solid #121212'}} onClick={()=>setRepResumen('ambos')}>
+                      <div className="kpi-label">INDUMENTARIA A DESCONTAR {mesNombreAdmin.toUpperCase()}</div>
+                      <div style={{display:'flex',alignItems:'flex-end',gap:24,marginTop:6}}>
+                        <div><div className="kpi-value">{totalEquipos}</div><div className="kpi-sub">camisetas →</div></div>
+                        <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/>
+                        <div><div className="kpi-value">{totalShorts}</div><div className="kpi-sub">shorts →</div></div>
+                        <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/><div><div className="kpi-value">{totalExtras}</div><div className="kpi-sub">extras →</div></div>
+                      </div>
+                    </div>
+                    <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#f2cb12'}} onClick={()=>{ setResumenMesSel(mesActualKeyAdmin); setRepResumen('ambos') }}>
+                      <div className="kpi-label" style={{color:'#f2cb12'}}>DESCUENTOS {mesNombreAdmin.toUpperCase()}</div>
+                      <div className="kpi-value" style={{color:'#f2cb12'}}>$ {totalDineroMesAdmin.toLocaleString('es-UY')}</div>
+                      <div className="kpi-sub" style={{color:'#f2cb12'}}>ver detalle →</div>
+                    </div>
+                    <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepTab('plantel')}>
+                      <div className="kpi-label">PLANTEL</div>
+                      <div className="kpi-value">{(db.plantel||[]).filter(j=>j.nombre.trim().toLowerCase()!=='libre').length}</div>
+                      <div className="kpi-sub">jugadores registrados →</div>
+                    </div>
+                    <div style={{display:'flex',flexDirection:'column',gap:8,alignSelf:'flex-start'}}>
+                      <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',fecha:'',prendas:[{articulo:'',precio:0,cantidad:1}]});setDescExtraModal(true)}}>+ Descuento</button>
+                    </div>
+                  </div>
+                  {(db.descExtras||[]).length === 0
+                    ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>Sin descuentos adicionales registrados.</div>
+                    : (() => {
+                        const _sorted2 = [...(db.descExtras||[])].sort((a,b)=>{const[da,ma,ya]=a.fecha.split('/');const[db2,mb,yb]=b.fecha.split('/');return(yb-ya)||((mb-ma)||(db2-da))})
+                        const _gMap2 = {}; const _gOrder2 = []
+                        _sorted2.forEach(e=>{ const k=e.jugadorNombre+'|'+e.fecha; if(!_gMap2[k]){_gMap2[k]={k,fecha:e.fecha,jugadorNombre:e.jugadorNombre,jugadorNumero:e.jugadorNumero,items:[]};_gOrder2.push(k)} _gMap2[k].items.push(e) })
+                        return (
+                          <div className="card" style={{padding:0,overflow:'hidden'}}>
+                            <div style={{overflowX:'auto'}}>
+                              <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                                <thead>
+                                  <tr style={{background:'#2a2a2a',color:'#f2cb12'}}>
+                                    <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>FECHA</th>
+                                    <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>JUGADOR</th>
+                                    <th style={{padding:'7px 12px',textAlign:'left',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>PRENDAS</th>
+                                    <th style={{padding:'7px 12px',textAlign:'right',fontSize:11,fontWeight:600,letterSpacing:'.04em'}}>TOTAL</th>
+                                    <th style={{padding:'7px 12px'}}></th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {_gOrder2.map((k,gi)=>{
+                                    const g=_gMap2[k]
+                                    const total=g.items.reduce((s,e)=>s+e.precio*(e.cantidad||1),0)
+                                    const expanded=extrasExpandedKey===k
+                                    const resumen=g.items.map(e=>`${e.articulo}${(e.cantidad||1)>1?' ×'+(e.cantidad||1):''}`).join(', ')
+                                    return (
+                                      <Fragment key={k}>
+                                        <tr onClick={()=>setExtrasExpandedKey(expanded?null:k)} style={{borderBottom:'1px solid #F0F0EC',background:gi%2===0?'#fff':'#FAFAF8',cursor:'pointer'}}>
+                                          <td style={{padding:'8px 12px',fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>{g.fecha}</td>
+                                          <td style={{padding:'8px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
+                                            <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#8a8a82',marginRight:6}}>{g.jugadorNumero}</span>{g.jugadorNombre}
+                                          </td>
+                                          <td style={{padding:'8px 12px',fontSize:12,color:'#5a5a50'}}>{resumen}</td>
+                                          <td style={{padding:'8px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>$ {total.toLocaleString('es-UY')}</td>
+                                          <td style={{padding:'8px 10px',textAlign:'right',fontSize:11,color:'#8a8a82'}}>{expanded?'▲':'▼'}</td>
+                                        </tr>
+                                        {expanded && g.items.map(e=>(
+                                          <tr key={e.id} style={{borderBottom:'1px solid #F0F0EC',background:'#F5F5F0'}}>
+                                            <td style={{padding:'5px 12px'}}></td>
+                                            <td style={{padding:'5px 12px'}}></td>
+                                            <td style={{padding:'5px 12px 5px 24px',fontSize:12}}>{e.articulo} <span style={{color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>×{e.cantidad||1}</span></td>
+                                            <td style={{padding:'5px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:12}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</td>
+                                            <td style={{padding:'5px 6px',textAlign:'right',whiteSpace:'nowrap'}}>
+                                              <button onClick={ev=>{ev.stopPropagation();setDescExtraForm({...e});setDescExtraModal(true)}} title="Editar" style={{background:'none',border:'none',cursor:'pointer',color:'#5a5a50',fontSize:14,padding:'2px 6px'}}>✎</button>
+                                              <button onClick={ev=>{ev.stopPropagation();deleteDescExtra(e.id)}} title="Eliminar" style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:16,padding:'2px 6px',lineHeight:1}}>×</button>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </Fragment>
+                                    )
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )
+                      })()
+                  }
+                </div>
+              )
+              })()}
+
+              {/* Tab: Plantel */}
+              {repTab === 'plantel' && (<>
+                <div style={{display:'flex',alignItems:'flex-start',gap:24,flexWrap:'wrap'}}>
+                  {/* Tabla */}
+                  <div style={{flex:'0 0 auto',minWidth:0}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                      <span style={{fontSize:12.5,color:'#8a8a82'}}>Jugadores con su talle de camiseta y short</span>
+                      <div style={{display:'flex',gap:8}}>
+                        {(db.plantel||[]).length > 0 && <button className="btn" onClick={downloadPlantelExcel} style={{fontSize:12.5}}>⬇ Excel</button>}
+                        <button className="btn btn-dark" onClick={() => { setPlantelForm({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',cantCamiseta:1,talleShort:'L',cantShort:1}); setPlantelModal(true) }}>+ Jugador</button>
+                      </div>
+                    </div>
+                    {(db.plantel||[]).length === 0
+                      ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay jugadores en el plantel.</div>
+                      : (
+                        <div className="card" style={{padding:0,overflow:'hidden',width:'max-content'}}>
+                          <div style={{display:'grid',gridTemplateColumns:'50px max-content 80px 90px 90px 72px'}}>
+                            {['Nº','NOMBRE','POSICIÓN','CAMISETA','SHORT',''].map((h,i)=>(
+                              <div key={i} style={{padding:'11px 20px',background:'#121212',color:'#f2cb12',fontWeight:700,fontSize:11,letterSpacing:'.04em',whiteSpace:'nowrap'}}>{h}</div>
+                            ))}
+                            {(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => {
+                              const isLibre = j.nombre.trim().toLowerCase()==='libre'
+                              const isGolero = j.posicion==='Golero'
+                              const hovered = plantelHoverRow===j.id
+                              const baseBg = isLibre?'#3a3a3a':isGolero?'#A5D6A7':'#fff'
+                              const bg = hovered?(isLibre?'#4a4a4a':isGolero?'#B5E6B7':'#FCFBF4'):baseBg
+                              const textColor = isLibre?'#888':'#1a1a1a'
+                              const cell = {background:bg,padding:'13px 20px',borderBottom:'1px solid #F0F0EC',fontSize:13.5,color:textColor,cursor:'pointer',transition:'background 0.12s',display:'flex',alignItems:'center'}
+                              const rowEvents = {onMouseEnter:()=>setPlantelHoverRow(j.id),onMouseLeave:()=>setPlantelHoverRow(null),onClick:()=>setSelectedPlantelId(j.id)}
+                              return (
+                                <Fragment key={j.id}>
+                                  <div style={{...cell,fontWeight:800,fontSize:15}} {...rowEvents}>{j.numero||'—'}</div>
+                                  <div style={{...cell,fontWeight:700,fontStyle:isLibre?'italic':undefined,textTransform:isLibre?undefined:'uppercase',whiteSpace:'nowrap'}} {...rowEvents}>{j.nombre}</div>
+                                  <div style={{...cell,fontSize:12}} {...rowEvents}>{j.posicion||'Jugador'}</div>
+                                  <div style={cell} {...rowEvents}>{j.talleCamiseta}{(j.cantCamiseta||1)>1?<span style={{color:'#8a8a82',fontSize:11,marginLeft:4}}>×{j.cantCamiseta}</span>:null}</div>
+                                  <div style={cell} {...rowEvents}>{j.talleShort}{(j.cantShort||1)>1?<span style={{color:'#8a8a82',fontSize:11,marginLeft:4}}>×{j.cantShort}</span>:null}</div>
+                                  <div style={{...cell,gap:6,justifyContent:'flex-end',cursor:'default'}} onMouseEnter={rowEvents.onMouseEnter} onMouseLeave={rowEvents.onMouseLeave}>
+                                    <button onClick={e=>{e.stopPropagation();setPlantelForm({...j,cantCamiseta:j.cantCamiseta||1,cantShort:j.cantShort||1});setPlantelModal(true)}} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button>
+                                    <button onClick={e=>{e.stopPropagation();deletePlantelJugador(j.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'#C2473D',fontSize:16,fontWeight:700,padding:'2px 4px'}}>×</button>
+                                  </div>
+                                </Fragment>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )
+                    }
+                  </div>
+                  {/* Resumen de talles */}
+                  {(db.plantel||[]).length > 0 && (() => {
+                    const jugadores = (db.plantel||[]).filter(j => j.nombre.trim().toLowerCase() !== 'libre')
+                    const contarTalles = campo => {
+                      const counts = {}
+                      jugadores.forEach(j => { const t = j[campo]; if(t) counts[t] = (counts[t]||0)+1 })
+                      return Object.entries(counts).sort((a,b) => TALLE_ORDER.indexOf(a[0]) - TALLE_ORDER.indexOf(b[0]))
+                    }
+                    const tallesCam = contarTalles('talleCamiseta')
+                    const tallesSht = contarTalles('talleShort')
+                    const maxCam = Math.max(...tallesCam.map(([,v])=>v), 1)
+                    const maxSht = Math.max(...tallesSht.map(([,v])=>v), 1)
+                    const BarFila = ({talle, qty, max, campo}) => (
+                      <div onClick={() => setTalleDetalle({campo, talle})}
+                        style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,cursor:'pointer',borderRadius:6,padding:'2px 0'}}>
+                        <div style={{width:28,fontWeight:700,fontSize:13,textAlign:'right',flexShrink:0}}>{talle}</div>
+                        <div style={{flex:1,background:'#ECECE8',borderRadius:4,height:22,overflow:'hidden'}}>
+                          <div style={{width:`${(qty/max)*100}%`,background:'#f2cb12',height:'100%',borderRadius:4,minWidth:4}}/>
+                        </div>
+                        <div style={{width:20,fontWeight:700,fontSize:13,flexShrink:0}}>{qty}</div>
+                      </div>
+                    )
+                    const ranking = (() => {
+                      const counts = {}
+                      ;(db.reposiciones||[]).forEach(r => {
+                        ;(r.jugadores||[]).forEach(j => {
+                          const nombre = j.nombre?.trim()
+                          if (!nombre) return
+                          const dc = j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
+                          const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
+                          const cam = dc ? Number(j.cantCamiseta)||0 : 0
+                          const sht = ds ? Number(j.cantShort)||0 : 0
+                          const total = cam + sht
+                          if (total > 0) {
+                            if (!counts[nombre]) counts[nombre] = {total:0, monto:0}
+                            counts[nombre].total += total
+                            counts[nombre].monto += cam * PRECIO_CAMISETA + sht * PRECIO_SHORT
+                          }
+                        })
+                      })
+                      return Object.entries(counts).sort((a,b) => b[1].total-a[1].total).slice(0,15)
+                    })()
+                    return (
+                      <div style={{display:'flex',gap:20,flexWrap:'wrap',alignItems:'flex-start',paddingTop:36}}>
+                        <div className="card" style={{padding:'16px 20px',minWidth:200}}>
+                          <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:12,textAlign:'center'}}>TALLES CAMISETA</div>
+                          {tallesCam.map(([t,q]) => <BarFila key={t} talle={t} qty={q} max={maxCam} campo="talleCamiseta"/>)}
+                        </div>
+                        <div className="card" style={{padding:'16px 20px',minWidth:200}}>
+                          <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:12,textAlign:'center'}}>TALLES SHORT</div>
+                          {tallesSht.map(([t,q]) => <BarFila key={t} talle={t} qty={q} max={maxSht} campo="talleShort"/>)}
+                        </div>
+                        {ranking.length > 0 && (
+                          <div className="card" style={{padding:'16px 20px',minWidth:300,maxWidth:460}}>
+                            <div style={{fontSize:12,fontWeight:700,color:'#121212',letterSpacing:'.04em',marginBottom:8,textAlign:'center'}}>TOP PRENDAS ENTREGADAS POR JUGADOR</div>
+                            <div style={{display:'grid',gridTemplateColumns:'28px 1fr 44px',gap:'0 8px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',padding:'0 0 6px',borderBottom:'2px solid #ECECE8',marginBottom:2}}>
+                              <span style={{textAlign:'right'}}>#</span>
+                              <span>NOMBRE</span>
+                              <span style={{textAlign:'center'}}>PRENDAS</span>
+                            </div>
+                            {ranking.map(([nombre, {total, monto}]) => {
+                              const jug = jugadores.find(j => j.nombre.trim().toLowerCase() === nombre.toLowerCase())
+                              return (
+                                <div key={nombre} onClick={()=>setRankingDetalle(nombre)} style={{display:'grid',gridTemplateColumns:'28px 1fr 44px',gap:'0 8px',alignItems:'center',padding:'6px 0',borderBottom:'1px solid #ECECE8',cursor:'pointer',borderRadius:4,transition:'background .1s'}}
+                                  onMouseEnter={e=>e.currentTarget.style.background='#F8F8F4'}
+                                  onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                                  <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,textAlign:'right',color:'#121212'}}>{jug?.numero||'—'}</span>
+                                  <span style={{fontWeight:600,fontSize:12,textTransform:'uppercase',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:jug?'inherit':'#999'}}>
+                                    {nombre}
+                                    {!jug && <button onClick={e=>{e.stopPropagation();setRepararRanking(nombre)}} style={{background:'#EA580C',color:'#fff',border:'none',borderRadius:4,padding:'1px 5px',fontSize:10,fontWeight:700,cursor:'pointer',marginLeft:4}}>!</button>}
+                                  </span>
+                                  <span style={{background:'#f2cb12',borderRadius:20,padding:'2px 6px',fontWeight:700,fontSize:12,textAlign:'center'}}>{total}</span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
+                </div>
+              </>)}
             </div>
           )}
         </div>
       </div>
 
       {/* ===== MODALES ===== */}
+
+      {/* Modal: Descuentos de jugador */}
+      {selectedPlantelId && (() => {
+        const j = (db.plantel||[]).find(x => x.id === selectedPlantelId)
+        if (!j) return null
+        const reps = (db.reposiciones||[])
+          .filter(r => (r.jugadores||[]).some(jj => jj.nombre === j.nombre))
+          .sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''))
+        return (
+          <div className="modal-backdrop" onClick={() => setSelectedPlantelId(null)}>
+            <div className="modal modal-md" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <div>
+                  <div className="modal-title">{j.nombre}</div>
+                  <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>
+                    Nº {j.numero} · {j.posicion||'Jugador'} · Cam. {j.talleCamiseta} · Short {j.talleShort}
+                  </div>
+                </div>
+                <button className="modal-close" onClick={() => setSelectedPlantelId(null)}>×</button>
+              </div>
+              <div className="modal-body" style={{padding:0,maxHeight:'65vh',overflowY:'auto'}}>
+                {reps.length === 0
+                  ? <div style={{padding:24,textAlign:'center',color:'#8a8a82',fontSize:13}}>Sin reposiciones registradas para este jugador.</div>
+                  : <>
+                    <div style={{display:'grid',gridTemplateColumns:'95px 1fr 60px 60px',background:'#121212',padding:'6px 16px',gap:8,alignItems:'center'}}>
+                      <div style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:'.04em'}}>FECHA</div>
+                      <div style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:'.04em'}}>CONCEPTO</div>
+                      <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:1}}>
+                        <div style={{fontSize:9,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em'}}>DESCUENTO</div>
+                        <div style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:'.04em'}}>CAMISETA</div>
+                      </div>
+                      <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:1}}>
+                        <div style={{fontSize:9,color:'transparent'}}>DESCUENTO</div>
+                        <div style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:'.04em'}}>SHORT</div>
+                      </div>
+                    </div>
+                    {reps.map(r => {
+                      const jj = (r.jugadores||[]).find(x => x.nombre === j.nombre)
+                      if (!jj) return null
+                      const dc = jj.descuentoCamiseta !== undefined ? jj.descuentoCamiseta !== false : jj.descuento !== false
+                      const ds = jj.descuentoShort !== undefined ? jj.descuentoShort !== false : jj.descuento !== false
+                      const badge = (active) => (
+                        <span style={{background:active?'#E8F5E9':'#FBEAE8',color:active?'#2e7d32':'#C2473D',
+                          border:'1px solid '+(active?'#A5D6A7':'#ef9a9a'),borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700}}>
+                          {active?'SÍ':'NO'}
+                        </span>
+                      )
+                      return (
+                        <div key={r.id} style={{display:'grid',gridTemplateColumns:'95px 1fr 60px 60px',padding:'10px 16px',borderBottom:'1px solid #F0F0EC',alignItems:'center',gap:8}}>
+                          <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11.5,color:'#6a6a62'}}>{r.fecha}</div>
+                          <div>
+                            <div style={{fontWeight:600,fontSize:13}}>{r.concepto}</div>
+                            {r.torneo && <div style={{fontSize:11,color:'#8a8a82'}}>{r.torneo}{r.fechaTorneo?(r.fechaTorneo==='Final'||r.fechaTorneo==='NaN'||Number.isNaN(r.fechaTorneo)?' · Final':` · Fecha ${r.fechaTorneo}`):''}</div>}
+                          </div>
+                          <div style={{textAlign:'center'}}>{badge(dc)}</div>
+                          <div style={{textAlign:'center'}}>{badge(ds)}</div>
+                        </div>
+                      )
+                    })}
+                  </>
+                }
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={() => setSelectedPlantelId(null)}>Cerrar</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Modal: Detalle de entrega */}
+      {selectedDeliveryId && (() => {
+        const d = deliveryRows.find(x => x.id === selectedDeliveryId)
+        if (!d) return null
+        const st = d.status || 'aceptado'
+        const stStyle = st==='pendiente'
+          ? {background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12'}
+          : st==='rechazado'
+          ? {background:'#FBEAE8',color:'#C2473D',border:'1px solid #C2473D'}
+          : st==='pendiente_separar'
+          ? {background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B'}
+          : {background:'#EDF7F2',color:'#2e9b5e',border:'1px solid #2e9b5e'}
+        const stLabel = st==='pendiente'?'Pendiente':st==='rechazado'?'Rechazado':st==='pendiente_separar'?'Pend. separar':'Aceptado'
+        return (
+          <div className="modal-backdrop" onClick={() => setSelectedDeliveryId(null)}>
+            <div className="modal modal-md" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <div>
+                  <div className="modal-title">{d.persona}</div>
+                  <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>
+                    {d.receptor}
+                    {d.receptor === 'Deportes Anexos' && (
+                      disciplinaEdit !== null
+                        ? <span style={{marginLeft:6,display:'inline-flex',gap:4,alignItems:'center'}}>
+                            <select className="field-input" value={disciplinaEdit} onChange={e=>setDisciplinaEdit(e.target.value)}
+                              autoFocus style={{fontSize:12,padding:'2px 6px',width:170}}>
+                              <option value="">— Seleccioná —</option>
+                              {DISCIPLINAS_DEPORTES_ANEXOS.map(d => <option key={d} value={d}>{d}</option>)}
+                            </select>
+                            <button onClick={()=>saveDisciplinaEdit(d.id)} style={{background:'#f2cb12',border:'none',borderRadius:4,padding:'2px 8px',fontWeight:700,fontSize:11,cursor:'pointer'}}>✓</button>
+                            <button onClick={()=>setDisciplinaEdit(null)} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:13}}>✕</button>
+                          </span>
+                        : <span>
+                            {d.disciplina ? ' · ' + d.disciplina : <span style={{color:'#C2473D',fontSize:11,marginLeft:4}}>sin disciplina</span>}
+                            <button onClick={()=>setDisciplinaEdit(d.disciplina||'')} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:13,marginLeft:4,padding:'0 2px'}}>✎</button>
+                          </span>
+                    )}
+                    {d.receptor !== 'Deportes Anexos' && d.disciplina ? ' · ' + d.disciplina : ''}
+                    {' · '}{d.fecha}
+                  </div>
+                  {d.obs && <div style={{fontSize:13,color:'#4a4a42',marginTop:4,fontStyle:'italic'}}>"{d.obs}"</div>}
+                  {d.creadoPor && <div style={{fontSize:12,color:'#aaa',marginTop:2}}>Registrado por: {d.creadoPor}</div>}
+                </div>
+                <span style={{...stStyle,borderRadius:5,padding:'3px 9px',fontSize:11,fontWeight:700,marginLeft:'auto',marginRight:12,whiteSpace:'nowrap'}}>{stLabel}</span>
+                <button className="modal-close" onClick={() => setSelectedDeliveryId(null)}>×</button>
+              </div>
+              <div className="modal-body" style={{padding:0}}>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 60px 55px',background:'#121212',padding:'9px 20px'}}>
+                  <div style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:'.04em'}}>PRENDA</div>
+                  <div style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:'.04em',textAlign:'center'}}>TALLE</div>
+                  <div style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:'.04em',textAlign:'right'}}>CANT.</div>
+                </div>
+                {st === 'rechazado' && d.motivoRechazo && (
+                  <div style={{padding:'10px 20px',background:'#FBEAE8',borderBottom:'1px solid #f5c6c3',fontSize:13,color:'#C2473D'}}>
+                    <b>Motivo de rechazo:</b> {d.motivoRechazo}
+                  </div>
+                )}
+                {d.lines.map((l, i) => (
+                  <div key={i} style={{display:'grid',gridTemplateColumns:'1fr 60px 55px',padding:'11px 20px',borderBottom:'1px solid #F0F0EC',alignItems:'center'}}>
+                    <div>
+                      <div style={{fontWeight:600,fontSize:13.5}}>{l.name || l.code}</div>
+                      {l.ubic && <div style={{fontSize:11.5,color:'#8a8a82',marginTop:2}}>Ubic. {l.ubic}</div>}
+                    </div>
+                    <div style={{textAlign:'center',fontWeight:700,fontSize:13}}>{l.talle}</div>
+                    <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',fontSize:14}}>{l.qty}</div>
+                  </div>
+                ))}
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 20px',background:'#FAFAF8',borderTop:'2px solid #E7E7E3'}}>
+                  <span style={{fontSize:13,color:'#6a6a62',fontWeight:600}}>Total unidades</span>
+                  <span style={{fontWeight:800,fontSize:16,fontFamily:'IBM Plex Mono,monospace'}}>{d.totalUd}</span>
+                </div>
+                {d.paga === 'si' && d.monto > 0 && (
+                  <div style={{padding:'10px 20px',background:'#F0FAF4',borderTop:'1px solid #b6e4c8',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <span style={{fontSize:13,color:'#1a5c33',fontWeight:600}}>Total a cobrar</span>
+                    <span style={{fontWeight:800,fontSize:15,color:'#1a5c33'}}>$ {d.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                {st !== 'pendiente_separar' && <button className="btn btn-ghost" onClick={() => setSelectedDeliveryId(null)}>Cerrar</button>}
+                <button className="btn btn-ghost" style={{border:'1px solid #7a5800',color:'#7a5800'}} onClick={() => openPrintWindow(buildRemitoHtml(d.lines, d.persona, d.receptor, d.disciplina, d.fecha, d.obs, d.paga, d.monto))}>↓ Remito</button>
+                {!isSoloVista && st === 'pendiente_separar' && (
+                  <button className="btn" style={{background:'#f2cb12',color:'#121212',fontWeight:700}}
+                    onClick={() => confirmarSeparar(d.id)}>✓ Confirmar entrega</button>
+                )}
+                {!isSoloVista && st === 'pendiente_separar' && (
+                  <button className="btn btn-ghost" onClick={() => openPrintWindow(buildPedidoHtml(d.lines, d.persona, d.receptor, d.disciplina, d.fecha))}>🖨 Reimprimir</button>
+                )}
+                {!isSoloVista && st !== 'pendiente_separar' && <button className="btn" onClick={() => { setEditDelivery({id:d.id,persona:d.persona,fecha:d.fecha,paga:d.paga,obs:d.obs||'',receptor:d.receptor,lines:d.lines.map(l=>({...l}))}); setSelectedDeliveryId(null) }}>✎ Editar</button>}
+                {!isSoloVista && <button className="btn btn-red" onClick={() => { setSelectedDeliveryId(null); askDeleteDelivery(d.id) }}>Eliminar entrega</button>}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Modal: Editar entrega */}
+      {editDelivery && (
+        <div className="modal-backdrop" onClick={() => setEditDelivery(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">Editar entrega</div>
+              <button className="modal-close" onClick={() => setEditDelivery(null)}>×</button>
+            </div>
+            <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:14,maxHeight:'70vh',overflowY:'auto'}}>
+              <div className="form-group">
+                <label className="field-label">Nombre</label>
+                <input className="field-input" value={editDelivery.persona} autoFocus
+                  onChange={e => setEditDelivery(p => ({...p, persona:e.target.value}))}
+                  onKeyDown={e => e.key==='Enter' && saveEditDelivery()} />
+              </div>
+              <div className="form-group">
+                <label className="field-label">Fecha</label>
+                <input className="field-input" type="date" value={editDelivery.fecha}
+                  onChange={e => setEditDelivery(p => ({...p, fecha:e.target.value}))} />
+              </div>
+              <div className="form-group">
+                <label className="field-label">Receptor</label>
+                <select className="field-input" value={editDelivery.receptor||''}
+                  onChange={e => setEditDelivery(p => ({...p, receptor:e.target.value, paga:e.target.value==='Protocolo'?(p.paga||'no'):null}))}>
+                  {RECEPTORES.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+              {editDelivery.receptor === 'Protocolo' && (
+                <div className="form-group">
+                  <label className="field-label">Paga</label>
+                  <div style={{display:'flex',gap:8}}>
+                    {[['si','SÍ'],['no','NO']].map(([v,l]) => (
+                      <button key={v} className={`talle-btn${editDelivery.paga===v?' active':''}`}
+                        style={{flex:1,padding:'9px 0',fontSize:13,fontWeight:700}}
+                        onClick={() => setEditDelivery(p => ({...p, paga:v}))}>
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="form-group">
+                <label className="field-label">Observaciones <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional)</span></label>
+                <textarea className="field-input" value={editDelivery.obs||''} onChange={e => setEditDelivery(p => ({...p, obs:e.target.value}))}
+                  placeholder="Ej. Entrega para partido del sábado" rows={2}
+                  style={{resize:'vertical',minHeight:60,fontFamily:'inherit',fontSize:14}} />
+              </div>
+              <div className="form-group">
+                <label className="field-label">Artículos entregados <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(poner 0 para eliminar)</span></label>
+                <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                  {(editDelivery.lines||[]).map((l,i) => (
+                    <div key={i} style={{display:'flex',alignItems:'center',gap:10,background:'#F8F8F4',borderRadius:6,padding:'8px 12px'}}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontWeight:600,fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.name||l.code}</div>
+                        <div style={{fontSize:12,color:'#8a8a82'}}>Talle {l.talle}</div>
+                      </div>
+                      <input type="number" min="0" value={l.qty}
+                        style={{width:64,textAlign:'center',padding:'5px 8px',borderRadius:6,border:'1.5px solid #E0E0DA',fontSize:14,fontWeight:700}}
+                        onChange={e => {
+                          const qty = Math.max(0, parseInt(e.target.value)||0)
+                          setEditDelivery(p => ({...p, lines: p.lines.map((x,j) => j===i ? {...x,qty} : x)}))
+                        }} />
+                      <span style={{fontSize:12,color:'#8a8a82',minWidth:12}}>u.</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setEditDelivery(null)}>Cancelar</button>
+              <button className="btn btn-dark" onClick={saveEditDelivery}>Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Camiseta Utilería */}
+      {utiModal && (
+        <div className="modal-backdrop" onClick={()=>setUtiModal(false)}>
+          <div className="modal modal-sm" onClick={e=>e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">{utiForm.id !== null ? 'Editar camiseta' : 'Nueva camiseta'}</div>
+              <button className="modal-close" onClick={()=>setUtiModal(false)}>×</button>
+            </div>
+            <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:12}}>
+              <div className="form-group">
+                <label className="field-label">Tipo</label>
+                <div style={{display:'flex',gap:8}}>
+                  {['JUGADOR','GOLERO'].map(t => (
+                    <button key={t} className={`talle-btn${utiForm.tipo===t?' active':''}`}
+                      style={{flex:1,padding:'10px 0',fontSize:13,fontWeight:700}}
+                      onClick={()=>setUtiForm(p=>({...p,tipo:t,modelo:''}))}>
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="field-label">Competición</label>
+                <select className="field-input" value={utiForm.competicion} onChange={e=>setUtiForm(p=>({...p,competicion:e.target.value}))}>
+                  {COMPETICIONES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div className="form-cols-2" style={{gridTemplateColumns:'1fr 1fr 0.7fr'}}>
+                <div className="form-group">
+                  <label className="field-label">Número</label>
+                  <input className="field-input" value={utiForm.numero} onChange={e=>setUtiForm(p=>({...p,numero:e.target.value}))} placeholder="10" />
+                </div>
+                <div className="form-group">
+                  <label className="field-label">Talle</label>
+                  <select className="field-input" value={utiForm.talle} onChange={e=>setUtiForm(p=>({...p,talle:e.target.value}))}>
+                    {['S','M','L','XL'].map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="field-label">Cantidad</label>
+                  <input type="number" min="1" className="field-input" value={utiForm.cantidad ?? 1} onChange={e=>setUtiForm(p=>({...p,cantidad:Math.max(1, Number(e.target.value)||1)}))} />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="field-label">Jugador / Asignado</label>
+                <input className="field-input" value={utiForm.jugador} onChange={e=>setUtiForm(p=>({...p,jugador:e.target.value}))} placeholder="Nombre del jugador" />
+              </div>
+              <div className="form-group">
+                <label className="field-label">Estampado</label>
+                <input className="field-input" value={utiForm.estampado} onChange={e=>setUtiForm(p=>({...p,estampado:e.target.value}))} placeholder="" />
+              </div>
+              <div className="form-group">
+                <label className="field-label">Temporada</label>
+                <select className="field-input" value={utiForm.temporada} onChange={e=>setUtiForm(p=>({...p,temporada:e.target.value}))}>
+                  <option value="">Seleccionar…</option>
+                  {['2012/2013','2013/2014','2015/2016','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025','2026'].map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="field-label">Modelo</label>
+                <select className="field-input" value={utiForm.modelo} onChange={e=>setUtiForm(p=>({...p,modelo:e.target.value}))}>
+                  <option value="">Seleccionar…</option>
+                  {(utiForm.tipo==='GOLERO' ? MODELOS_GOLERO : MODELOS_JUGADOR).map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="field-label">Parches</label>
+                <input className="field-input" value={utiForm.parches} onChange={e=>setUtiForm(p=>({...p,parches:e.target.value}))} placeholder="" />
+              </div>
+              <div className="form-group">
+                <label className="field-label">Observaciones</label>
+                <input className="field-input" value={utiForm.detalle} onChange={e=>setUtiForm(p=>({...p,detalle:e.target.value}))} placeholder="" />
+              </div>
+              <div className="form-group">
+                <label className="field-label">Ubicación</label>
+                <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+                  <div style={{display:'flex',gap:6,alignItems:'center',flex:1}}>
+                    <span style={{fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>Estantería</span>
+                    <select className="field-input" style={{flex:1}} value={utiForm.utiEstante} onChange={e=>setUtiForm(p=>({...p,utiEstante:e.target.value}))}>
+                      {UT_ESTANTES.map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                  <div style={{display:'flex',gap:6,alignItems:'center',flex:1}}>
+                    <span style={{fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>Altura</span>
+                    <select className="field-input" style={{flex:1}} value={utiForm.utiAltura} onChange={e=>setUtiForm(p=>({...p,utiAltura:e.target.value}))}>
+                      {UT_ALTURAS.map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                  <div style={{fontSize:13,fontWeight:700,fontFamily:'IBM Plex Mono,monospace',background:'#121212',color:'#f2cb12',borderRadius:6,padding:'4px 10px',whiteSpace:'nowrap'}}>
+                    {utiForm.utiEstante + utiForm.utiAltura}
+                  </div>
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="field-label">Fotos <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional · máx. 6)</span></label>
+                {(utiForm.photos||[]).length > 0 && (
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(90px,1fr))',gap:8,marginBottom:8}}>
+                    {(utiForm.photos||[]).map((src,i) => (
+                      <div key={i} style={{position:'relative'}}>
+                        <img src={src} alt={`foto ${i+1}`} style={{width:'100%',aspectRatio:'1',objectFit:'cover',borderRadius:8,border:'1px solid #E0E0DA'}} />
+                        <button type="button" onClick={()=>setUtiForm(p=>({...p,photos:p.photos.filter((_,j)=>j!==i)}))}
+                          style={{position:'absolute',top:4,right:4,width:20,height:20,borderRadius:'50%',border:'none',background:'rgba(0,0,0,0.55)',color:'#fff',fontSize:11,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {(utiForm.photos||[]).length < 6 && (
+                  <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',padding:'10px 14px',border:'2px dashed #E0E0DA',borderRadius:8,color:'#8a8a82',fontSize:13}}>
+                    <span style={{fontSize:20}}>📷</span>
+                    <span>{(utiForm.photos||[]).length === 0 ? 'Subir foto…' : 'Agregar otra foto…'}</span>
+                    <input type="file" accept="image/*" multiple style={{display:'none'}} onChange={async e => {
+                      const files = [...(e.target.files||[])].slice(0, 6-(utiForm.photos||[]).length)
+                      const b64s = await Promise.all(files.map(compressImage))
+                      setUtiForm(p => ({...p, photos:[...(p.photos||[]),...b64s].slice(0,6)}))
+                      e.target.value = ''
+                    }} />
+                  </label>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={()=>setUtiModal(false)}>Cancelar</button>
+              <button className="btn btn-dark" onClick={saveUti}>Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Ficha de camiseta (utilería) */}
+      {utiDetalle && (() => {
+        const c = utiDetalle
+        const campo = (label, value) => (
+          <div>
+            <div style={{fontSize:10,fontWeight:700,color:'#8a8a82',letterSpacing:.4,marginBottom:2}}>{label}</div>
+            <div style={{fontSize:14,fontWeight:600,color:'#1a1a1a'}}>{value || <span style={{color:'#ccc',fontWeight:400}}>—</span>}</div>
+          </div>
+        )
+        return (
+          <div className="modal-backdrop" onClick={()=>setUtiDetalle(null)}>
+            <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:520,width:'96%'}}>
+              <div className="modal-header">
+                <div className="modal-title">
+                  {c.jugador || <span style={{fontStyle:'italic',color:'#aaa'}}>Sin asignar</span>}
+                  {c.numero && <span style={{marginLeft:8,fontFamily:'IBM Plex Mono,monospace',color:'#8a8a82'}}>#{c.numero}</span>}
+                </div>
+                <button className="modal-close" onClick={()=>setUtiDetalle(null)}>×</button>
+              </div>
+              <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:16}}>
+                {(c.photos||[]).length > 0 ? (
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(80px,1fr))',gap:8}}>
+                    {c.photos.map((src,i) => (
+                      <img key={i} src={src} alt={`foto ${i+1}`} style={{width:'100%',aspectRatio:'1',objectFit:'cover',borderRadius:8,border:'1px solid #E0E0DA',cursor:'pointer'}}
+                        onClick={()=>setPhotoPreview({photos:c.photos,idx:i})} />
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{width:'100%',padding:'20px 0',textAlign:'center',color:'#C0C0BA',border:'1px dashed #E0E0DA',borderRadius:8,fontSize:13}}>Sin fotos</div>
+                )}
+                <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                  {c.tipo && <span style={{fontSize:11,fontWeight:700,background:c.tipo==='GOLERO'?'#EDF7F2':'#F0F0EC',color:c.tipo==='GOLERO'?'#2e9b5e':'#5a5a52',border:'1px solid '+(c.tipo==='GOLERO'?'#2e9b5e':'#D0D0CA'),borderRadius:5,padding:'3px 8px'}}>{c.tipo}</span>}
+                  {c.ubic && <span style={{fontSize:12,fontWeight:700,fontFamily:'IBM Plex Mono,monospace',background:'#121212',color:'#f2cb12',borderRadius:5,padding:'3px 9px'}}>{c.ubic}</span>}
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+                  {campo('COMPETICIÓN', c.competicion)}
+                  {campo('TEMPORADA', c.temporada)}
+                  {campo('MODELO', c.modelo)}
+                  {campo('TALLE', c.talle)}
+                  {campo('CANTIDAD', c.cantidad ?? 1)}
+                  {campo('ESTAMPADO', c.estampado)}
+                  {campo('PARCHES', c.parches)}
+                </div>
+                {c.detalle && (
+                  <div style={{borderTop:'1px dashed #E0E0DA',paddingTop:12}}>
+                    <div style={{fontSize:10,fontWeight:700,color:'#8a8a82',letterSpacing:.4,marginBottom:3}}>OBSERVACIONES</div>
+                    <div style={{fontSize:13,color:'#3a3a34',lineHeight:1.4}}>{c.detalle}</div>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={()=>setUtiDetalle(null)}>Cerrar</button>
+                {!isSoloVista && <button className="btn btn-dark" onClick={()=>{
+                  const ubicMatch = (c.ubic||'').match(/^(\d+)([A-E])$/)
+                  setUtiForm({...c, photos:c.photos||[], utiEstante:ubicMatch?ubicMatch[1]:'1', utiAltura:ubicMatch?ubicMatch[2]:'A'})
+                  setUtiDetalle(null)
+                  setUtiModal(true)
+                }}>Editar</button>}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Modal: Nueva Reposición Camisetas */}
+      {repModal && (
+        <div className="modal-backdrop" onClick={() => setRepModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:600,width:'96%'}}>
+            <div className="modal-header">
+              <div className="modal-title">{repForm.editId ? 'Editar reposición' : 'Nueva reposición'}</div>
+              <button className="modal-close" onClick={() => setRepModal(false)}>×</button>
+            </div>
+            <div className="modal-body" style={{maxHeight:'70vh',overflowY:'auto'}}>
+              <div className="form-group">
+                <label className="field-label">Concepto</label>
+                <input className="field-input" value={repForm.concepto} onChange={e => setRepForm(p=>({...p,concepto:e.target.value}))} placeholder="Ej. Reposición vs. Danubio" autoFocus />
+              </div>
+              {/* Torneo y Fecha */}
+              <div style={{display:'flex',gap:12,marginTop:4,alignItems:'flex-end'}}>
+                <div className="form-group" style={{flex:1,marginBottom:0}}>
+                  <label className="field-label">Torneo</label>
+                  <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                    {['APERTURA','CLAUSURA','INTERMEDIO','COPA AUF','LIBERTADORES','SUDAMERICANA'].map(t=>(
+                      <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,torneo:t,fechaTorneo:(TORNEO_FECHAS[t]||['1'])[0]}))}
+                        style={{padding:'6px 10px',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:11,cursor:'pointer',
+                          borderColor:repForm.torneo===t?'#f2cb12':'#ECECE8',
+                          background:repForm.torneo===t?'#FFF8D6':'#fff',
+                          color:repForm.torneo===t?'#7a5800':'#8a8a82'}}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="form-group" style={{marginBottom:0}}>
+                  <label className="field-label">Fecha</label>
+                  <select className="field-input" value={repForm.fechaTorneo} onChange={e=>setRepForm(p=>({...p,fechaTorneo:e.target.value}))}>
+                    {(TORNEO_FECHAS[repForm.torneo]||[]).map(f=><option key={f} value={f}>{f}</option>)}
+                  </select>
+                </div>
+              </div>
+              {/* Fecha Partido — solo para reposiciones con descuento cross-mes */}
+              {/reposici[oó]n/i.test(repForm.concepto) && (
+              <div className="form-group" style={{marginTop:10}}>
+                <label className="field-label">Fecha Partido <span style={{fontWeight:400,color:'#8a8a82'}}>(DD/MM/YYYY — opcional, define el mes para descuentos)</span></label>
+                <input className="field-input" value={repForm.fechaPartido||''} onChange={e=>setRepForm(p=>({...p,fechaPartido:e.target.value}))} placeholder="Ej. 31/07/2025" style={{maxWidth:160}} />
+              </div>
+              )}
+              {/* Selector de tipo de camiseta — uno por posición */}
+              <div style={{display:'flex',gap:16,marginTop:14}}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',marginBottom:6}}>EQUIPO JUGADORES</div>
+                  <div style={{display:'flex',gap:6}}>
+                    {REP_TIPOS_JUGADOR.map(t=>(
+                      <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,tipoCamisetaJugador:t}))}
+                        style={{flex:1,padding:'6px 4px',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:11,cursor:'pointer',
+                          borderColor:repForm.tipoCamisetaJugador===t?'#f2cb12':'#ECECE8',
+                          background:repForm.tipoCamisetaJugador===t?'#FFF8D6':'#fff',
+                          color:repForm.tipoCamisetaJugador===t?'#7a5800':'#8a8a82'}}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',marginBottom:6}}>EQUIPO GOLEROS</div>
+                  <div style={{display:'flex',gap:6}}>
+                    {REP_TIPOS_GOLERO.map(t=>(
+                      <button key={t} type="button" onClick={()=>setRepForm(p=>({...p,tipoCamisetaGolero:t}))}
+                        style={{flex:1,padding:'6px 4px',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:11,cursor:'pointer',
+                          borderColor:repForm.tipoCamisetaGolero===t?'#f2cb12':'#ECECE8',
+                          background:repForm.tipoCamisetaGolero===t?'#FFF8D6':'#fff',
+                          color:repForm.tipoCamisetaGolero===t?'#7a5800':'#8a8a82'}}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{marginTop:16}}>
+                <div style={{display:'grid',gridTemplateColumns:'40px 1fr 62px 38px 62px 38px',gap:4,marginBottom:4,fontSize:10,fontWeight:700,color:'#8a8a82',padding:'4px 6px',background:'#F5F5F0',borderRadius:6}}>
+                  <div>Nº</div><div>NOMBRE</div><div style={{textAlign:'center'}}>CAM.</div><div style={{textAlign:'center'}}>DC</div><div style={{textAlign:'center'}}>SHT.</div><div style={{textAlign:'center'}}>DS</div>
+                </div>
+                {repForm.rows.map((r, i) => {
+                  const hasQty = Number(r.cantCamiseta)>0 || Number(r.cantShort)>0
+                  const isLibre = r.nombre.trim().toLowerCase()==='libre'
+                  const dcam = r.descuentoCamiseta !== false
+                  const dsht = r.descuentoShort !== false
+                  const toggle = (field) => setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,[field]:!x[field]}:x)}))
+                  return (
+                    <div key={i} style={{display:'grid',gridTemplateColumns:'40px 1fr 62px 38px 62px 38px',gap:4,marginBottom:3,alignItems:'center',padding:'5px 6px',borderRadius:6,
+                      background:isLibre?'#3a3a3a':hasQty?'#FFFDF0':'transparent',border:hasQty?'1px solid #f2cb12':'1px solid transparent'}}>
+                      <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,color:isLibre?'#888':undefined}}>{r.numero||'—'}</div>
+                      <div>
+                        <span style={{fontWeight:600,fontSize:13,color:isLibre?'#888':undefined,fontStyle:isLibre?'italic':undefined}}>{r.nombre}</span>
+                        {!isLibre && <span style={{fontSize:10,color:'#aaa',marginLeft:6}}>{r.posicion||'Jugador'}</span>}
+                      </div>
+                      <input className="field-input mono" type="number" min="0" value={r.cantCamiseta}
+                        onChange={e=>setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,cantCamiseta:e.target.value}:x)}))}
+                        placeholder="0" style={{textAlign:'center',padding:'5px 2px'}} />
+                      {!isLibre
+                        ? <button type="button" onClick={()=>toggle('descuentoCamiseta')}
+                            style={{padding:'4px 2px',borderRadius:5,border:'2px solid',fontWeight:700,fontSize:10,cursor:'pointer',width:'100%',
+                              borderColor:dcam?'#2d6a4f':'#ccc',background:dcam?'#d8f3dc':'#f5f5f5',color:dcam?'#1b4332':'#999'}}>
+                            {dcam?'SÍ':'NO'}
+                          </button>
+                        : <div/>}
+                      <input className="field-input mono" type="number" min="0" value={r.cantShort}
+                        onChange={e=>setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,cantShort:e.target.value}:x)}))}
+                        placeholder="0" style={{textAlign:'center',padding:'5px 2px'}} />
+                      {!isLibre
+                        ? <button type="button" onClick={()=>toggle('descuentoShort')}
+                            style={{padding:'4px 2px',borderRadius:5,border:'2px solid',fontWeight:700,fontSize:10,cursor:'pointer',width:'100%',
+                              borderColor:dsht?'#2d6a4f':'#ccc',background:dsht?'#d8f3dc':'#f5f5f5',color:dsht?'#1b4332':'#999'}}>
+                            {dsht?'SÍ':'NO'}
+                          </button>
+                        : <div/>}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setRepModal(false)}>Cancelar</button>
+              <button className="btn btn-dark" onClick={saveReposicion}>{repForm.editId ? 'Guardar cambios' : 'Guardar reposición'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Detalle Reposición */}
+      {repDetail && (
+        <div className="modal-backdrop" onClick={() => setRepDetail(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:580,width:'96%'}}>
+            <div className="modal-header">
+              <div style={{flex:1,minWidth:0}}>
+                {repConceptoEdit !== null ? (
+                  <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                    <input className="field-input" value={repConceptoEdit} onChange={e=>setRepConceptoEdit(e.target.value)}
+                      onKeyDown={e=>{if(e.key==='Enter')saveRepConcepto();if(e.key==='Escape')setRepConceptoEdit(null)}}
+                      autoFocus style={{fontWeight:700,fontSize:16,flex:1}} />
+                    <button className="btn btn-dark" style={{padding:'6px 12px',fontSize:13}} onClick={saveRepConcepto}>✓</button>
+                    <button className="btn btn-ghost" style={{padding:'6px 10px',fontSize:13}} onClick={()=>setRepConceptoEdit(null)}>✕</button>
+                  </div>
+                ) : (
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <div className="modal-title">{repDetail.concepto}</div>
+                    <button onClick={()=>setRepConceptoEdit(repDetail.concepto)} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px',lineHeight:1}}>✎</button>
+                  </div>
+                )}
+                <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>
+                  {repDetail.fecha}{repDetail.creadoPor ? ' · '+repDetail.creadoPor : ''}
+                  {repDetail.torneo && <span style={{marginLeft:8,fontWeight:700,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:4,padding:'1px 7px',fontSize:11}}>
+                    {(()=>{const _f=repDetail.fechaTorneo;const _fin=_f&&(_f==='Final'||_f==='NaN'||Number.isNaN(_f));return _fin?'Final '+repDetail.torneo:repDetail.torneo+(_f?' · Fecha '+_f:'')})()}
+                  </span>}
+                </div>
+              </div>
+              <button className="modal-close" onClick={() => { setRepConceptoEdit(null); setRepDetail(null) }}>×</button>
+            </div>
+            <div className="modal-body" style={{maxHeight:'60vh',overflowY:'auto'}}>
+              {/* Tipos de camiseta usados en esta reposición */}
+              {(repDetail.tipoCamisetaJugador||repDetail.tipoCamisetaGolero) && (
+                <div style={{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap'}}>
+                  {repDetail.tipoCamisetaJugador && (
+                    <span style={{fontSize:12,fontWeight:700,background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:5,padding:'3px 10px'}}>
+                      Jugadores: {repDetail.tipoCamisetaJugador}
+                    </span>
+                  )}
+                  {repDetail.tipoCamisetaGolero && (
+                    <span style={{fontSize:12,fontWeight:700,background:'#F0F0EC',border:'1px solid #ccc',borderRadius:5,padding:'3px 10px'}}>
+                      Goleros: {repDetail.tipoCamisetaGolero}
+                    </span>
+                  )}
+                </div>
+              )}
+              <div style={{display:'grid',gridTemplateColumns:'40px 1fr 80px 80px',gap:6,marginBottom:4,fontSize:10,fontWeight:700,color:'#8a8a82',background:'#F5F5F0',borderRadius:6,padding:'5px 6px'}}>
+                <div>Nº</div><div>NOMBRE</div><div style={{textAlign:'center'}}>CAMISETA</div><div style={{textAlign:'center'}}>SHORT</div>
+              </div>
+              {(repDetail.jugadores||[]).map((j,i) => {
+                const goleroRowBg = j.posicion==='Golero'
+                  ? j.tipoCamiseta==='NEGRO'   ? {background:'#d0d0d0',borderBottom:'1px solid #bbb'}
+                  : j.tipoCamiseta==='NARANJA'  ? {background:'#FFE5CC',borderBottom:'1px solid #FFB870'}
+                  : j.tipoCamiseta==='CREMA'    ? {background:'#FFF8E8',borderBottom:'1px solid #EDE0C0'}
+                  : {borderBottom:'1px solid #F5F5F0'}
+                  : {borderBottom:'1px solid #F5F5F0'}
+                return (
+                  <div key={i} style={{display:'grid',gridTemplateColumns:'40px 1fr 80px 80px',gap:6,padding:'6px 6px',fontSize:13,alignItems:'center',...goleroRowBg}}>
+                    <div style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#6a6a62'}}>{j.numero||'—'}</div>
+                    <div>
+                      <div style={{fontWeight:500}}>{j.nombre||'—'}</div>
+                      {j.talleCamiseta && <div style={{fontSize:10,color:'#8a8a82',marginTop:1}}>CAM {j.talleCamiseta} · SHORT {j.talleShort}</div>}
+                    </div>
+                    <div style={{textAlign:'center',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:j.cantCamiseta>0?'#1a1a1a':'#ccc'}}>
+                      {j.cantCamiseta>0?j.cantCamiseta:'—'}
+                    </div>
+                    <div style={{textAlign:'center',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:j.cantShort>0?'#1a1a1a':'#ccc'}}>
+                      {j.cantShort>0?j.cantShort:'—'}
+                    </div>
+                  </div>
+                )
+              })}
+              {(() => {
+                const totCam = (repDetail.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
+                const totSht = (repDetail.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
+                return <div style={{marginTop:10,fontSize:12,color:'#8a8a82',textAlign:'right'}}>
+                  {totCam > 0 && <span>{totCam} camiseta{totCam!==1?'s':''}</span>}
+                  {totCam > 0 && totSht > 0 && <span style={{margin:'0 6px'}}>·</span>}
+                  {totSht > 0 && <span>{totSht} short{totSht!==1?'s':''}</span>}
+                </div>
+              })()}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setRepDetail(null)}>Cerrar</button>
+              <button className="btn btn-ghost" style={{border:'1px solid #2d6a4f',color:'#2d6a4f'}} onClick={() => exportRepToExcel(repDetail)}>↓ Excel</button>
+              <button className="btn btn-dark" onClick={() => openRepEdit(repDetail)}>Editar</button>
+              <button style={{padding:'8px 16px',borderRadius:7,border:'1px solid #C2473D',background:'#FBEAE8',color:'#C2473D',fontWeight:700,cursor:'pointer'}}
+                onClick={() => { if(window.confirm('¿Eliminar esta reposición?')) deleteReposicion(repDetail.id) }}>Eliminar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Detalle de descuentos por jugador */}
+      {rankingDetalle && (() => {
+        const nombre = rankingDetalle
+        const jug = (db.plantel||[]).find(j => j.nombre?.trim().toLowerCase() === nombre.toLowerCase())
+        const filas = (db.reposiciones||[]).flatMap(r => {
+          const j = (r.jugadores||[]).find(jj => jj.nombre?.trim().toLowerCase() === nombre.toLowerCase())
+          if (!j) return []
+          const dc = j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
+          const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
+          const cam = dc ? Number(j.cantCamiseta)||0 : 0
+          const sht = ds ? Number(j.cantShort)||0 : 0
+          if (cam === 0 && sht === 0) return []
+          return [{label: r.concepto||'Sin nombre', fecha: r.fecha||'', torneo: r.torneo||'', cam, sht, monto: cam*PRECIO_CAMISETA + sht*PRECIO_SHORT}]
+        })
+        const totCam = filas.reduce((s,f)=>s+f.cam,0)
+        const totSht = filas.reduce((s,f)=>s+f.sht,0)
+        const totMonto = filas.reduce((s,f)=>s+f.monto,0)
+        const extrasJug = (db.descExtras||[]).filter(e => e.jugadorNombre?.trim().toLowerCase() === nombre.toLowerCase())
+        const totExtrasItems = extrasJug.reduce((s,e) => s + e.precio*(e.cantidad||1), 0)
+        return (
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:1100,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setRankingDetalle(null)}>
+            <div style={{background:'#fff',borderRadius:12,padding:28,minWidth:360,maxWidth:500,boxShadow:'0 8px 32px rgba(0,0,0,0.18)',maxHeight:'80vh',display:'flex',flexDirection:'column'}} onClick={e=>e.stopPropagation()}>
+              <div style={{display:'flex',alignItems:'baseline',gap:10,marginBottom:4}}>
+                {jug?.numero && <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:22,color:'#121212'}}>{jug.numero}</span>}
+                <span style={{fontWeight:700,fontSize:16,textTransform:'uppercase'}}>{nombre}</span>
+              </div>
+              <div style={{fontSize:12,color:'#999',marginBottom:16}}>{jug?.posicion||''}</div>
+              <div style={{overflowY:'auto',flex:1}}>
+                <table style={{width:'100%',borderCollapse:'collapse',tableLayout:'fixed'}}>
+                  <colgroup>
+                    <col style={{width:'auto'}}/>
+                    <col style={{width:52}}/>
+                    <col style={{width:52}}/>
+                    <col style={{width:80}}/>
+                  </colgroup>
+                  <thead>
+                    <tr style={{borderBottom:'2px solid #ECECE8'}}>
+                      <th style={{padding:'0 0 6px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',textAlign:'left'}}>REPOSICIÓN</th>
+                      <th style={{padding:'0 0 6px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',textAlign:'center'}}>CAM</th>
+                      <th style={{padding:'0 0 6px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',textAlign:'center'}}>SHO</th>
+                      <th style={{padding:'0 0 6px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',textAlign:'right'}}>MONTO</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filas.length === 0
+                      ? <tr><td colSpan={4} style={{color:'#999',fontSize:13,padding:'20px 0',textAlign:'center'}}>Sin registros</td></tr>
+                      : filas.map((f,i) => (
+                        <tr key={i} style={{borderBottom:'1px solid #ECECE8'}}>
+                          <td style={{padding:'7px 8px 7px 0',verticalAlign:'middle'}}>
+                            {f.fecha && <div style={{fontSize:11,fontWeight:700,color:'#121212',marginBottom:1}}>{f.fecha}</div>}
+                            <div style={{fontWeight:500,fontSize:12,textTransform:'uppercase',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'#555'}}>{f.label}{f.torneo ? ` · ${f.torneo}` : ''}</div>
+                          </td>
+                          <td style={{padding:'7px 4px',textAlign:'center',fontWeight:700,fontSize:13,verticalAlign:'middle'}}>{f.cam}</td>
+                          <td style={{padding:'7px 4px',textAlign:'center',fontWeight:700,fontSize:13,verticalAlign:'middle'}}>{f.sht}</td>
+                          <td style={{padding:'7px 0 7px 4px',fontFamily:'IBM Plex Mono,monospace',fontSize:12,fontWeight:600,textAlign:'right',whiteSpace:'nowrap',verticalAlign:'middle'}}>$ {f.monto.toLocaleString('es-UY')}</td>
+                        </tr>
+                      ))
+                    }
+                  </tbody>
+                  <tfoot>
+                    <tr style={{borderTop:'2px solid #121212'}}>
+                      <td style={{padding:'8px 8px 0 0',fontWeight:700,fontSize:12}}>TOTAL</td>
+                      <td style={{padding:'8px 4px 0',textAlign:'center'}}><span style={{fontWeight:700,fontSize:14,background:'#f2cb12',borderRadius:20,padding:'2px 6px'}}>{totCam}</span></td>
+                      <td style={{padding:'8px 4px 0',textAlign:'center'}}><span style={{fontWeight:700,fontSize:14,background:'#f2cb12',borderRadius:20,padding:'2px 6px'}}>{totSht}</span></td>
+                      <td style={{padding:'8px 0 0 4px',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,textAlign:'right',whiteSpace:'nowrap'}}>$ {totMonto.toLocaleString('es-UY')}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              {extrasJug.length > 0 && (<>
+                <div style={{fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',paddingTop:12,paddingBottom:4,borderBottom:'2px solid #ECECE8',marginTop:8}}>DESCUENTOS EXTRA</div>
+                <div style={{overflowY:'auto',maxHeight:160}}>
+                  {extrasJug.map((e,i) => (
+                    <div key={i} style={{display:'grid',gridTemplateColumns:'1fr auto',gap:'0 10px',alignItems:'center',padding:'6px 0',borderBottom:'1px solid #ECECE8'}}>
+                      <div>
+                        {e.fecha && <div style={{fontSize:11,fontWeight:700,color:'#121212',marginBottom:1}}>{e.fecha}</div>}
+                        <div style={{fontWeight:500,fontSize:12,color:'#555',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{e.articulo}{(e.cantidad||1)>1?` × ${e.cantidad}`:''}</div>
+                      </div>
+                      <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,fontWeight:600,textAlign:'right',whiteSpace:'nowrap'}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0 0',borderTop:'2px solid #121212',marginTop:4}}>
+                  <span style={{fontWeight:700,fontSize:12}}>TOTAL EXTRAS</span>
+                  <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,whiteSpace:'nowrap'}}>$ {totExtrasItems.toLocaleString('es-UY')}</span>
+                </div>
+              </>)}
+              <button onClick={()=>setRankingDetalle(null)} style={{marginTop:16,width:'100%',padding:'9px 0',border:'1px solid #D0D0CC',borderRadius:8,background:'#fff',cursor:'pointer',fontSize:13,color:'#666'}}>Cerrar</button>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Modal: Reparar nombre en ranking */}
+      {repararRanking && (() => {
+        const nombreViejo = repararRanking
+        return (
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setRepararRanking(null)}>
+            <div style={{background:'#fff',borderRadius:12,padding:28,minWidth:340,maxWidth:440,boxShadow:'0 8px 32px rgba(0,0,0,0.18)'}} onClick={e=>e.stopPropagation()}>
+              <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>Reparar nombre en ranking</div>
+              <div style={{fontSize:13,color:'#666',marginBottom:16}}>
+                El nombre <strong style={{color:'#EA580C',textTransform:'uppercase'}}>{nombreViejo}</strong> no existe en el plantel actual. Seleccioná el jugador correcto para actualizar todas las reposiciones.
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:6,maxHeight:300,overflowY:'auto'}}>
+                {(db.plantel||[]).filter(j=>j.nombre?.trim().toLowerCase()!=='libre').sort((a,b)=>(a.numero||0)-(b.numero||0)).map(j=>(
+                  <button key={j.id} onClick={()=>{
+                    const newNombre = j.nombre.trim()
+                    setDb(s=>({
+                      ...s,
+                      reposiciones:(s.reposiciones||[]).map(r=>({
+                        ...r,
+                        jugadores:(r.jugadores||[]).map(jug=>
+                          jug.nombre?.trim().toLowerCase()===nombreViejo.toLowerCase() ? {...jug, nombre:newNombre} : jug
+                        )
+                      }))
+                    }))
+                    setRepararRanking(null)
+                    showToast(`Nombre actualizado a "${newNombre}" en todas las reposiciones.`)
+                  }} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',border:'1px solid #ECECE8',borderRadius:8,background:'#fff',cursor:'pointer',textAlign:'left',fontSize:13}}>
+                    <span style={{width:28,fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212',textAlign:'right',flexShrink:0}}>{j.numero||'—'}</span>
+                    <span style={{fontWeight:600,textTransform:'uppercase'}}>{j.nombre}</span>
+                    <span style={{marginLeft:'auto',fontSize:11,color:'#999',textTransform:'uppercase'}}>{j.posicion}</span>
+                  </button>
+                ))}
+              </div>
+              <button onClick={()=>setRepararRanking(null)} style={{marginTop:16,width:'100%',padding:'9px 0',border:'1px solid #D0D0CC',borderRadius:8,background:'#fff',cursor:'pointer',fontSize:13,color:'#666'}}>Cancelar</button>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Modal: Jugadores por talle */}
+      {talleDetalle && (() => {
+        const esCam = talleDetalle.campo === 'talleCamiseta'
+        const lista = (db.plantel||[])
+          .filter(j => j.nombre.trim().toLowerCase() !== 'libre' && j[talleDetalle.campo] === talleDetalle.talle)
+          .sort((a,b) => (Number(a.numero)||0) - (Number(b.numero)||0))
+        return (
+          <div className="modal-backdrop" onClick={() => setTalleDetalle(null)}>
+            <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:380,width:'96%'}}>
+              <div className="modal-header">
+                <div className="modal-title">{esCam ? 'Camiseta' : 'Short'} talle {talleDetalle.talle}</div>
+                <button className="modal-close" onClick={() => setTalleDetalle(null)}>×</button>
+              </div>
+              <div className="modal-body" style={{padding:0}}>
+                {lista.map(j => (
+                  <div key={j.id} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 20px',borderBottom:'1px solid #ECECE8',
+                    background: j.posicion === 'Golero' ? '#A5D6A7' : undefined}}>
+                    <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,width:28,flexShrink:0}}>{j.numero||'—'}</span>
+                    <span style={{fontWeight:700,fontSize:14,textTransform:'uppercase'}}>{j.nombre}</span>
+                    <span style={{marginLeft:'auto',fontSize:11,color:'#8a8a82'}}>{j.posicion||'Jugador'}</span>
+                  </div>
+                ))}
+                {lista.length === 0 && <div style={{padding:24,textAlign:'center',color:'#8a8a82'}}>Sin jugadores.</div>}
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={() => setTalleDetalle(null)}>Cerrar</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Modal: Desglose unidades en stock por categoría */}
+      {showUnidadesDesglose && (
+        <div className="modal-backdrop" onClick={()=>setShowUnidadesDesglose(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:380,width:'96%'}}>
+            <div className="modal-header">
+              <div className="modal-title">Unidades en stock por categoría</div>
+              <button className="modal-close" onClick={()=>setShowUnidadesDesglose(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              {[['Entrenamiento', kpis.entrenamiento], ['Juego', kpis.juego], ['Casual', kpis.casual]].map(([cat, qty]) => (
+                <div key={cat} style={{display:'flex',justifyContent:'space-between',alignItems:'center',
+                  padding:'12px 16px',borderRadius:8,marginBottom:8,background:'#f2cb12',cursor:'pointer'}}
+                  onClick={()=>{ setCat(cat); setView('inventario'); setShowUnidadesDesglose(false) }}>
+                  <span style={{fontWeight:700,fontSize:14}}>PRENDAS DE {cat.toUpperCase()}</span>
+                  <span style={{fontFamily:'Oswald,sans-serif',fontSize:26}}>{qty}</span>
+                </div>
+              ))}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={()=>setShowUnidadesDesglose(false)}>Cerrar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Desglose camisetas/shorts enviados por tipo */}
+      {repDesglose && (() => {
+        const esCam = repDesglose === 'camisetas'
+        const titulo = esCam ? 'Camisetas enviadas por tipo' : 'Shorts enviados por tipo'
+        const desglose = {}
+        ;(db.reposiciones||[]).forEach(r => {
+          ;(r.jugadores||[]).forEach(j => {
+            const tipo = j.tipoCamiseta || '(sin tipo)'
+            const qty = esCam ? (Number(j.cantCamiseta)||0) : (Number(j.cantShort)||0)
+            if (qty > 0) desglose[tipo] = (desglose[tipo]||0) + qty
+          })
+        })
+        const filas = Object.entries(desglose).sort((a,b)=>b[1]-a[1])
+        const totalGeneral = filas.reduce((s,[,v])=>s+v,0)
+        const jugTipos = [...REP_TIPOS_JUGADOR]
+        const golTipos = [...REP_TIPOS_GOLERO]
+        const filasJug = filas.filter(([t])=>jugTipos.includes(t))
+        const filasGol = filas.filter(([t])=>golTipos.includes(t))
+        const filasOtros = filas.filter(([t])=>!jugTipos.includes(t)&&!golTipos.includes(t))
+        const TIPO_COLORS = {
+          'TRADICIONAL': {bg:'repeating-linear-gradient(45deg,#f2cb12,#f2cb12 28px,#121212 28px,#121212 56px)', color:'#fff', badge:true},
+          'AMARILLA':    {bg:'#f2cb12', color:'#121212'},
+          'VERDE':       {bg:'#2d6a4f', color:'#fff'},
+          'NEGRO':       {bg:'#2a2a2a', color:'#fff'},
+          'NARANJA':     {bg:'#EA580C', color:'#121212'},
+          'CREMA':       {bg:'#F5ECD7', color:'#121212'},
+        }
+        const renderFila = ([tipo, qty]) => {
+          const c = TIPO_COLORS[tipo] || {bg:'#F5F5F0', color:'#121212'}
+          return (
+            <div key={tipo} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 16px',borderRadius:8,marginBottom:6,background:c.bg}}>
+              {c.badge
+                ? <span style={{fontWeight:700,fontSize:13,color:'#fff',background:'#121212',padding:'3px 10px',borderRadius:20}}>{tipo}</span>
+                : <span style={{fontWeight:700,fontSize:14,color:c.color}}>{tipo}</span>
+              }
+              {c.badge
+                ? <span style={{fontFamily:'Oswald,sans-serif',fontSize:22,color:'#121212',background:'#f2cb12',padding:'2px 14px',borderRadius:20}}>{qty}</span>
+                : <span style={{fontFamily:'Oswald,sans-serif',fontSize:22,color:c.color}}>{qty}</span>
+              }
+            </div>
+          )
+        }
+        return (
+          <div className="modal-backdrop" onClick={()=>setRepDesglose(null)}>
+            <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:400,width:'96%'}}>
+              <div className="modal-header">
+                <div className="modal-title">{titulo}</div>
+                <button className="modal-close" onClick={()=>setRepDesglose(null)}>×</button>
+              </div>
+              <div className="modal-body">
+                {filasJug.length > 0 && <>
+                  <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginBottom:4}}>JUGADORES</div>
+                  {filasJug.map(renderFila)}
+                </>}
+                {filasGol.length > 0 && <>
+                  <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginTop:16,marginBottom:4}}>GOLEROS</div>
+                  {filasGol.map(renderFila)}
+                </>}
+                {filasOtros.length > 0 && <>
+                  <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginTop:16,marginBottom:4}}>OTROS</div>
+                  {filasOtros.map(renderFila)}
+                </>}
+                {filas.length === 0 && <div style={{textAlign:'center',color:'#8a8a82',padding:'24px 0'}}>Sin datos.</div>}
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:16,paddingTop:12,borderTop:'2px solid #121212'}}>
+                  <span style={{fontWeight:700,fontSize:13}}>TOTAL</span>
+                  <span style={{fontFamily:'Oswald,sans-serif',fontSize:26}}>{totalGeneral}</span>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={()=>setRepDesglose(null)}>Cerrar</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Modal: Descuento adicional (admin) */}
+      {descExtraModal && (
+        <div className="modal-backdrop" onClick={()=>setDescExtraModal(false)}>
+          <div className="modal modal-sm" onClick={e=>e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">{descExtraForm.id?'Editar descuento':'Descuento adicional'}</div>
+              <button className="modal-close" onClick={()=>setDescExtraModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="field-label">Fecha</label>
+                <input className="field-input" type="text" placeholder={today()} value={descExtraForm.fecha} onChange={e=>setDescExtraForm(p=>({...p,fecha:e.target.value}))} />
+              </div>
+              <div className="form-group">
+                <label className="field-label">Jugador</label>
+                <select className="field-input" value={descExtraForm.jugadorNombre} onChange={e=>{const j=(db.plantel||[]).find(p=>p.nombre===e.target.value);setDescExtraForm(p=>({...p,jugadorNombre:e.target.value,jugadorNumero:j?.numero||''}))}}>
+                  <option value="">Seleccionar jugador…</option>
+                  {(db.plantel||[]).filter(j=>j.nombre?.trim().toLowerCase()!=='libre').sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j=>(<option key={j.id} value={j.nombre}>{j.numero} — {j.nombre}</option>))}
+                </select>
+              </div>
+              {descExtraForm.id ? (<>
+                <div className="form-group">
+                  <label className="field-label">Prenda</label>
+                  <select className="field-input" value={descExtraForm.articulo} onChange={e=>{const p=EXTRAS_PRENDAS.find(p=>p.nombre===e.target.value);setDescExtraForm(f=>({...f,articulo:e.target.value,precio:p?.precio||0}))}}>
+                    <option value="">Seleccionar prenda…</option>
+                    {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre}</option>))}
+                  </select>
+                </div>
+                <div style={{display:'flex',gap:12}}>
+                  <div className="form-group" style={{flex:1}}>
+                    <label className="field-label">Precio unitario</label>
+                    <input className="field-input mono" type="number" value={descExtraForm.precio} readOnly style={{background:'#F5F5F0',color:'#5a5a52'}} />
+                  </div>
+                  <div className="form-group" style={{width:80}}>
+                    <label className="field-label">Cant.</label>
+                    <input className="field-input mono" type="number" min="1" value={descExtraForm.cantidad} onChange={e=>setDescExtraForm(p=>({...p,cantidad:Math.max(1,parseInt(e.target.value)||1)}))} style={{textAlign:'center'}} />
+                  </div>
+                </div>
+                {descExtraForm.precio>0 && (
+                  <div style={{textAlign:'right',fontWeight:700,fontSize:14,fontFamily:'IBM Plex Mono,monospace',color:'#121212'}}>
+                    Total: $ {(descExtraForm.precio*(descExtraForm.cantidad||1)).toLocaleString('es-UY')}
+                  </div>
+                )}
+              </>) : (<>
+                <div style={{borderTop:'1px solid #ECECE8',marginTop:4,paddingTop:12}}>
+                  <div style={{fontSize:11,fontWeight:700,letterSpacing:'.04em',color:'#8a8a82',marginBottom:8}}>PRENDAS</div>
+                  {(descExtraForm.prendas||[]).map((pr,i)=>(
+                    <div key={i} style={{display:'flex',gap:8,alignItems:'center',marginBottom:8}}>
+                      <select style={{flex:1,padding:'6px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,background:'#fff'}}
+                        value={pr.articulo}
+                        onChange={e=>{const found=EXTRAS_PRENDAS.find(p=>p.nombre===e.target.value);setDescExtraForm(f=>({...f,prendas:f.prendas.map((p,j)=>j===i?{...p,articulo:e.target.value,precio:found?.precio||0}:p)}))}}>
+                        <option value="">Seleccionar prenda…</option>
+                        {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre}</option>))}
+                      </select>
+                      <input style={{width:52,padding:'6px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,textAlign:'center'}}
+                        type="number" min="1" value={pr.cantidad}
+                        onChange={e=>setDescExtraForm(f=>({...f,prendas:f.prendas.map((p,j)=>j===i?{...p,cantidad:Math.max(1,parseInt(e.target.value)||1)}:p)}))} />
+                      {(descExtraForm.prendas||[]).length>1 && (
+                        <button onClick={()=>setDescExtraForm(f=>({...f,prendas:f.prendas.filter((_,j)=>j!==i)}))}
+                          style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:18,lineHeight:1,padding:'0 4px',flexShrink:0}}>×</button>
+                      )}
+                    </div>
+                  ))}
+                  <button onClick={()=>setDescExtraForm(f=>({...f,prendas:[...(f.prendas||[]),{articulo:'',precio:0,cantidad:1}]}))}
+                    style={{fontSize:12,color:'#5a5a52',background:'none',border:'1px dashed #ccc',borderRadius:6,padding:'5px 12px',cursor:'pointer',width:'100%',marginTop:2}}>
+                    + Agregar prenda
+                  </button>
+                </div>
+                {(descExtraForm.prendas||[]).some(p=>p.precio>0) && (
+                  <div style={{textAlign:'right',fontWeight:700,fontSize:14,fontFamily:'IBM Plex Mono,monospace',color:'#121212',marginTop:10}}>
+                    Total: $ {(descExtraForm.prendas||[]).reduce((s,p)=>s+p.precio*(p.cantidad||1),0).toLocaleString('es-UY')}
+                  </div>
+                )}
+              </>)}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={()=>setDescExtraModal(false)}>Cancelar</button>
+              <button className="btn btn-dark" onClick={saveDescExtra}>Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modal: Resumen entregas por jugador por mes */}
+      {repResumen && (() => {
+        const MESES_ES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+        const repsValidas = db.reposiciones||[]
+
+        // Agrupar por mes (clave MM/YYYY)
+        const mesesMap = {}
+        repsValidas.forEach(r => {
+          const p = (r.fechaPartido||r.fecha||'').split('/')
+          const key = p.length===3 ? p[1]+'/'+p[2] : (r.fechaPartido||r.fecha)||'?'
+          if (!mesesMap[key]) mesesMap[key] = []
+          mesesMap[key].push(r)
+        })
+        const mesActualKeyMod = (() => { const p = today().split('/'); return p[1]+'/'+p[2] })()
+        if (!mesesMap[mesActualKeyMod]) mesesMap[mesActualKeyMod] = []
+        const mesesOrdenados = Object.keys(mesesMap).sort((a,b)=>{
+          const [ma,ya] = a.split('/').map(Number)
+          const [mb,yb] = b.split('/').map(Number)
+          return ya!==yb ? ya-yb : ma-mb
+        })
+        const mesMostradoAdmin = (resumenMesSel && mesesMap[resumenMesSel]) ? resumenMesSel : (mesesMap[mesActualKeyMod] ? mesActualKeyMod : mesesOrdenados[mesesOrdenados.length-1])
+
+        const calcMesAdmin = mesKey => {
+          const repsDelMes = mesesMap[mesKey] || []
+          const extrasDelMes = (db.descExtras||[]).filter(e => { const p=e.fecha.split('/'); return p.length===3&&p[1]+'/'+p[2]===mesKey })
+          const jugMapMes = {}
+          ;(db.plantel||[]).filter(p=>p.nombre?.trim().toLowerCase()!=='libre').forEach(p => {
+            jugMapMes[p.nombre.trim()] = {numero:p.numero||'—', nombre:p.nombre.trim()}
+          })
+          repsDelMes.forEach(r => (r.jugadores||[]).forEach(j => {
+            if (!jugMapMes[j.nombre]) jugMapMes[j.nombre] = {numero:j.numero||'—', nombre:j.nombre}
+          }))
+          extrasDelMes.forEach(e => { if (!jugMapMes[e.jugadorNombre]) jugMapMes[e.jugadorNombre] = {numero:e.jugadorNumero||'—', nombre:e.jugadorNombre} })
+          const jugsMes = Object.values(jugMapMes).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0))
+          const getCam = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const dc=j.descuentoCamiseta!==undefined?j.descuentoCamiseta!==false:j.descuento!==false;return acc+(dc?Number(j.cantCamiseta)||0:0)},0)
+          const getSht = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const ds=j.descuentoShort!==undefined?j.descuentoShort!==false:j.descuento!==false;return acc+(ds?Number(j.cantShort)||0:0)},0)
+          const getExtras = nombre => extrasDelMes.filter(e=>e.jugadorNombre===nombre).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
+          const filas = jugsMes.map(j=>({...j,cam:getCam(j.nombre),sht:getSht(j.nombre),extras:getExtras(j.nombre)})).map(f=>({...f,desc:f.cam*PRECIO_DESC_CAMISETA+f.sht*PRECIO_DESC_SHORT+f.extras}))
+          const totCam = filas.reduce((s,f)=>s+f.cam,0)
+          const totSht = filas.reduce((s,f)=>s+f.sht,0)
+          const totExtras = filas.reduce((s,f)=>s+f.extras,0)
+          const totDesc = filas.reduce((s,f)=>s+f.desc,0)
+          return {filas, totCam, totSht, totExtras, totDesc}
+        }
+
+        const {filas: filasAdmin, totCam: totCamAdmin, totSht: totShtAdmin, totExtras: totExtrasAdmin, totDesc: totDescAdmin} = mesMostradoAdmin ? calcMesAdmin(mesMostradoAdmin) : {filas:[],totCam:0,totSht:0,totExtras:0,totDesc:0}
+        const [mmAdmin, yyyyAdmin] = (mesMostradoAdmin||'').split('/')
+        const mesNombreMod = mesMostradoAdmin ? `${MESES_ES[Number(mmAdmin)]||mmAdmin} ${yyyyAdmin}` : ''
+
+        const datosPorMes = mesesOrdenados.map(mesKey => {
+          const [mm, yyyy] = mesKey.split('/')
+          const mesNombre = `${MESES_ES[Number(mm)]||mm} ${yyyy}`
+          const {filas, totCam, totSht, totExtras, totDesc} = calcMesAdmin(mesKey)
+          return {mesKey, mesNombre, filas, totCam, totSht, totExtras, totDesc}
+        })
+
+        const exportResumenExcel = async () => {
+          const wb = new ExcelJS.Workbook()
+          const YELLOW   = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
+          const FILL_SUB = {type:'pattern',pattern:'solid',fgColor:{argb:'FFF5F2E8'}}
+          const FILL_WHT = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFFFF'}}
+          const FILL_GRAY= {type:'pattern',pattern:'solid',fgColor:{argb:'FFD9D9D9'}}
+          const F_BOLD   = {name:'Calibri',size:11,bold:true}
+          const F_NORM   = {name:'Calibri',size:11}
+          const CENTER   = {horizontal:'center',vertical:'middle'}
+          const BORDER   = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
+          const MONEY_FMT = '"$" #,##0'
+          const style = (cell,fill,font) => { cell.fill=fill; cell.font=font; cell.alignment=CENTER; cell.border=BORDER }
+
+          datosPorMes.forEach(({mesNombre, filas, totDesc}) => {
+            const nombreHoja = mesNombre.replace(/[\\/:*?"<>|[\]]/g,'-').slice(0,31) || 'Mes'
+            const ws = wb.addWorksheet(nombreHoja)
+            ws.columns = [{width:8.5},{width:24},{width:13},{width:10},{width:13},{width:13}]
+
+            ws.mergeCells('A1:F1')
+            style(ws.getCell('A1'), YELLOW, F_BOLD); ws.getCell('A1').value = mesNombre.toUpperCase(); ws.getRow(1).height = 20
+
+            ;['Nº','JUGADOR','CAMISETAS','SHORTS','EXTRAS','DESCUENTO'].forEach((h,i) => {
+              const c = ws.getRow(2).getCell(i+1); style(c, YELLOW, F_BOLD); c.value = h
+            })
+            ws.getRow(2).height = 20
+
+            filas.forEach((f,idx) => {
+              const r = ws.getRow(idx+3)
+              r.height = 18
+              ;[f.numero||'—', f.nombre, f.cam||0, f.sht||0, f.extras||0, f.desc||0].forEach((v,i) => {
+                const c = r.getCell(i+1); style(c, i===5?FILL_GRAY:FILL_WHT, i===5?F_BOLD:F_NORM); c.value = v
+                if (i===4||i===5) c.numFmt = MONEY_FMT
+              })
+            })
+
+            const totN = filas.length + 3
+            ws.mergeCells(`A${totN}:E${totN}`)
+            ws.getRow(totN).height = 20
+            style(ws.getRow(totN).getCell(1), FILL_SUB, F_BOLD); ws.getRow(totN).getCell(1).value = 'TOTAL DESCUENTOS'
+            const totCell = ws.getRow(totN).getCell(6)
+            style(totCell, FILL_SUB, F_BOLD); totCell.value = totDesc; totCell.numFmt = MONEY_FMT
+          })
+
+          const buf = await wb.xlsx.writeBuffer()
+          const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a'); a.href=url; a.download='descuentos-mensuales-peniarol.xlsx'; a.click()
+          URL.revokeObjectURL(url)
+        }
+
+        return (
+          <div className="modal-backdrop" onClick={()=>setRepResumen(null)}>
+            <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:580,width:'96%'}}>
+              <div className="modal-header">
+                <div className="modal-title">Descuentos — {mesNombreMod}</div>
+                <button className="modal-close" onClick={()=>setRepResumen(null)}>×</button>
+              </div>
+              <div className="modal-body" style={{padding:0}}>
+                {mesesOrdenados.length === 0
+                  ? <div style={{padding:32,textAlign:'center',color:'#888',fontSize:14}}>Sin datos</div>
+                  : <>
+                    {mesesOrdenados.length > 1 && (
+                      <div style={{display:'flex',gap:6,flexWrap:'wrap',padding:'10px 16px',borderBottom:'1px solid #ECECE8',background:'#F8F8F4'}}>
+                        {mesesOrdenados.map(key => {
+                          const [mm,yyyy] = key.split('/')
+                          const label = `${MESES_ES[Number(mm)]||mm} ${yyyy}`
+                          const activo = key === mesMostradoAdmin
+                          return (
+                            <button key={key} onClick={e=>{e.stopPropagation();setResumenMesSel(key)}}
+                              style={{padding:'5px 12px',borderRadius:20,border:'1.5px solid',fontSize:12,fontWeight:700,cursor:'pointer',
+                                borderColor:activo?'#121212':'#D0D0CC',
+                                background:activo?'#121212':'#fff',
+                                color:activo?'#f2cb12':'#5a5a52'}}>
+                              {label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                    <div style={{maxHeight:'55vh',overflowY:'auto'}}>
+                      <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                        <thead>
+                          <tr style={{background:'#2a2a2a',color:'#f2cb12'}}>
+                            <th style={{padding:'6px 12px',textAlign:'left',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>JUGADOR</th>
+                            <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>CAMISETAS</th>
+                            <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>SHORTS</th>
+                            <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>EXTRAS</th>
+                            <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>DESCUENTO</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filasAdmin.length === 0
+                            ? <tr><td colSpan={5} style={{padding:'28px 0',textAlign:'center',color:'#8a8a82',fontSize:13}}>Sin descuentos este mes.</td></tr>
+                            : filasAdmin.map((f,i)=>(
+                              <tr key={i} style={{borderBottom:'1px solid #F0F0EC',background:i%2===0?'#fff':'#FAFAF8'}}>
+                                <td style={{padding:'7px 12px',fontWeight:500,whiteSpace:'nowrap',cursor:'pointer'}} onClick={()=>setRankingDetalle(f.nombre)}>
+                                  <span style={{fontFamily:'IBM Plex Mono,monospace',color:'#121212',marginRight:8,fontSize:11}}>{f.numero}</span>
+                                  <span style={{textDecoration:'underline',textDecorationStyle:'dotted',textUnderlineOffset:3}}>{f.nombre}</span>
+                                </td>
+                                <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.cam}</td>
+                                <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.sht}</td>
+                                <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.extras>0?`$ ${f.extras.toLocaleString('es-UY')}`:'-'}</td>
+                                <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,background:'#FFF8D6'}}>$ {f.desc.toLocaleString('es-UY')}</td>
+                              </tr>
+                            ))
+                          }
+                          <tr style={{background:'#121212'}}>
+                            <td style={{padding:'7px 12px',fontSize:11,fontWeight:700,letterSpacing:'.04em',color:'#f2cb12'}}>TOTAL</td>
+                            <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>{totCamAdmin}</td>
+                            <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>{totShtAdmin}</td>
+                            <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>{totExtrasAdmin>0?`$ ${totExtrasAdmin.toLocaleString('es-UY')}`:'-'}</td>
+                            <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>$ {totDescAdmin.toLocaleString('es-UY')}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                }
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={()=>setRepResumen(null)}>Cerrar</button>
+                <button className="btn btn-ghost" style={{border:'1px solid #2d6a4f',color:'#2d6a4f'}} disabled={mesesOrdenados.length===0} onClick={exportResumenExcel}>↓ Excel</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Modal: Plantel — agregar/editar jugador */}
+      {plantelModal && (
+        <div className="modal-backdrop" onClick={() => setPlantelModal(false)}>
+          <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">{plantelForm.id !== null ? 'Editar jugador' : 'Agregar jugador'}</div>
+              <button className="modal-close" onClick={() => setPlantelModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{display:'flex',gap:12}}>
+                <div className="form-group" style={{width:80}}>
+                  <label className="field-label">Número</label>
+                  <input className="field-input mono" type="number" min="1" max="99" value={plantelForm.numero}
+                    onChange={e => setPlantelForm(p=>({...p,numero:e.target.value}))}
+                    placeholder="10" style={{textAlign:'center'}} />
+                </div>
+                <div className="form-group" style={{flex:1}}>
+                  <label className="field-label">Nombre completo</label>
+                  <input className="field-input" value={plantelForm.nombre}
+                    onChange={e => setPlantelForm(p=>({...p,nombre:e.target.value}))}
+                    placeholder="Ej. Maximiliano Olivera" autoFocus />
+                </div>
+              </div>
+              <div style={{display:'flex',gap:8,marginTop:4}}>
+                {['Jugador','Golero'].map(pos => (
+                  <button key={pos} type="button"
+                    onClick={() => setPlantelForm(p=>({...p,posicion:pos}))}
+                    style={{flex:1,padding:'8px 0',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:13,cursor:'pointer',
+                      borderColor: plantelForm.posicion===pos ? '#f2cb12' : '#ECECE8',
+                      background: plantelForm.posicion===pos ? '#FFF8D6' : '#fff',
+                      color: plantelForm.posicion===pos ? '#7a5800' : '#8a8a82'}}>
+                    {pos}
+                  </button>
+                ))}
+              </div>
+              <div style={{display:'flex',gap:12,marginTop:4}}>
+                <div className="form-group" style={{flex:1}}>
+                  <label className="field-label">Talle Camiseta</label>
+                  <select className="field-input" value={plantelForm.talleCamiseta} onChange={e => setPlantelForm(p=>({...p,talleCamiseta:e.target.value}))}>
+                    {TALLES_ADULTO.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div className="form-group" style={{width:72}}>
+                  <label className="field-label">Cant.</label>
+                  <input className="field-input mono" type="number" min="1" max="99" value={plantelForm.cantCamiseta||1}
+                    onChange={e => setPlantelForm(p=>({...p,cantCamiseta:Math.max(1,parseInt(e.target.value)||1)}))}
+                    style={{textAlign:'center'}} />
+                </div>
+                <div className="form-group" style={{flex:1}}>
+                  <label className="field-label">Talle Short</label>
+                  <select className="field-input" value={plantelForm.talleShort} onChange={e => setPlantelForm(p=>({...p,talleShort:e.target.value}))}>
+                    {TALLES_ADULTO.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div className="form-group" style={{width:72}}>
+                  <label className="field-label">Cant.</label>
+                  <input className="field-input mono" type="number" min="1" max="99" value={plantelForm.cantShort||1}
+                    onChange={e => setPlantelForm(p=>({...p,cantShort:Math.max(1,parseInt(e.target.value)||1)}))}
+                    style={{textAlign:'center'}} />
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setPlantelModal(false)}>Cancelar</button>
+              <button className="btn btn-dark" onClick={savePlantelJugador}>Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Detalle de receptor */}
+      {selectedReceptor && (() => {
+        const rData = receptorCards.find(r => r.name === selectedReceptor)
+        const rDeliveries = deliveryRows.filter(d => d.receptor === selectedReceptor).sort((a,b) => b.fecha.localeCompare(a.fecha))
+        return (
+          <div className="modal-backdrop" onClick={() => setSelectedReceptor(null)}>
+            <div className="modal modal-md" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <div style={{display:'flex',gap:12,alignItems:'center'}}>
+                  <div className="avatar xl">{rData?.ini}</div>
+                  <div>
+                    <div className="modal-title">{selectedReceptor}</div>
+                    <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>{rData?.count} entregas · {rData?.unidades} unidades totales</div>
+                  </div>
+                </div>
+                <button className="modal-close" onClick={() => setSelectedReceptor(null)}>×</button>
+              </div>
+              <div className="modal-body" style={{padding:0,maxHeight:'65vh',overflowY:'auto'}}>
+                {rDeliveries.length === 0
+                  ? <div style={{padding:24,textAlign:'center',color:'#8a8a82'}}>Sin entregas registradas.</div>
+                  : rDeliveries.map(d => {
+                      const st = d.status || 'aceptado'
+                      const stStyle = st==='pendiente'
+                        ? {background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12'}
+                        : st==='rechazado'
+                        ? {background:'#FBEAE8',color:'#C2473D',border:'1px solid #C2473D'}
+                        : st==='pendiente_separar'
+                        ? {background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B'}
+                        : {background:'#EDF7F2',color:'#2e9b5e',border:'1px solid #2e9b5e'}
+                      const stLabel = st==='pendiente'?'Pendiente':st==='rechazado'?'Rechazado':st==='pendiente_separar'?'Pend. separar':'Aceptado'
+                      return (
+                        <div key={d.id} className="clickable"
+                          style={{display:'flex',alignItems:'center',gap:10,padding:'12px 20px',borderBottom:'1px solid #F0F0EC'}}
+                          onClick={() => { setSelectedReceptor(null); setSelectedDeliveryId(d.id) }}>
+                          <div style={{flex:1}}>
+                            <div style={{fontWeight:600,fontSize:13.5}}>{d.persona}</div>
+                            <div style={{fontSize:11.5,color:'#8a8a82',marginTop:2}}>{d.fecha} · {d.totalUd} u.</div>
+                          </div>
+                          <span style={{...stStyle,borderRadius:5,padding:'3px 9px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>{stLabel}</span>
+                          <span style={{color:'#C8C8C0',fontSize:20,marginLeft:4}}>›</span>
+                        </div>
+                      )
+                    })
+                }
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={() => setSelectedReceptor(null)}>Cerrar</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Modal: Entrega / Devolución */}
       {modal === 'entrega' && (
@@ -1369,23 +6012,51 @@ export default function App() {
                 <input className="field-input" value={nd.persona} onChange={e => setNd(p=>({...p,persona:e.target.value}))} placeholder="Ej. Maximiliano Olivera" />
               </div>
               <div className="form-group">
+                <label className="field-label">Observaciones <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional)</span></label>
+                <textarea className="field-input" value={nd.obs||''} onChange={e => setNd(p=>({...p,obs:e.target.value}))}
+                  placeholder="Ej. Entrega para partido del sábado" rows={2}
+                  style={{resize:'vertical',minHeight:60,fontFamily:'inherit',fontSize:14}} />
+              </div>
+              <div className="form-group">
+                <label className="field-label">Fecha <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional — por defecto hoy)</span></label>
+                <input type="date" className="field-input" value={nd.fecha
+                  ? nd.fecha.split('/').reverse().join('-')
+                  : new Date().toISOString().slice(0,10)}
+                  onChange={e => {
+                    const [y,m,d] = e.target.value.split('-')
+                    setNd(p=>({...p, fecha: d+'/'+m+'/'+y}))
+                  }} />
+              </div>
+              <div className="form-group">
                 <label className="field-label">Grupo / Plantel</label>
-                <select className="field-input" value={nd.receptor} onChange={e => setNd(p=>({...p,receptor:e.target.value,paga:null}))}>
+                <select className="field-input" value={nd.receptor} onChange={e => setNd(p=>({...p,receptor:e.target.value,paga:null,disciplina:''}))}>
                   <option value="">Seleccionar grupo…</option>
                   {RECEPTORES.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
-              {!ndIsDev && receptorUsers.length > 0 && (
+              {nd.receptor === 'Deportes Anexos' && (
+                <div className="form-group">
+                  <label className="field-label">Disciplina</label>
+                  <select className="field-input" value={nd.disciplina} onChange={e => setNd(p=>({...p,disciplina:e.target.value}))}>
+                    <option value="">— Seleccioná una disciplina —</option>
+                    {DISCIPLINAS_DEPORTES_ANEXOS.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+              )}
+              {!ndIsDev && (
                 <div className="form-group">
                   <label className="field-label">Enviar a usuario registrado <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional)</span></label>
                   <select className="field-input" value={nd.toUser} onChange={e => {
                     const u = receptorUsers.find(x => x.username === e.target.value)
-                    setNd(p=>({...p, toUser:e.target.value, persona: u ? u.displayName : p.persona}))
+                    const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
+                    const matchedReceptor = u ? (RECEPTORES.find(r => norm(r) === norm(u.categoria)) || '') : ''
+                    setNd(p=>({...p, toUser:e.target.value, persona: u ? u.displayName : p.persona, receptor: matchedReceptor || p.receptor}))
                   }}>
                     <option value="">Sin usuario específico</option>
                     {receptorUsers.map(u => <option key={u.username} value={u.username}>{u.displayName} ({u.username})</option>)}
                   </select>
-                  {nd.toUser && <div style={{marginTop:6,fontSize:12,color:'#7a5800',background:'#FFF8D6',border:'1px solid #FFD200',borderRadius:6,padding:'6px 10px'}}>La entrega quedará pendiente de confirmación por el receptor.</div>}
+                  {receptorUsers.length === 0 && <div style={{marginTop:6,fontSize:12,color:'#8a8a82'}}>No hay usuarios receptores registrados aún.</div>}
+                  {nd.toUser && <div style={{marginTop:6,fontSize:12,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:6,padding:'6px 10px'}}>La entrega quedará pendiente de confirmación por el receptor.</div>}
                 </div>
               )}
               {nd.receptor === 'Protocolo' && !ndIsDev && (
@@ -1394,7 +6065,7 @@ export default function App() {
                   <div style={{display:'flex',gap:8}}>
                     {[['si','SÍ'],['no','NO']].map(([v,label]) => (
                       <button key={v} style={{flex:1,padding:'7px 0',borderRadius:6,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:13,
-                        background:nd.paga===v?'#FFD200':'#F5F5F0',
+                        background:nd.paga===v?'#f2cb12':'#F5F5F0',
                         borderColor:nd.paga===v?'#e6be00':'#E0E0DA',
                         color:nd.paga===v?'#121212':'#8a8a82'}}
                         onClick={() => setNd(p=>({...p,paga:v}))}>
@@ -1434,7 +6105,7 @@ export default function App() {
                           return unique.length === 0
                             ? <div style={{padding:'10px 14px',fontSize:13,color:'#8a8a82'}}>Sin resultados</div>
                             : unique.map(a => (
-                              <div key={a.code} style={{padding:'9px 14px',cursor:'pointer',borderBottom:'1px solid #F2F2EE',fontSize:13}} onClick={() => setNd(p=>({...p, cCode:a.code, cSearch:'', cTalle:'', cQty:''}))}>
+                              <div key={a.code} style={{padding:'9px 14px',cursor:'pointer',borderBottom:'1px solid #F2F2EE',fontSize:13}} onClick={() => setNd(p=>({...p, cCode:a.code, cSearch:'', cUbic:'', cTalle:'', cQty:''}))}>
                                 <span style={{fontWeight:600}}>{a.name}</span>
                                 <span style={{color:'#8a8a82',fontSize:11.5,marginLeft:8}}>{a.code}</span>
                               </div>
@@ -1443,9 +6114,26 @@ export default function App() {
                       </div>
                     )}
                   </div>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr auto',gap:10}}>
-                    <select className="field-input" value={nd.cTalle} onChange={e => setNd(p=>({...p,cTalle:e.target.value}))}>
-                      <option value="">Talle…</option>
+                  {nd.cCode && ndHasMultiUbic && (
+                    <div>
+                      <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginBottom:6}}>UBICACIÓN</div>
+                      <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                        {ndUbics.map(ubic => (
+                          <button key={ubic} onClick={() => setNd(p=>({...p, cUbic:ubic, cTalle:'', cQty:''}))}
+                            style={{padding:'5px 14px',borderRadius:5,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:12.5,
+                              background: nd.cUbic===ubic ? '#121212' : '#F5F5F0',
+                              color: nd.cUbic===ubic ? '#f2cb12' : '#5a5a52',
+                              borderColor: nd.cUbic===ubic ? '#121212' : '#E0E0DA'}}>
+                            {ubic}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="nd-tallerow">
+                    <select className="field-input" value={nd.cTalle} onChange={e => setNd(p=>({...p,cTalle:e.target.value}))}
+                      disabled={ndHasMultiUbic && !nd.cUbic}>
+                      <option value="">{ndHasMultiUbic && !nd.cUbic ? 'Elegí ubicación primero' : 'Talle…'}</option>
                       {ndTalleOptions.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </select>
                     <input type="number" min="1" className="field-input" value={nd.cQty} onChange={e => setNd(p=>({...p,cQty:e.target.value}))} placeholder="Cantidad" />
@@ -1472,8 +6160,11 @@ export default function App() {
             <div className="modal-footer">
               <span style={{fontSize:13,color:'#8a8a82'}}>Total: <b style={{color:'#1a1a1a'}}>{ndTotal}</b> unidades</span>
               <div style={{flex:1}}/>
+              {!ndIsDev && nd.lines.length > 0 && (
+                <button className="btn btn-ghost" onClick={printPedido} title="Imprimir pedido en PDF">🖨 Imprimir Pedido</button>
+              )}
               <button className="btn btn-ghost" onClick={closeModal}>Cancelar</button>
-              <button className="btn" style={{background:ndOk?'#FFD200':'#EDE9D2',color:ndOk?'#121212':'#a89e6a',cursor:ndOk?'pointer':'not-allowed'}} onClick={ndConfirm}>
+              <button className="btn" style={{background:ndOk?'#f2cb12':'#EDE9D2',color:ndOk?'#121212':'#a89e6a',cursor:ndOk?'pointer':'not-allowed'}} onClick={ndConfirm}>
                 {ndIsDev ? 'Confirmar devolución' : 'Confirmar entrega'}
               </button>
             </div>
@@ -1490,10 +6181,34 @@ export default function App() {
               <button className="modal-close" onClick={closeModal}>×</button>
             </div>
             <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:14}}>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1.4fr',gap:12}}>
+              <div className="form-cols-2" style={{gap:12}}>
                 <div className="form-group">
                   <label className="field-label">Código (SKU)</label>
-                  <input className="field-input mono" value={na.code} onChange={e => setNa(p=>({...p,code:e.target.value.toUpperCase()}))} placeholder="CAM-XXX-26" />
+                  <input className="field-input mono" value={na.code} onChange={e => {
+                    const code = e.target.value.toUpperCase()
+                    const existing = db.articles.find(a => a.code === code)
+                    setNa(p => ({
+                      ...p,
+                      code,
+                      ...(existing ? { name: existing.name, cat: existing.cat || p.cat, precio: existing.precio != null ? String(existing.precio) : p.precio } : {})
+                    }))
+                  }} placeholder="CAM-XXX-26" />
+                  {(() => {
+                    const existing = na.code ? db.articles.find(a => a.code === na.code && (a.sizes||[]).reduce((s,z)=>s+z.qty,0) > 0) : null
+                    if (!existing?.ubic) return null
+                    return (
+                      <div style={{marginTop:6,fontSize:12,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:6,padding:'6px 10px',display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>
+                        <span>Ya existe en <b>{existing.ubic}</b></span>
+                        <button type="button" onClick={() => {
+                          const ubic = existing.ubic
+                          const isT = ubic === 'TRANSITO'
+                          setNa(p => ({...p, estante: isT ? 'TRANSITO' : ubic.slice(0,-1), altura: isT ? 'A' : ubic.slice(-1)}))
+                        }} style={{padding:'3px 10px',borderRadius:5,border:'1px solid #e6be00',background:'#f2cb12',color:'#121212',fontWeight:700,fontSize:11.5,cursor:'pointer',whiteSpace:'nowrap'}}>
+                          Usar ubicación
+                        </button>
+                      </div>
+                    )
+                  })()}
                 </div>
                 <div className="form-group">
                   <label className="field-label">Categoría</label>
@@ -1515,7 +6230,7 @@ export default function App() {
                 <div style={{display:'flex',gap:8,marginBottom:10}}>
                   {['adulto','nino'].map(t => (
                     <button key={t} style={{flex:1,padding:'7px 0',borderRadius:6,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:13,
-                      background:na.tipo===t?'#FFD200':'#F5F5F0',
+                      background:na.tipo===t?'#f2cb12':'#F5F5F0',
                       borderColor:na.tipo===t?'#b89900':'#E0E0DA',
                       color:na.tipo===t?'#121212':'#8a8a82'}}
                       onClick={() => setNa(p=>({...p,tipo:t,tallesArr:[],tallesMins:{},tallesQty:{}}))}>
@@ -1552,20 +6267,48 @@ export default function App() {
               </div>
               <div className="form-group">
                 <label className="field-label">Ubicación en depósito</label>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+                <div className="form-cols-2" style={{gap:12}}>
                   <div style={{display:'flex',alignItems:'center',gap:8}}>
                     <span style={{fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>Estantería</span>
                     <select className="field-input" style={{flex:1}} value={na.estante} onChange={e => setNa(p=>({...p,estante:e.target.value}))}>
                       {ESTANTES.map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
                   </div>
+                  {na.estante !== 'TRANSITO' && (
                   <div style={{display:'flex',alignItems:'center',gap:8}}>
                     <span style={{fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>Altura</span>
                     <select className="field-input" style={{flex:1}} value={na.altura} onChange={e => setNa(p=>({...p,altura:e.target.value}))}>
                       {ALTURAS.map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
                   </div>
+                  )}
                 </div>
+              </div>
+              <div className="form-group">
+                <label className="field-label">Fotos <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional · máx. 6)</span></label>
+                {(na.photos||[]).length > 0 && (
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(90px,1fr))',gap:8,marginBottom:8}}>
+                    {(na.photos||[]).map((src,i) => (
+                      <div key={i} style={{position:'relative'}}>
+                        <img src={src} alt={`foto ${i+1}`} style={{width:'100%',aspectRatio:'1',objectFit:'cover',borderRadius:8,border:'1px solid #E0E0DA'}} />
+                        <button type="button" onClick={()=>setNa(p=>({...p,photos:p.photos.filter((_,j)=>j!==i)}))}
+                          style={{position:'absolute',top:4,right:4,width:20,height:20,borderRadius:'50%',border:'none',background:'rgba(0,0,0,0.55)',color:'#fff',fontSize:11,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {(na.photos||[]).length < 6 && (
+                  <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',padding:'10px 14px',border:'2px dashed #E0E0DA',borderRadius:8,color:'#8a8a82',fontSize:13}}>
+                    <span style={{fontSize:20}}>📷</span>
+                    <span>{(na.photos||[]).length === 0 ? 'Subir foto…' : 'Agregar otra foto…'}</span>
+                    <input type="file" accept="image/*" multiple style={{display:'none'}} onChange={async e => {
+                      const files = [...(e.target.files||[])].slice(0, 6-(na.photos||[]).length)
+                      const b64s = await Promise.all(files.map(compressImage))
+                      setNa(p => ({...p, photos:[...(p.photos||[]),...b64s].slice(0,6)}))
+                      e.target.value = ''
+                    }} />
+                  </label>
+                )}
               </div>
             </div>
             <div className="modal-footer">
@@ -1627,7 +6370,7 @@ export default function App() {
               <div style={{fontSize:12,color:'#9a7d00',background:'#FBF7E3',padding:'8px 12px',borderRadius:6,marginBottom:16}}>
                 Corrección por recuento: ingresá la cantidad física real contada. El sistema registra la diferencia.
               </div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+              <div className="form-cols-2" style={{gap:12}}>
                 <div className="form-group">
                   <label className="field-label">Talle</label>
                   <select className="field-input" value={aj.talle} onChange={e => setAj(p=>({...p,talle:e.target.value}))}>
@@ -1658,7 +6401,7 @@ export default function App() {
               <button className="modal-close" onClick={closeModal}>×</button>
             </div>
             <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:14}}>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1.4fr',gap:12}}>
+              <div className="form-cols-2" style={{gap:12}}>
                 <div className="form-group">
                   <label className="field-label">Código (SKU)</label>
                   <input className="field-input mono" value={editing.code} onChange={e => setEditing(p=>({...p,code:e.target.value}))} />
@@ -1674,7 +6417,7 @@ export default function App() {
                 <label className="field-label">Nombre del artículo</label>
                 <input className="field-input" value={editing.name} onChange={e => setEditing(p=>({...p,name:e.target.value}))} />
               </div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+              <div className="form-cols-2" style={{gap:12}}>
                 <div className="form-group">
                   <label className="field-label">Ubicación <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(ej. 3B, 0O)</span></label>
                   <input className="field-input mono" value={editing.ubic} onChange={e => setEditing(p=>({...p,ubic:e.target.value}))} placeholder="1A" />
@@ -1683,6 +6426,90 @@ export default function App() {
                   <label className="field-label">Precio Tienda (Socio)</label>
                   <input type="number" min="0" step="0.01" className="field-input" value={editing.precio} onChange={e => setEditing(p=>({...p,precio:e.target.value}))} placeholder="0.00" />
                 </div>
+              </div>
+              <div className="form-group">
+                <label className="field-label">Talles</label>
+                {(() => {
+                  const sizes = editing.sizes || []
+                  const activeTalles = new Set(sizes.map(s => s.talle))
+                  const allTalles = [...TALLES_ADULTO, ...TALLES_NINO]
+                  const toggleTalle = (t) => {
+                    const existing = sizes.find(s => s.talle === t)
+                    if (existing) {
+                      if (existing.qty > 0) { showToast('Tiene ' + existing.qty + ' u. en stock. Usá Ajustar stock primero.'); return }
+                      setEditing(p => ({...p, sizes: p.sizes.filter(s => s.talle !== t)}))
+                    } else {
+                      setEditing(p => ({...p, sizes: [...p.sizes, {talle:t, qty:0, min:0}]}))
+                    }
+                  }
+                  return (
+                    <>
+                      <div className="talle-grid" style={{marginBottom: sizes.length > 0 ? 12 : 0}}>
+                        {allTalles.map(t => (
+                          <button key={t} type="button"
+                            className={`talle-btn${activeTalles.has(t) ? ' active' : ''}`}
+                            onClick={() => toggleTalle(t)}>{t}</button>
+                        ))}
+                      </div>
+                      {sizes.length > 0 && (
+                        <div style={{border:'1px solid #E7E7E3',borderRadius:8,overflow:'hidden'}}>
+                          <div style={{display:'grid',gridTemplateColumns:'56px 1fr 1fr 36px',background:'#FAFAF8',padding:'7px 12px',borderBottom:'1px solid #E7E7E3'}}>
+                            <div style={{fontSize:11,fontWeight:700,color:'#8a8a82'}}>TALLE</div>
+                            <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',textAlign:'center'}}>STOCK</div>
+                            <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',textAlign:'center'}}>MÍN.</div>
+                            <div/>
+                          </div>
+                          {TALLE_ORDER.filter(t => activeTalles.has(t)).concat(sizes.filter(s=>!TALLE_ORDER.includes(s.talle)).map(s=>s.talle)).map(t => {
+                            const sz = sizes.find(s => s.talle === t); if(!sz) return null
+                            const isNew = !(editing._origSizes||[]).find(o=>o.talle===t) && sz.qty === 0
+                            return (
+                              <div key={t} style={{display:'grid',gridTemplateColumns:'56px 1fr 1fr 36px',gap:6,padding:'7px 12px',borderBottom:'1px solid #F0F0EC',alignItems:'center'}}>
+                                <span style={{fontWeight:700,fontSize:13.5}}>{t}</span>
+                                {isNew
+                                  ? <input type="number" min="0" className="field-input" style={{height:32,textAlign:'center',padding:'0 6px',fontSize:13}}
+                                      value={sz.qty||''} placeholder="0"
+                                      onChange={e => setEditing(p=>({...p,sizes:p.sizes.map(s=>s.talle===t?{...s,qty:parseInt(e.target.value,10)||0}:s)}))} />
+                                  : <span style={{textAlign:'center',fontWeight:600,fontFamily:'IBM Plex Mono,monospace',color:'#1a1a1a'}}>{sz.qty}</span>
+                                }
+                                <input type="number" min="0" className="field-input" style={{height:32,textAlign:'center',padding:'0 6px',fontSize:13}}
+                                  value={sz.min||''} placeholder="0"
+                                  onChange={e => setEditing(p=>({...p,sizes:p.sizes.map(s=>s.talle===t?{...s,min:parseInt(e.target.value,10)||0}:s)}))} />
+                                <button type="button" onClick={() => toggleTalle(t)}
+                                  style={{width:24,height:24,borderRadius:'50%',border:'none',background:'#FBEAE8',color:'#C2473D',fontSize:14,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700}}>×</button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </>
+                  )
+                })()}
+              </div>
+              <div className="form-group">
+                <label className="field-label">Fotos <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional · máx. 6)</span></label>
+                {(editing.photos||[]).length > 0 && (
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(90px,1fr))',gap:8,marginBottom:8}}>
+                    {(editing.photos||[]).map((src,i) => (
+                      <div key={i} style={{position:'relative'}}>
+                        <img src={src} alt={`foto ${i+1}`} style={{width:'100%',aspectRatio:'1',objectFit:'cover',borderRadius:8,border:'1px solid #E0E0DA'}} />
+                        <button type="button" onClick={()=>setEditing(p=>({...p,photos:p.photos.filter((_,j)=>j!==i)}))}
+                          style={{position:'absolute',top:4,right:4,width:20,height:20,borderRadius:'50%',border:'none',background:'rgba(0,0,0,0.55)',color:'#fff',fontSize:11,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {(editing.photos||[]).length < 6 && (
+                  <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer',padding:'10px 14px',border:'2px dashed #E0E0DA',borderRadius:8,color:'#8a8a82',fontSize:13}}>
+                    <span style={{fontSize:20}}>📷</span>
+                    <span>{(editing.photos||[]).length === 0 ? 'Subir foto…' : 'Agregar otra foto…'}</span>
+                    <input type="file" accept="image/*" multiple style={{display:'none'}} onChange={async e => {
+                      const files = [...(e.target.files||[])].slice(0, 6-(editing.photos||[]).length)
+                      const b64s = await Promise.all(files.map(compressImage))
+                      setEditing(p => ({...p, photos:[...(p.photos||[]),...b64s].slice(0,6)}))
+                      e.target.value = ''
+                    }} />
+                  </label>
+                )}
               </div>
             </div>
             <div className="modal-footer">
@@ -1726,13 +6553,24 @@ export default function App() {
                 Ubicación actual: <b style={{color:'#1a1a1a'}}>{selA.ubic||'—'}</b>
               </div>
               <div className="form-group">
-                <label className="field-label">Seleccioná los talles a mover</label>
-                <div className="talle-grid">
+                <label className="field-label">Cantidad a mover por talle</label>
+                <div style={{border:'1px solid #E7E7E3',borderRadius:8,overflow:'hidden'}}>
+                  <div style={{display:'grid',gridTemplateColumns:'56px 1fr 84px',background:'#FAFAF8',padding:'7px 12px',borderBottom:'1px solid #E7E7E3'}}>
+                    <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:.5}}>TALLE</div>
+                    <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:.5}}>STOCK</div>
+                    <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:.5,textAlign:'center'}}>MOVER</div>
+                  </div>
                   {selA.sizes.map(s => (
-                    <button key={s.talle} className={`talle-btn${mv.tallesArr.includes(s.talle)?' active':''}`}
-                      onClick={() => setMv(p => ({...p, tallesArr: p.tallesArr.includes(s.talle) ? p.tallesArr.filter(t=>t!==s.talle) : [...p.tallesArr, s.talle]}))}>
-                      {s.talle}
-                    </button>
+                    <div key={s.talle} style={{display:'grid',gridTemplateColumns:'56px 1fr 84px',gap:6,padding:'8px 12px',borderBottom:'1px solid #F0F0EC',alignItems:'center'}}>
+                      <div style={{fontWeight:700,fontSize:13.5}}>{s.talle}</div>
+                      <div style={{fontSize:13,color:'#6a6a62'}}>{s.qty} u.</div>
+                      <input type="number" min="0" max={s.qty} className="field-input"
+                        style={{height:34,textAlign:'center',padding:'0 6px',fontSize:13}}
+                        value={mv.qtys[s.talle]||''}
+                        onChange={e => setMv(p => ({...p, qtys:{...p.qtys,[s.talle]:e.target.value}}))}
+                        placeholder="0"
+                      />
+                    </div>
                   ))}
                 </div>
               </div>
@@ -1742,12 +6580,14 @@ export default function App() {
                   <select className="field-input" style={{flex:1}} value={mv.estante} onChange={e => setMv(p=>({...p,estante:e.target.value}))}>
                     {ESTANTES.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
+                  {mv.estante !== 'TRANSITO' && <>
                   <span style={{fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>Altura</span>
                   <select className="field-input" style={{flex:1}} value={mv.altura} onChange={e => setMv(p=>({...p,altura:e.target.value}))}>
                     {ALTURAS.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
+                  </>}
                 </div>
-                <div style={{marginTop:6,fontSize:12,color:'#8a8a82'}}>Destino: <b style={{color:'#1a1a1a'}}>{mv.estante}{mv.altura}</b></div>
+                <div style={{marginTop:6,fontSize:12,color:'#8a8a82'}}>Destino: <b style={{color:'#1a1a1a'}}>{mv.estante === 'TRANSITO' ? 'TRANSITO' : mv.estante + mv.altura}</b></div>
               </div>
             </div>
             <div className="modal-footer">
@@ -1785,18 +6625,18 @@ export default function App() {
                         )}
                         {u.telefono && <div style={{fontSize:11.5,color:'#8a8a82'}}>{u.telefono}</div>}
                       </div>
-                      <span style={{background:u.role==='admin'?'#121212':'#EDF7F2',color:u.role==='admin'?'#FFD200':'#2e9b5e',border:'1px solid '+(u.role==='admin'?'#3a3a3a':'#2e9b5e'),borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700,flexShrink:0}}>{u.role==='admin'?'Admin':'Receptor'}</span>
+                      <span style={{background:u.role==='admin'?'#121212':u.role==='solo-vista'?'#FFF4E6':'#EDF7F2',color:u.role==='admin'?'#f2cb12':u.role==='solo-vista'?'#c2560a':'#2e9b5e',border:'1px solid '+(u.role==='admin'?'#3a3a3a':u.role==='solo-vista'?'#e8834a':'#2e9b5e'),borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700,flexShrink:0}}>{ROLE_LABELS[u.role]||'Receptor'}</span>
                       {u.username === session && <span className="badge gray">Vos</span>}
-                      {u.username !== session && <button className="btn-del" onClick={()=>deleteUser(u.username)}>✕</button>}
+                      {currentUser?.role === 'admin' && u.username !== session && <button className="btn-del" onClick={()=>deleteUser(u.username)}>✕</button>}
                     </div>
-                    {session === 'compras' && u.username !== 'compras' && (
-                      <div style={{display:'flex',gap:6,marginTop:8,paddingLeft:42}}>
-                        {[['admin','Administrador'],['receptor','Receptor']].map(([v,label]) => (
+                    {currentUser?.role === 'admin' && u.username !== session && (
+                      <div style={{display:'flex',gap:6,marginTop:8,paddingLeft:42,flexWrap:'wrap'}}>
+                        {ROLE_OPTIONS.map(([v,label]) => (
                           <button key={v} onClick={()=>{
                             const list = userMgmt.list.map(x => x.username===u.username?{...x,role:v}:x)
                             saveUsers(list)
                             setUserMgmt(p=>({...p,list}))
-                          }} style={{padding:'4px 12px',borderRadius:5,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:11.5,background:u.role===v?'#FFD200':'#F5F5F0',borderColor:u.role===v?'#e6be00':'#E0E0DA',color:u.role===v?'#121212':'#8a8a82'}}>
+                          }} style={{padding:'4px 12px',borderRadius:5,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:11.5,background:u.role===v?'#f2cb12':'#F5F5F0',borderColor:u.role===v?'#e6be00':'#E0E0DA',color:u.role===v?'#121212':'#8a8a82'}}>
                             {label}
                           </button>
                         ))}
@@ -1808,7 +6648,7 @@ export default function App() {
               <div style={{borderTop:'1px solid #E7E7E3',paddingTop:16}}>
                 <div style={{fontSize:12,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em',marginBottom:10}}>AGREGAR USUARIO</div>
                 <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:10}}>
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                  <div className="form-cols-2">
                     <div className="form-group">
                       <label className="field-label">Usuario</label>
                       <input className="field-input" value={userMgmt.newUser} onChange={e=>setUserMgmt(p=>({...p,newUser:e.target.value,err:''}))} placeholder="nombre de usuario" />
@@ -1822,13 +6662,13 @@ export default function App() {
                     <label className="field-label">Nombre completo</label>
                     <input className="field-input" value={userMgmt.newDisplayName||''} onChange={e=>setUserMgmt(p=>({...p,newDisplayName:e.target.value,err:''}))} placeholder="Ej. Juan Pérez" />
                   </div>
-                  {session === 'compras' && (
+                  {currentUser?.role === 'admin' && (
                   <div className="form-group">
                     <label className="field-label">Rol</label>
-                    <div style={{display:'flex',gap:8}}>
-                      {[['admin','Administrador'],['receptor','Receptor']].map(([v,label]) => (
-                        <button key={v} style={{flex:1,padding:'8px 0',borderRadius:6,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:13,
-                          background:(userMgmt.newRole||'receptor')===v?'#FFD200':'#F5F5F0',
+                    <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                      {ROLE_OPTIONS.map(([v,label]) => (
+                        <button key={v} style={{flex:'1 1 auto',minWidth:110,padding:'8px 0',borderRadius:6,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:13,
+                          background:(userMgmt.newRole||'receptor')===v?'#f2cb12':'#F5F5F0',
                           borderColor:(userMgmt.newRole||'receptor')===v?'#e6be00':'#E0E0DA',
                           color:(userMgmt.newRole||'receptor')===v?'#121212':'#8a8a82'}}
                           onClick={() => setUserMgmt(p=>({...p,newRole:v}))}>
@@ -1841,6 +6681,41 @@ export default function App() {
                 </div>
                 {userMgmt.err && <div style={{fontSize:12.5,color:'#C2473D',fontWeight:600,marginBottom:8}}>{userMgmt.err}</div>}
                 <button className="btn btn-dark" onClick={addUser}>+ Agregar usuario</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {rechazarModal.delId !== null && (
+        <div className="modal-overlay" onClick={() => setRechazarModal({ delId: null, motivo: '' })}>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{maxWidth:420}}>
+            <div className="modal-header">
+              <div className="modal-title">Motivo de rechazo</div>
+              <button className="modal-close" onClick={() => setRechazarModal({ delId: null, motivo: '' })}>×</button>
+            </div>
+            <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:14}}>
+              <p style={{margin:0,fontSize:13.5,color:'#6a6a62'}}>Explicá brevemente por qué rechazás esta entrega.</p>
+              <div className="form-group">
+                <label className="field-label">Motivo</label>
+                <textarea
+                  className="field-input"
+                  rows={3}
+                  style={{resize:'vertical',fontFamily:'inherit'}}
+                  placeholder="Ej: Talle incorrecto, artículo dañado…"
+                  value={rechazarModal.motivo}
+                  onChange={e => setRechazarModal(p => ({...p, motivo: e.target.value}))}
+                />
+              </div>
+              {!rechazarModal.motivo.trim() && (
+                <div style={{fontSize:12,color:'#8a8a82'}}>El motivo es obligatorio para rechazar.</div>
+              )}
+              <div style={{display:'flex',gap:10}}>
+                <button className="btn btn-ghost" style={{flex:1}} onClick={() => setRechazarModal({ delId: null, motivo: '' })}>Cancelar</button>
+                <button
+                  style={{flex:1,padding:'10px 0',borderRadius:8,border:'none',cursor: rechazarModal.motivo.trim() ? 'pointer':'not-allowed',fontWeight:700,fontSize:14,background: rechazarModal.motivo.trim() ? '#C2473D':'#e0a09a',color:'#fff'}}
+                  onClick={() => { if(rechazarModal.motivo.trim()) receptorRechazar(rechazarModal.delId, rechazarModal.motivo.trim()) }}
+                >✕ Rechazar entrega</button>
               </div>
             </div>
           </div>
@@ -1869,6 +6744,166 @@ export default function App() {
               </div>
               {changePassForm.err && <div style={{fontSize:12.5,color:'#C2473D',fontWeight:600}}>{changePassForm.err}</div>}
               <button className="btn btn-dark" style={{width:'100%',justifyContent:'center',height:42}} onClick={doChangePass}>Guardar contraseña</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox foto */}
+      {photoPreview && (() => {
+        const { photos, name, idx } = photoPreview
+        const total = photos.length
+        const prev = () => setPhotoPreview(p => ({...p, idx:(p.idx-1+total)%total}))
+        const next = () => setPhotoPreview(p => ({...p, idx:(p.idx+1)%total}))
+        return (
+          <div onClick={() => setPhotoPreview(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.80)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
+            <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:12,overflow:'hidden',maxWidth:640,width:'100%',boxShadow:'0 8px 40px rgba(0,0,0,0.4)'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 16px',borderBottom:'1px solid #E7E7E3'}}>
+                <div style={{fontWeight:700,fontSize:14,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{name}{total>1 ? ` · ${idx+1}/${total}` : ''}</div>
+                <button onClick={() => setPhotoPreview(null)} style={{background:'none',border:'none',fontSize:20,cursor:'pointer',color:'#8a8a82',flexShrink:0}}>✕</button>
+              </div>
+              <div style={{padding:16,display:'flex',alignItems:'center',gap:10}}>
+                {total > 1 && <button onClick={prev} style={{flexShrink:0,width:32,height:32,borderRadius:'50%',border:'1px solid #E0E0DA',background:'#F5F5F0',cursor:'pointer',fontSize:16}}>‹</button>}
+                <div style={{flex:1,display:'flex',justifyContent:'center'}}>
+                  <img src={photos[idx]} alt={`${name} ${idx+1}`} style={{maxWidth:'100%',maxHeight:'70vh',borderRadius:8,objectFit:'contain'}} />
+                </div>
+                {total > 1 && <button onClick={next} style={{flexShrink:0,width:32,height:32,borderRadius:'50%',border:'1px solid #E0E0DA',background:'#F5F5F0',cursor:'pointer',fontSize:16}}>›</button>}
+              </div>
+              {total > 1 && (
+                <div style={{display:'flex',gap:6,justifyContent:'center',padding:'0 16px 14px'}}>
+                  {photos.map((_,i) => <div key={i} onClick={()=>setPhotoPreview(p=>({...p,idx:i}))} style={{width:8,height:8,borderRadius:'50%',background:i===idx?'#121212':'#D0D0C8',cursor:'pointer'}} />)}
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Carrito de entrega — panel flotante */}
+      {cartLines.length > 0 && !cartPickerCode && (
+        <div style={{position:'fixed',bottom:24,right:24,width:300,background:'#fff',borderRadius:12,boxShadow:'0 8px 32px rgba(0,0,0,.18)',border:'1px solid #E8E8E0',zIndex:300,overflow:'hidden'}}>
+          <div style={{background:'#121212',color:'#f2cb12',padding:'11px 16px',fontWeight:700,fontSize:13,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <span>Entrega múltiple · {cartLines.reduce((s,l)=>s+l.qty,0)} unidades</span>
+            <button onClick={() => setCartLines([])} title="Descartar" style={{background:'none',border:'none',color:'#f2cb12',cursor:'pointer',fontSize:20,lineHeight:1,padding:0}}>×</button>
+          </div>
+          <div style={{maxHeight:220,overflowY:'auto'}}>
+            {cartLines.map((l,i) => (
+              <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'9px 14px',borderBottom:'1px solid #F0F0EC'}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:600,fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{l.name}</div>
+                  <div style={{fontSize:11.5,color:'#8a8a82'}}>Talle {l.talle}</div>
+                </div>
+                <div style={{fontWeight:700,fontSize:13,fontFamily:'IBM Plex Mono,monospace'}}>×{l.qty}</div>
+                <button onClick={() => setCartLines(p=>p.filter((_,j)=>j!==i))} style={{background:'none',border:'none',color:'#C2473D',fontSize:18,cursor:'pointer',padding:0,lineHeight:1}}>×</button>
+              </div>
+            ))}
+          </div>
+          <div style={{padding:'12px 14px',borderTop:'1px solid #E8E8E0'}}>
+            <button onClick={openCartConfirm} style={{width:'100%',background:'#f2cb12',color:'#121212',border:'none',borderRadius:7,padding:'10px',fontWeight:700,fontSize:13,cursor:'pointer'}}>
+              Completar entrega →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Picker de talle/cantidad para el carrito */}
+      {cartPickerCode && (() => {
+        const artsForCode = db.articles.filter(a => a.code === cartPickerCode)
+        const artName = artsForCode[0]?.name || cartPickerCode
+        const entriesWithStock = artsForCode.filter(a => a.sizes.reduce((s,z) => s+z.qty, 0) > 0)
+        const needsUbic = entriesWithStock.length > 1
+        const relevantArts = needsUbic && cartPickerUbic ? artsForCode.filter(a => a.ubic === cartPickerUbic) : (needsUbic ? [] : artsForCode)
+        const sizeMap = {}
+        relevantArts.forEach(a => a.sizes.forEach(s => { sizeMap[s.talle] = (sizeMap[s.talle] || 0) + s.qty }))
+        const tallesConStock = Object.entries(sizeMap).filter(([,q]) => q > 0).map(([t]) => t)
+        const ubicsConStock = entriesWithStock.map(a => a.ubic).filter(Boolean)
+        return (
+          <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.45)',zIndex:400,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={() => { setCartPickerCode(null); setCartPickerUbic('') }}>
+            <div style={{background:'#fff',borderRadius:12,padding:24,width:320,boxShadow:'0 8px 32px rgba(0,0,0,.22)'}} onClick={e=>e.stopPropagation()}>
+              <div style={{fontWeight:700,fontSize:15,marginBottom:3}}>{artName}</div>
+              <div style={{fontSize:11.5,color:'#8a8a82',marginBottom:18,fontFamily:'IBM Plex Mono,monospace'}}>{cartPickerCode}</div>
+              {needsUbic && (<>
+                <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.05em',marginBottom:8}}>UBICACIÓN</div>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:18}}>
+                  {ubicsConStock.map(u => (
+                    <button key={u} onClick={() => { setCartPickerUbic(u); setCartPickerTalle('') }}
+                      style={{padding:'6px 13px',borderRadius:6,border:'1.5px solid',cursor:'pointer',fontWeight:700,fontSize:12,
+                        background: cartPickerUbic===u ? '#121212' : '#F5F5F0',
+                        color: cartPickerUbic===u ? '#f2cb12' : '#5a5a52',
+                        borderColor: cartPickerUbic===u ? '#121212' : '#E0E0DA'}}>
+                      {u}
+                    </button>
+                  ))}
+                </div>
+              </>)}
+              {(!needsUbic || cartPickerUbic) && (<>
+                <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.05em',marginBottom:8}}>TALLE</div>
+                {tallesConStock.length > 0
+                  ? <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:18}}>
+                      {tallesConStock.map(t => (
+                        <button key={t} onClick={() => setCartPickerTalle(t)}
+                          style={{padding:'6px 13px',borderRadius:6,border:'1.5px solid',cursor:'pointer',fontWeight:700,fontSize:12.5,
+                            background: cartPickerTalle===t ? '#121212' : '#F5F5F0',
+                            color: cartPickerTalle===t ? '#f2cb12' : '#5a5a52',
+                            borderColor: cartPickerTalle===t ? '#121212' : '#E0E0DA'}}>
+                          {t} <span style={{fontWeight:400,fontSize:10.5,opacity:.7}}>({sizeMap[t]})</span>
+                        </button>
+                      ))}
+                    </div>
+                  : <div style={{color:'#C2473D',fontSize:13,marginBottom:18}}>Sin stock disponible.</div>
+                }
+                <div style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.05em',marginBottom:8}}>CANTIDAD</div>
+                <input type="number" min="1" className="field-input" value={cartPickerQty}
+                  onChange={e => setCartPickerQty(e.target.value)}
+                  onKeyDown={e => e.key==='Enter' && addToCart()}
+                  placeholder="Cantidad" style={{marginBottom:18}} autoFocus />
+              </>)}
+              <div style={{display:'flex',gap:8}}>
+                <button onClick={() => { setCartPickerCode(null); setCartPickerUbic('') }} style={{flex:1,padding:'9px',border:'1px solid #E0E0DA',borderRadius:6,background:'#F5F5F0',color:'#5a5a52',fontWeight:600,fontSize:13,cursor:'pointer'}}>Cancelar</button>
+                <button onClick={addToCart} disabled={!cartPickerTalle||!cartPickerQty||(needsUbic&&!cartPickerUbic)}
+                  style={{flex:2,padding:'9px',border:'none',borderRadius:6,fontWeight:700,fontSize:13,cursor:'pointer',
+                    background: cartPickerTalle&&cartPickerQty&&(!needsUbic||cartPickerUbic) ? '#f2cb12' : '#EDE9D2',
+                    color: cartPickerTalle&&cartPickerQty&&(!needsUbic||cartPickerUbic) ? '#121212' : '#a89e6a'}}>
+                  Agregar a entrega múltiple
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Modal: Partidos Registrados */}
+      {showPartidosModal && (
+        <div className="modal-backdrop" onClick={()=>setShowPartidosModal(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:560}}>
+            <div className="modal-header">
+              <div className="modal-title">Partidos Registrados</div>
+              <button className="modal-close" onClick={()=>setShowPartidosModal(false)}>×</button>
+            </div>
+            <div className="modal-body" style={{padding:0,maxHeight:'60vh',overflowY:'auto'}}>
+              {(() => {
+                const seen = new Set()
+                const partidos = []
+                ;(db.reposiciones||[]).forEach(r => {
+                  const key = (r.torneo&&r.fechaTorneo!=null&&r.fechaTorneo!=='') ? r.torneo+'|'+r.fechaTorneo : 'id:'+r.id
+                  if (!seen.has(key)) { seen.add(key); partidos.push(r) }
+                })
+                partidos.sort((a,b)=>{const[da,ma,ya]=(a.fechaPartido||a.fecha||'').split('/');const[db2,mb,yb]=(b.fechaPartido||b.fecha||'').split('/');return(yb-ya)||((mb-ma)||(db2-da))})
+                if (!partidos.length) return <div style={{padding:'20px',color:'#8a8a82',textAlign:'center'}}>Sin partidos registrados.</div>
+                return partidos.map((r,i) => {
+                  const _f = r.fechaTorneo
+                  const _fin = _f!=null&&_f!==''&&(_f==='Final'||_f==='NaN'||Number.isNaN(_f))
+                  const instancia = _fin ? 'Final' : (_f!=null&&_f!=='' ? 'Fecha '+_f : '')
+                  const rival = r.concepto ? r.concepto.replace(/^Reposici[oó]n\.?\s*/i,'').trim() : ''
+                  return (
+                    <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 16px',borderBottom:i<partidos.length-1?'1px solid #F0F0EC':'none',background:i%2===0?'#fff':'#FAFAF8'}}>
+                      <span style={{fontSize:12,color:'#8a8a82',minWidth:76,fontVariantNumeric:'tabular-nums'}}>{r.fechaPartido||r.fecha}</span>
+                      <span style={{flex:1,fontWeight:600,fontSize:13.5}}>{rival||r.concepto}</span>
+                      {r.torneo && <span style={{fontSize:11,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:4,padding:'1px 7px',fontWeight:600,whiteSpace:'nowrap'}}>{r.torneo}{instancia?' · '+instancia:''}</span>}
+                    </div>
+                  )
+                })
+              })()}
             </div>
           </div>
         </div>
