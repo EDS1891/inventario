@@ -4022,6 +4022,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                 const activeFiltros = [utiFilter,utiFilterTipo,utiFilterTemp,utiFilterModelo,utiFilterUbic].filter(Boolean).length
                 const ubicsUsadas = [...new Set((db.camisetasUtileria||[]).map(c => c.ubic).filter(Boolean))].sort()
                 const clearAll = () => { setUtiFilter(''); setUtiFilterTipo(''); setUtiFilterTemp(''); setUtiFilterModelo(''); setUtiFilterUbic('') }
+                const modelosOrden = [...new Set([...MODELOS_JUGADOR,...MODELOS_GOLERO])]
+                const modelosDisponibles = modelosOrden.filter(m => (db.camisetasUtileria||[]).some(c => c.modelo === m && (!utiFilterTipo || c.tipo === utiFilterTipo)))
                 return (
                   <div style={{display:'flex',gap:8,alignItems:'flex-start',justifyContent:'space-between'}}>
                     <div style={{flex:1}}>
@@ -4055,7 +4057,11 @@ tfoot td{padding:9px 12px;font-weight:700}
                           <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
                             <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>TIPO</span>
                             <button className={`chip${utiFilterTipo===''?' active':''}`} onClick={()=>setUtiFilterTipo('')}>Todos</button>
-                            {['JUGADOR','GOLERO'].map(t => <button key={t} className={`chip${utiFilterTipo===t?' active':''}`} onClick={()=>setUtiFilterTipo(t)}>{t}</button>)}
+                            {['JUGADOR','GOLERO'].map(t => <button key={t} className={`chip${utiFilterTipo===t?' active':''}`} onClick={()=>{
+                              setUtiFilterTipo(t)
+                              const disponiblesNuevo = modelosOrden.filter(m => (db.camisetasUtileria||[]).some(c => c.modelo === m && c.tipo === t))
+                              if (utiFilterModelo && !disponiblesNuevo.includes(utiFilterModelo)) setUtiFilterModelo('')
+                            }}>{t}</button>)}
                           </div>
                           <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
                             <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>TEMPORADA</span>
@@ -4065,7 +4071,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                           <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
                             <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>MODELO</span>
                             <button className={`chip${utiFilterModelo===''?' active':''}`} onClick={()=>setUtiFilterModelo('')}>Todos</button>
-                            {[...new Set([...MODELOS_JUGADOR,...MODELOS_GOLERO])].map(m => <button key={m} className={`chip${utiFilterModelo===m?' active':''}`} onClick={()=>setUtiFilterModelo(m)}>{m}</button>)}
+                            {modelosDisponibles.map(m => <button key={m} className={`chip${utiFilterModelo===m?' active':''}`} onClick={()=>setUtiFilterModelo(m)}>{m}</button>)}
                           </div>
                           {ubicsUsadas.length > 0 && (
                             <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
@@ -4113,7 +4119,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                           setUtiForm({...c, photos:c.photos||[], utiEstante:ubicMatch?ubicMatch[1]:'1', utiAltura:ubicMatch?ubicMatch[2]:'A'})
                           setUtiModal(true)
                         }}>Editar</button>}
-                        {!isSoloVista && <button onClick={()=>deleteUti(c.id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:18,color:'#C2473D',padding:'0 4px',lineHeight:1}}>×</button>}
+                        {!isSoloVista && <button onClick={()=>{ if(window.confirm('¿Desea eliminar esta camiseta?')) deleteUti(c.id) }} style={{background:'none',border:'none',cursor:'pointer',fontSize:18,color:'#C2473D',padding:'0 4px',lineHeight:1}}>×</button>}
                         {c.detalle && (
                           <div style={{gridColumn:'1 / -1',fontSize:11,color:'#8a8a82',paddingTop:4,borderTop:'1px dashed #F0F0EC',marginTop:2}}>
                             {`Detalle: ${c.detalle}`}
