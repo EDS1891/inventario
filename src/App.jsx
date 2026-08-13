@@ -4128,8 +4128,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                         }}>Editar</button>}
                         {!isSoloVista && <button onClick={()=>{ if(window.confirm('¿Desea eliminar esta camiseta?')) deleteUti(c.id) }} style={{background:'none',border:'none',cursor:'pointer',fontSize:18,color:'#C2473D',padding:'0 4px',lineHeight:1}}>×</button>}
                         {c.detalle && (
-                          <div style={{gridColumn:'1 / -1',fontSize:11,color:'#8a8a82',paddingTop:4,borderTop:'1px dashed #F0F0EC',marginTop:2}}>
-                            {`Detalle: ${c.detalle}`}
+                          <div style={{gridColumn:'1 / -1',fontSize:12.5,color:'#3a3a34',paddingTop:6,borderTop:'1px dashed #D8D8D2',marginTop:4,lineHeight:1.4}}>
+                            <span style={{fontWeight:700,color:'#1a1a1a'}}>Detalle: </span>{c.detalle}
                           </div>
                         )}
                       </div>
