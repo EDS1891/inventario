@@ -70,6 +70,8 @@ nav.sidebar-nav {
 }
 .nav-item.active .nav-dot { background: #121212; }
 .nav-item-sub { padding-left: 30px; font-size: 12.5px; }
+.nav-item-sub.active { background: rgba(242,203,18,0.12); color: #f2cb12; border-left: 3px solid #f2cb12; border-radius: 0 4px 4px 0; padding-left: 27px; }
+.nav-item-sub.active .nav-dot { background: #f2cb12; }
 
 .sidebar-user {
   padding: 16px 18px;
@@ -163,6 +165,10 @@ nav.sidebar-nav {
 .btn-ghost { background: #fff; border: 1px solid #d7d7d1 !important; color: #1a1a1a; }
 .btn-yellow { background: #f2cb12; color: #121212; }
 .btn-dark { background: #121212; color: #fff; }
+.btn-black-yellow { background: #333333; color: #fff; }
+.btn-green-light { background: #c8e6c9; color: #121212; }
+.btn-gray-light { background: #e5e5e5; color: #121212; }
+.btn-gray-dark { background: #555555; color: #fff; }
 .btn-red { background: #C2473D; color: #fff; }
 
 /* ---- Content ---- */
@@ -238,7 +244,7 @@ nav.sidebar-nav {
 .table-row.clickable { cursor: pointer; }
 
 /* Inventory table columns */
-.inv-cols { grid-template-columns: 1.1fr 1.85fr .7fr 1.25fr .8fr .65fr .6fr .85fr .75fr; }
+.inv-cols { grid-template-columns: 1.1fr 1.85fr .7fr 1.25fr .8fr .65fr .6fr .85fr .75fr 40px; }
 .del-cols { grid-template-columns: 1fr 1.6fr 1.8fr 55px 1.1fr .7fr 44px; }
 .del-cols-disc { grid-template-columns: 1fr 1.6fr 1fr 1.8fr 55px 1.1fr .7fr 44px; }
 .mov-cols { grid-template-columns: 0.95fr 2.4fr 1fr .7fr 1.1fr .7fr 44px; }
@@ -488,11 +494,11 @@ select.field-input { cursor: pointer; }
 /* ---- Detail action btns ---- */
 .detail-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 10px;
   margin-top: 18px;
 }
-.detail-actions .btn { height: 42px; font-size: 13.5px; border-radius: 6px; justify-content: center; }
+.detail-actions .btn { height: 42px; font-size: 13.5px; border-radius: 6px; justify-content: center; border: 1px solid #121212 !important; }
 .detail-actions .btn-full { grid-column: 1 / -1; }
 
 /* ============================================================
@@ -532,7 +538,7 @@ select.field-input { cursor: pointer; }
 
   /* Inventory table: hide some columns, scroll */
   .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .inv-cols { grid-template-columns: 110px 1fr 60px 70px; }
+  .inv-cols { grid-template-columns: 110px 1fr 60px 70px 36px; }
   .inv-col-ubic, .inv-col-cat, .inv-col-sizes, .inv-col-precio { display: none; }
 
   .del-cols { grid-template-columns: 80px 1fr 50px 34px; }
