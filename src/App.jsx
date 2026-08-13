@@ -193,6 +193,7 @@ export default function App() {
   const [photoPreview, setPhotoPreview] = useState(null)
   const [selectedReceptor, setSelectedReceptor] = useState(null)
   const [utiFilter, setUtiFilter] = useState('')
+  const [utiFilterJugador, setUtiFilterJugador] = useState('')
   const [utiFilterTipo, setUtiFilterTipo] = useState('')
   const [utiFilterTemp, setUtiFilterTemp] = useState('')
   const [utiFilterModelo, setUtiFilterModelo] = useState('')
@@ -1825,6 +1826,7 @@ tfoot td{padding:9px 12px;font-weight:700}
   }
   const utiFiltered = (db.camisetasUtileria || []).filter(c =>
     (!utiFilter      || c.competicion === utiFilter) &&
+    (!utiFilterJugador || (c.jugador||'').toLowerCase().includes(utiFilterJugador.trim().toLowerCase())) &&
     (!utiFilterTipo  || c.tipo === utiFilterTipo) &&
     (!utiFilterTemp  || c.temporada === utiFilterTemp) &&
     (!utiFilterModelo|| c.modelo === utiFilterModelo) &&
@@ -4019,11 +4021,13 @@ tfoot td{padding:9px 12px;font-weight:700}
                 <div className="kpi-sub">en utilería</div>
               </div>
               {(() => {
-                const activeFiltros = [utiFilter,utiFilterTipo,utiFilterTemp,utiFilterModelo,utiFilterUbic].filter(Boolean).length
+                const activeFiltros = [utiFilter,utiFilterJugador,utiFilterTipo,utiFilterTemp,utiFilterModelo,utiFilterUbic].filter(Boolean).length
                 const ubicsUsadas = [...new Set((db.camisetasUtileria||[]).map(c => c.ubic).filter(Boolean))].sort()
-                const clearAll = () => { setUtiFilter(''); setUtiFilterTipo(''); setUtiFilterTemp(''); setUtiFilterModelo(''); setUtiFilterUbic('') }
+                const clearAll = () => { setUtiFilter(''); setUtiFilterJugador(''); setUtiFilterTipo(''); setUtiFilterTemp(''); setUtiFilterModelo(''); setUtiFilterUbic('') }
                 const modelosOrden = [...new Set([...MODELOS_JUGADOR,...MODELOS_GOLERO])]
                 const modelosDisponibles = modelosOrden.filter(m => (db.camisetasUtileria||[]).some(c => c.modelo === m && (!utiFilterTipo || c.tipo === utiFilterTipo)))
+                const temporadasOrden = ['2012/2013','2013/2014','2015/2016','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025','2026']
+                const temporadasDisponibles = temporadasOrden.filter(t => (db.camisetasUtileria||[]).some(c => c.temporada === t && (!utiFilterTipo || c.tipo === utiFilterTipo)))
                 return (
                   <div style={{display:'flex',gap:8,alignItems:'flex-start',justifyContent:'space-between'}}>
                     <div style={{flex:1}}>
@@ -4035,6 +4039,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                           Filtros
                           {activeFiltros > 0 && <span style={{background:'#f2cb12',color:'#121212',borderRadius:10,padding:'1px 7px',fontSize:11,fontWeight:800,marginLeft:2}}>{activeFiltros}</span>}
                         </button>
+                        <input className="field-input" style={{maxWidth:200,padding:'6px 10px',fontSize:12.5}} placeholder="Buscar jugador…" value={utiFilterJugador} onChange={e=>setUtiFilterJugador(e.target.value)} />
                         {activeFiltros > 0 && (
                           <>
                             {utiFilter && <span style={{fontSize:12,background:'#121212',color:'#f2cb12',borderRadius:5,padding:'2px 8px',fontWeight:600}}>{utiFilter}</span>}
@@ -4061,12 +4066,14 @@ tfoot td{padding:9px 12px;font-weight:700}
                               setUtiFilterTipo(t)
                               const disponiblesNuevo = modelosOrden.filter(m => (db.camisetasUtileria||[]).some(c => c.modelo === m && c.tipo === t))
                               if (utiFilterModelo && !disponiblesNuevo.includes(utiFilterModelo)) setUtiFilterModelo('')
+                              const tempsNuevo = temporadasOrden.filter(tm => (db.camisetasUtileria||[]).some(c => c.temporada === tm && c.tipo === t))
+                              if (utiFilterTemp && !tempsNuevo.includes(utiFilterTemp)) setUtiFilterTemp('')
                             }}>{t}</button>)}
                           </div>
                           <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
                             <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>TEMPORADA</span>
                             <button className={`chip${utiFilterTemp===''?' active':''}`} onClick={()=>setUtiFilterTemp('')}>Todas</button>
-                            {['2012/2013','2013/2014','2015/2016','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025','2026'].map(t => <button key={t} className={`chip${utiFilterTemp===t?' active':''}`} onClick={()=>setUtiFilterTemp(t)}>{t}</button>)}
+                            {temporadasDisponibles.map(t => <button key={t} className={`chip${utiFilterTemp===t?' active':''}`} onClick={()=>setUtiFilterTemp(t)}>{t}</button>)}
                           </div>
                           <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
                             <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',minWidth:82}}>MODELO</span>
