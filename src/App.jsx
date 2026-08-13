@@ -201,6 +201,7 @@ export default function App() {
   const [utiFiltersOpen, setUtiFiltersOpen] = useState(false)
   const [utiForm, setUtiForm] = useState({ tipo:'', competicion:'', numero:'', jugador:'', talle:'S', modelo:'', estampado:'', parches:'', detalle:'', temporada:'', cantidad:1, utiEstante:'1', utiAltura:'A', photos:[], id:null })
   const [utiModal, setUtiModal] = useState(false)
+  const [utiDetalle, setUtiDetalle] = useState(null)
   const [repForm, setRepForm] = useState({ editId:null, concepto:'', descuento:true, rows:[], fechaPartido:'' })
   const [repModal, setRepModal] = useState(false)
   const [repDetail, setRepDetail] = useState(null)
@@ -4103,9 +4104,10 @@ tfoot td{padding:9px 12px;font-weight:700}
                 {utiFiltered.length === 0
                   ? <div style={{padding:28,textAlign:'center',color:'#8a8a82',fontSize:13}}>No hay camisetas que coincidan con los filtros.</div>
                   : utiFiltered.map(c => (
-                      <div key={c.id} style={{display:'grid',gridTemplateColumns:'44px 74px 62px 90px 46px 44px 1fr 110px 1fr 1fr 50px 60px 65px 28px',padding:'10px 16px',borderBottom:'1px solid #F0F0EC',alignItems:'center',gap:8,minWidth:1062}}>
+                      <div key={c.id} onClick={()=>setUtiDetalle(c)} style={{display:'grid',gridTemplateColumns:'44px 74px 62px 90px 46px 44px 1fr 110px 1fr 1fr 50px 60px 65px 28px',padding:'10px 16px',borderBottom:'1px solid #F0F0EC',alignItems:'center',gap:8,minWidth:1062,cursor:'pointer'}}
+                        onMouseEnter={e=>e.currentTarget.style.background='#FAFAF6'} onMouseLeave={e=>e.currentTarget.style.background=''}>
                         <div>{(c.photos||[]).length > 0
-                          ? <img src={c.photos[0]} alt="foto" style={{width:36,height:36,objectFit:'cover',borderRadius:6,border:'1px solid #E0E0DA',display:'block',cursor:'pointer'}} onClick={()=>setPhotoPreview({photos:c.photos,idx:0})} />
+                          ? <img src={c.photos[0]} alt="foto" style={{width:36,height:36,objectFit:'cover',borderRadius:6,border:'1px solid #E0E0DA',display:'block',cursor:'pointer'}} onClick={e=>{e.stopPropagation(); setPhotoPreview({photos:c.photos,idx:0})}} />
                           : <div style={{width:36,height:36,borderRadius:6,border:'1px dashed #D0D0CA',background:'#F5F5F0',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,color:'#C0C0BA'}}>📷</div>
                         }</div>
                         <div style={{fontSize:12,color:'#1a1a1a',whiteSpace:'nowrap'}}>{c.temporada||<span style={{color:'#ccc'}}>—</span>}</div>
@@ -4121,12 +4123,13 @@ tfoot td{padding:9px 12px;font-weight:700}
                         <div style={{fontSize:12,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textAlign:'center'}}>{c.parches||<span style={{color:'#ccc'}}>—</span>}</div>
                         <div style={{fontSize:13,fontWeight:700,textAlign:'center',color:'#1a1a1a'}}>{c.cantidad ?? 1}</div>
                         <div style={{fontSize:11,fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:c.ubic?'#1a1a1a':'#ccc',textAlign:'center'}}>{c.ubic||'—'}</div>
-                        {!isSoloVista && <button className="btn btn-ghost" style={{padding:'4px 10px',fontSize:12}} onClick={()=>{
+                        {!isSoloVista && <button className="btn btn-ghost" style={{padding:'4px 10px',fontSize:12}} onClick={e=>{
+                          e.stopPropagation()
                           const ubicMatch = (c.ubic||'').match(/^(\d+)([A-E])$/)
                           setUtiForm({...c, photos:c.photos||[], utiEstante:ubicMatch?ubicMatch[1]:'1', utiAltura:ubicMatch?ubicMatch[2]:'A'})
                           setUtiModal(true)
                         }}>Editar</button>}
-                        {!isSoloVista && <button onClick={()=>{ if(window.confirm('¿Desea eliminar esta camiseta?')) deleteUti(c.id) }} style={{background:'none',border:'none',cursor:'pointer',fontSize:18,color:'#C2473D',padding:'0 4px',lineHeight:1}}>×</button>}
+                        {!isSoloVista && <button onClick={e=>{ e.stopPropagation(); if(window.confirm('¿Desea eliminar esta camiseta?')) deleteUti(c.id) }} style={{background:'none',border:'none',cursor:'pointer',fontSize:18,color:'#C2473D',padding:'0 4px',lineHeight:1}}>×</button>}
                         {c.detalle && (
                           <div style={{gridColumn:'1 / -1',fontSize:12.5,color:'#3a3a34',paddingTop:6,borderTop:'1px dashed #D8D8D2',marginTop:4,lineHeight:1.4}}>
                             <span style={{fontWeight:700,color:'#1a1a1a'}}>Detalle: </span>{c.detalle}
@@ -5059,6 +5062,70 @@ tfoot td{padding:9px 12px;font-weight:700}
           </div>
         </div>
       )}
+
+      {/* Modal: Ficha de camiseta (utilería) */}
+      {utiDetalle && (() => {
+        const c = utiDetalle
+        const campo = (label, value) => (
+          <div>
+            <div style={{fontSize:10,fontWeight:700,color:'#8a8a82',letterSpacing:.4,marginBottom:2}}>{label}</div>
+            <div style={{fontSize:14,fontWeight:600,color:'#1a1a1a'}}>{value || <span style={{color:'#ccc',fontWeight:400}}>—</span>}</div>
+          </div>
+        )
+        return (
+          <div className="modal-backdrop" onClick={()=>setUtiDetalle(null)}>
+            <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:520,width:'96%'}}>
+              <div className="modal-header">
+                <div className="modal-title">
+                  {c.jugador || <span style={{fontStyle:'italic',color:'#aaa'}}>Sin asignar</span>}
+                  {c.numero && <span style={{marginLeft:8,fontFamily:'IBM Plex Mono,monospace',color:'#8a8a82'}}>#{c.numero}</span>}
+                </div>
+                <button className="modal-close" onClick={()=>setUtiDetalle(null)}>×</button>
+              </div>
+              <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:16}}>
+                {(c.photos||[]).length > 0 ? (
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(80px,1fr))',gap:8}}>
+                    {c.photos.map((src,i) => (
+                      <img key={i} src={src} alt={`foto ${i+1}`} style={{width:'100%',aspectRatio:'1',objectFit:'cover',borderRadius:8,border:'1px solid #E0E0DA',cursor:'pointer'}}
+                        onClick={()=>setPhotoPreview({photos:c.photos,idx:i})} />
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{width:'100%',padding:'20px 0',textAlign:'center',color:'#C0C0BA',border:'1px dashed #E0E0DA',borderRadius:8,fontSize:13}}>Sin fotos</div>
+                )}
+                <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                  {c.tipo && <span style={{fontSize:11,fontWeight:700,background:c.tipo==='GOLERO'?'#EDF7F2':'#F0F0EC',color:c.tipo==='GOLERO'?'#2e9b5e':'#5a5a52',border:'1px solid '+(c.tipo==='GOLERO'?'#2e9b5e':'#D0D0CA'),borderRadius:5,padding:'3px 8px'}}>{c.tipo}</span>}
+                  {c.ubic && <span style={{fontSize:12,fontWeight:700,fontFamily:'IBM Plex Mono,monospace',background:'#121212',color:'#f2cb12',borderRadius:5,padding:'3px 9px'}}>{c.ubic}</span>}
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
+                  {campo('COMPETICIÓN', c.competicion)}
+                  {campo('TEMPORADA', c.temporada)}
+                  {campo('MODELO', c.modelo)}
+                  {campo('TALLE', c.talle)}
+                  {campo('CANTIDAD', c.cantidad ?? 1)}
+                  {campo('ESTAMPADO', c.estampado)}
+                  {campo('PARCHES', c.parches)}
+                </div>
+                {c.detalle && (
+                  <div style={{borderTop:'1px dashed #E0E0DA',paddingTop:12}}>
+                    <div style={{fontSize:10,fontWeight:700,color:'#8a8a82',letterSpacing:.4,marginBottom:3}}>OBSERVACIONES</div>
+                    <div style={{fontSize:13,color:'#3a3a34',lineHeight:1.4}}>{c.detalle}</div>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={()=>setUtiDetalle(null)}>Cerrar</button>
+                {!isSoloVista && <button className="btn btn-dark" onClick={()=>{
+                  const ubicMatch = (c.ubic||'').match(/^(\d+)([A-E])$/)
+                  setUtiForm({...c, photos:c.photos||[], utiEstante:ubicMatch?ubicMatch[1]:'1', utiAltura:ubicMatch?ubicMatch[2]:'A'})
+                  setUtiDetalle(null)
+                  setUtiModal(true)
+                }}>Editar</button>}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Modal: Nueva Reposición Camisetas */}
       {repModal && (
