@@ -223,6 +223,7 @@ export default function App() {
   const [repTab, setRepTab] = useState('reposiciones')
   const [plantelForm, setPlantelForm] = useState({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',cantCamiseta:1,talleShort:'L',cantShort:1})
   const [plantelModal, setPlantelModal] = useState(false)
+  const [showPartidosModal, setShowPartidosModal] = useState(false)
   const [descExtraModal, setDescExtraModal] = useState(false)
   const [descExtraForm, setDescExtraForm] = useState({jugadorNombre:'',jugadorNumero:'',articulo:'',precio:0,cantidad:1,fecha:''})
   const [extrasExpandedKey, setExtrasExpandedKey] = useState(null)
@@ -998,6 +999,36 @@ ${rowsHtml}
     const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a'); a.href=url; a.download='stock-deposito-peniarol.xlsx'; a.click()
+    URL.revokeObjectURL(url)
+  }
+  const exportProductoExcel = async () => {
+    if (!detail) return
+    const YELLOW = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
+    const DARK   = {type:'pattern',pattern:'solid',fgColor:{argb:'FF1E1E1E'}}
+    const F_BOLD = {name:'Calibri',size:11,bold:true}
+    const F_NORM = {name:'Calibri',size:11}
+    const F_WITE = {name:'Calibri',size:11,bold:true,color:{argb:'FFFFFFFF'}}
+    const BORDER = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('Stock por Ubicación')
+    ws.columns = [{header:'UBICACIÓN',width:14},{header:'TALLE',width:10},{header:'CANTIDAD',width:12}]
+    ws.getRow(1).eachCell(cell => { cell.fill=YELLOW; cell.font=F_BOLD; cell.border=BORDER; cell.alignment={horizontal:'center',vertical:'middle'} })
+    let total = 0
+    detail.entries.forEach(entry => {
+      entry.sizes.filter(s=>s.qty>0).forEach(s => {
+        const row = ws.addRow([entry.ubic||'—', s.talle, s.qty])
+        row.eachCell(cell => { cell.font=F_NORM; cell.border=BORDER; cell.alignment={horizontal:'center'} })
+        row.getCell(1).alignment={horizontal:'left'}
+        total += s.qty
+      })
+    })
+    const totRow = ws.addRow(['TOTAL','',total])
+    totRow.eachCell(cell => { cell.fill=DARK; cell.font=F_WITE; cell.border=BORDER; cell.alignment={horizontal:'center'} })
+    totRow.getCell(1).alignment={horizontal:'left'}
+    const buf = await wb.xlsx.writeBuffer()
+    const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href=url; a.download=`stock-${detail.code}-${detail.name.replace(/\s+/g,'-')}.xlsx`; a.click()
     URL.revokeObjectURL(url)
   }
   const downloadPlantelExcel = async () => {
@@ -2089,15 +2120,10 @@ tfoot td{padding:9px 12px;font-weight:700}
               const totalDineroMes  = totalEquiposMes * PRECIO_CAMISETA + totalShortsMes * PRECIO_SHORT + totalExtrasMes
               return (
                 <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
-                  <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepDesglose('camisetas')}>
-                    <div className="kpi-label">CAMISETAS ENVIADAS</div>
-                    <div className="kpi-value">{totalCamTodas}</div>
-                    <div className="kpi-sub">en todas las entregas →</div>
-                  </div>
-                  <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepDesglose('shorts')}>
-                    <div className="kpi-label">SHORTS ENVIADOS</div>
-                    <div className="kpi-value">{totalShtTodas}</div>
-                    <div className="kpi-sub">en todas las entregas →</div>
+                  <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setShowPartidosModal(true)}>
+                    <div className="kpi-label">PARTIDOS REGISTRADOS</div>
+                    <div className="kpi-value">{new Set((db.reposiciones||[]).map(r=>(r.torneo&&r.fechaTorneo!=null&&r.fechaTorneo!=='')?r.torneo+'|'+r.fechaTorneo:'id:'+r.id)).size}</div>
+                    <div className="kpi-sub">partidos únicos</div>
                   </div>
                   <div className="kpi-card" style={{alignSelf:'flex-start',cursor:'pointer',background:'#D6D6D0',border:'1px solid #121212'}} onClick={()=>setRepResumen('ambos')}>
                     <div className="kpi-label">INDUMENTARIA A DESCONTAR {['','ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'][Number(mesActualKey.split('/')[0])]}</div>
@@ -2117,11 +2143,6 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <div className="kpi-label">PLANTEL</div>
                     <div className="kpi-value">{(db.plantel||[]).filter(j=>j.nombre.trim().toLowerCase()!=='libre').length}</div>
                     <div className="kpi-sub">jugadores registrados →</div>
-                  </div>
-                  <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
-                    <div className="kpi-label">PARTIDOS REGISTRADOS</div>
-                    <div className="kpi-value">{new Set((db.reposiciones||[]).map(r=>(r.torneo&&r.fechaTorneo!=null&&r.fechaTorneo!=='')?r.torneo+'|'+r.fechaTorneo:'id:'+r.id)).size}</div>
-                    <div className="kpi-sub">partidos únicos</div>
                   </div>
                   <div style={{display:'flex',flexDirection:'column',gap:8,alignSelf:'flex-start'}}>
                     <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed'}}>+ Nueva reposición</button>
@@ -2269,8 +2290,7 @@ tfoot td{padding:9px 12px;font-weight:700}
 
         {receptorTab === 'extras' && isReceptorReposiciones && (
           <div style={{display:'flex',flexDirection:'column',gap:12}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-              <div style={{fontSize:13,color:'#8a8a82'}}>{(db.descExtras||[]).length} descuentos adicionales registrados</div>
+            <div style={{display:'flex',justifyContent:'flex-end'}}>
               <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',fecha:'',prendas:[{articulo:'',precio:0,cantidad:1}]});setDescExtraModal(true)}}>+ Descuento</button>
             </div>
             {(db.descExtras||[]).length === 0
@@ -2593,7 +2613,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>
                     {repDetail.fecha}
                     {repDetail.torneo && <span style={{marginLeft:8,fontWeight:700,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:4,padding:'1px 7px',fontSize:11}}>
-                      {repDetail.torneo}{repDetail.fechaTorneo ? (repDetail.fechaTorneo==='Final'||repDetail.fechaTorneo==='NaN'||Number.isNaN(repDetail.fechaTorneo)?' · Final':' · Fecha '+repDetail.fechaTorneo) : ''}
+                      {(()=>{const _f=repDetail.fechaTorneo;const _fin=_f&&(_f==='Final'||_f==='NaN'||Number.isNaN(_f));return _fin?'Final '+repDetail.torneo:repDetail.torneo+(_f?' · Fecha '+_f:'')})()}
                     </span>}
                   </div>
                   {repDetail.creadoPor && <div style={{fontSize:11.5,color:'#8a8a82',marginTop:2}}>Creado por: {repDetail.creadoPor}</div>}
@@ -3092,6 +3112,131 @@ tfoot td{padding:9px 12px;font-weight:700}
         )}
 
         {/* Toast */}
+        {/* Modal: Detalle jugador en descuentos (receptor) */}
+        {rankingDetalle && (() => {
+          const nombre = rankingDetalle
+          const jug = (db.plantel||[]).find(j => j.nombre?.trim().toLowerCase() === nombre.toLowerCase())
+          const filas = (db.reposiciones||[]).flatMap(r => {
+            const j = (r.jugadores||[]).find(jj => jj.nombre?.trim().toLowerCase() === nombre.toLowerCase())
+            if (!j) return []
+            const dc = j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
+            const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
+            const cam = dc ? Number(j.cantCamiseta)||0 : 0
+            const sht = ds ? Number(j.cantShort)||0 : 0
+            if (cam === 0 && sht === 0) return []
+            return [{label: r.concepto||'Sin nombre', fecha: r.fecha||'', torneo: r.torneo||'', cam, sht, monto: cam*PRECIO_CAMISETA + sht*PRECIO_SHORT}]
+          })
+          const totCam = filas.reduce((s,f)=>s+f.cam,0)
+          const totSht = filas.reduce((s,f)=>s+f.sht,0)
+          const totMonto = filas.reduce((s,f)=>s+f.monto,0)
+          const extrasJug = (db.descExtras||[]).filter(e => e.jugadorNombre?.trim().toLowerCase() === nombre.toLowerCase())
+          const totExtrasItems = extrasJug.reduce((s,e) => s + e.precio*(e.cantidad||1), 0)
+          return (
+            <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:1100,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setRankingDetalle(null)}>
+              <div style={{background:'#fff',borderRadius:12,padding:28,minWidth:360,maxWidth:500,boxShadow:'0 8px 32px rgba(0,0,0,0.18)',maxHeight:'80vh',display:'flex',flexDirection:'column'}} onClick={e=>e.stopPropagation()}>
+                <div style={{display:'flex',alignItems:'baseline',gap:10,marginBottom:4}}>
+                  {jug?.numero && <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:22,color:'#121212'}}>{jug.numero}</span>}
+                  <span style={{fontWeight:700,fontSize:16,textTransform:'uppercase'}}>{nombre}</span>
+                </div>
+                <div style={{fontSize:12,color:'#999',marginBottom:16}}>{jug?.posicion||''}</div>
+                <div style={{overflowY:'auto',flex:1}}>
+                  <table style={{width:'100%',borderCollapse:'collapse',tableLayout:'fixed'}}>
+                    <colgroup><col style={{width:'auto'}}/><col style={{width:52}}/><col style={{width:52}}/><col style={{width:80}}/></colgroup>
+                    <thead>
+                      <tr style={{borderBottom:'2px solid #ECECE8'}}>
+                        <th style={{padding:'0 0 6px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',textAlign:'left'}}>REPOSICIÓN</th>
+                        <th style={{padding:'0 0 6px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',textAlign:'center'}}>CAM</th>
+                        <th style={{padding:'0 0 6px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',textAlign:'center'}}>SHO</th>
+                        <th style={{padding:'0 0 6px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',textAlign:'right'}}>MONTO</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filas.length === 0
+                        ? <tr><td colSpan={4} style={{color:'#999',fontSize:13,padding:'20px 0',textAlign:'center'}}>Sin registros</td></tr>
+                        : filas.map((f,i) => (
+                          <tr key={i} style={{borderBottom:'1px solid #ECECE8'}}>
+                            <td style={{padding:'7px 8px 7px 0',verticalAlign:'middle'}}>
+                              {f.fecha && <div style={{fontSize:11,fontWeight:700,color:'#121212',marginBottom:1}}>{f.fecha}</div>}
+                              <div style={{fontWeight:500,fontSize:12,textTransform:'uppercase',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'#555'}}>{f.label}{f.torneo ? ` · ${f.torneo}` : ''}</div>
+                            </td>
+                            <td style={{padding:'7px 4px',textAlign:'center',fontWeight:700,fontSize:13,verticalAlign:'middle'}}>{f.cam}</td>
+                            <td style={{padding:'7px 4px',textAlign:'center',fontWeight:700,fontSize:13,verticalAlign:'middle'}}>{f.sht}</td>
+                            <td style={{padding:'7px 0 7px 4px',fontFamily:'IBM Plex Mono,monospace',fontSize:12,fontWeight:600,textAlign:'right',whiteSpace:'nowrap',verticalAlign:'middle'}}>$ {f.monto.toLocaleString('es-UY')}</td>
+                          </tr>
+                        ))
+                      }
+                    </tbody>
+                    <tfoot>
+                      <tr style={{borderTop:'2px solid #121212'}}>
+                        <td style={{padding:'8px 8px 0 0',fontWeight:700,fontSize:12}}>TOTAL</td>
+                        <td style={{padding:'8px 4px 0',textAlign:'center'}}><span style={{fontWeight:700,fontSize:14,background:'#f2cb12',borderRadius:20,padding:'2px 6px'}}>{totCam}</span></td>
+                        <td style={{padding:'8px 4px 0',textAlign:'center'}}><span style={{fontWeight:700,fontSize:14,background:'#f2cb12',borderRadius:20,padding:'2px 6px'}}>{totSht}</span></td>
+                        <td style={{padding:'8px 0 0 4px',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,textAlign:'right',whiteSpace:'nowrap'}}>$ {totMonto.toLocaleString('es-UY')}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                {extrasJug.length > 0 && (<>
+                  <div style={{fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',paddingTop:12,paddingBottom:4,borderBottom:'2px solid #ECECE8',marginTop:8}}>DESCUENTOS EXTRA</div>
+                  <div style={{overflowY:'auto',maxHeight:160}}>
+                    {extrasJug.map((e,i) => (
+                      <div key={i} style={{display:'grid',gridTemplateColumns:'1fr auto',gap:'0 10px',alignItems:'center',padding:'6px 0',borderBottom:'1px solid #ECECE8'}}>
+                        <div>
+                          {e.fecha && <div style={{fontSize:11,fontWeight:700,color:'#121212',marginBottom:1}}>{e.fecha}</div>}
+                          <div style={{fontWeight:500,fontSize:12,color:'#555',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{e.articulo}{(e.cantidad||1)>1?` × ${e.cantidad}`:''}</div>
+                        </div>
+                        <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,fontWeight:600,textAlign:'right',whiteSpace:'nowrap'}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0 0',borderTop:'2px solid #121212',marginTop:4}}>
+                    <span style={{fontWeight:700,fontSize:12}}>TOTAL EXTRAS</span>
+                    <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,whiteSpace:'nowrap'}}>$ {totExtrasItems.toLocaleString('es-UY')}</span>
+                  </div>
+                </>)}
+                <button onClick={()=>setRankingDetalle(null)} style={{marginTop:16,width:'100%',padding:'9px 0',border:'1px solid #D0D0CC',borderRadius:8,background:'#fff',cursor:'pointer',fontSize:13,color:'#666'}}>Cerrar</button>
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* Modal: Partidos Registrados (receptor) */}
+        {showPartidosModal && (
+          <div className="modal-backdrop" onClick={()=>setShowPartidosModal(false)}>
+            <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:560}}>
+              <div className="modal-header">
+                <div className="modal-title">Partidos Registrados</div>
+                <button className="modal-close" onClick={()=>setShowPartidosModal(false)}>×</button>
+              </div>
+              <div className="modal-body" style={{padding:0,maxHeight:'60vh',overflowY:'auto'}}>
+                {(() => {
+                  const seen = new Set()
+                  const partidos = []
+                  ;(db.reposiciones||[]).forEach(r => {
+                    const key = (r.torneo&&r.fechaTorneo!=null&&r.fechaTorneo!=='') ? r.torneo+'|'+r.fechaTorneo : 'id:'+r.id
+                    if (!seen.has(key)) { seen.add(key); partidos.push(r) }
+                  })
+                  partidos.sort((a,b)=>{const[da,ma,ya]=(a.fechaPartido||a.fecha||'').split('/');const[db2,mb,yb]=(b.fechaPartido||b.fecha||'').split('/');return(yb-ya)||((mb-ma)||(db2-da))})
+                  if (!partidos.length) return <div style={{padding:'20px',color:'#8a8a82',textAlign:'center'}}>Sin partidos registrados.</div>
+                  return partidos.map((r,i) => {
+                    const _f = r.fechaTorneo
+                    const _fin = _f!=null&&_f!==''&&(_f==='Final'||_f==='NaN'||Number.isNaN(_f))
+                    const instancia = _fin ? 'Final' : (_f!=null&&_f!=='' ? 'Fecha '+_f : '')
+                    const rival = r.concepto ? r.concepto.replace(/^Reposici[oó]n\.?\s*/i,'').trim() : ''
+                    return (
+                      <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 16px',borderBottom:i<partidos.length-1?'1px solid #F0F0EC':'none',background:i%2===0?'#fff':'#FAFAF8'}}>
+                        <span style={{fontSize:12,color:'#8a8a82',minWidth:76,fontVariantNumeric:'tabular-nums'}}>{r.fechaPartido||r.fecha}</span>
+                        <span style={{flex:1,fontWeight:600,fontSize:13.5}}>{rival||r.concepto}</span>
+                        {r.torneo && <span style={{fontSize:11,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:4,padding:'1px 7px',fontWeight:600,whiteSpace:'nowrap'}}>{r.torneo}{instancia?' · '+instancia:''}</span>}
+                      </div>
+                    )
+                  })
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
+
         {toast && (
           <div className="toast">
             <span className="toast-dot"/>
@@ -3490,6 +3635,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                         <div style={{fontFamily:'Oswald,sans-serif',fontSize:30,lineHeight:1}}>{detail.totalFmt}</div>
                         <div style={{fontSize:11.5,color:'#8a8a82',marginTop:4}}>unidades totales</div>
                         {detail.precio > 0 && <div style={{marginTop:8,fontSize:13,fontWeight:700,color:'#1a1a1a'}}>$ {detail.precio.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>}
+                        <button onClick={exportProductoExcel} style={{marginTop:10,padding:'5px 12px',borderRadius:6,border:'1px solid #2d6a4f',background:'#fff',color:'#2d6a4f',fontSize:12,fontWeight:700,cursor:'pointer'}}>↓ Excel</button>
                       </div>
                     </div>
                   </div>
@@ -3936,22 +4082,22 @@ tfoot td{padding:9px 12px;font-weight:700}
                 )
               })()}
               <div className="card" style={{overflow:'auto'}}>
-                <div style={{display:'grid',gridTemplateColumns:'44px 62px 90px 50px 46px 1fr 110px 1fr 44px 1fr 60px 65px 28px',background:'#121212',padding:'9px 16px',gap:8,minWidth:980}}>
-                  {['','TIPO','MODELO','TEMP.','NRO.','NOMBRE','ESTAMPADO','COMPETICIÓN','TALLE','PARCHES','UBIC.','',''].map((h,i) => (
+                <div style={{display:'grid',gridTemplateColumns:'44px 62px 90px 74px 46px 1fr 110px 1fr 44px 1fr 60px 65px 28px',background:'#121212',padding:'9px 16px',gap:8,minWidth:1004}}>
+                  {['','TIPO','MODELO','TEMP.','NRO.','JUGADOR','ESTAMPADO','COMPETICIÓN','TALLE','PARCHES','UBIC.','',''].map((h,i) => (
                     <div key={i} style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:.5}}>{h}</div>
                   ))}
                 </div>
                 {utiFiltered.length === 0
                   ? <div style={{padding:28,textAlign:'center',color:'#8a8a82',fontSize:13}}>No hay camisetas que coincidan con los filtros.</div>
                   : utiFiltered.map(c => (
-                      <div key={c.id} style={{display:'grid',gridTemplateColumns:'44px 62px 90px 50px 46px 1fr 110px 1fr 44px 1fr 60px 65px 28px',padding:'10px 16px',borderBottom:'1px solid #F0F0EC',alignItems:'center',gap:8,minWidth:980}}>
+                      <div key={c.id} style={{display:'grid',gridTemplateColumns:'44px 62px 90px 74px 46px 1fr 110px 1fr 44px 1fr 60px 65px 28px',padding:'10px 16px',borderBottom:'1px solid #F0F0EC',alignItems:'center',gap:8,minWidth:1004}}>
                         <div>{(c.photos||[]).length > 0
                           ? <img src={c.photos[0]} alt="foto" style={{width:36,height:36,objectFit:'cover',borderRadius:6,border:'1px solid #E0E0DA',display:'block',cursor:'pointer'}} onClick={()=>setPhotoPreview({photos:c.photos,idx:0})} />
                           : <div style={{width:36,height:36,borderRadius:6,border:'1px dashed #D0D0CA',background:'#F5F5F0',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,color:'#C0C0BA'}}>📷</div>
                         }</div>
                         <div>{c.tipo && <span style={{fontSize:10,fontWeight:700,background:c.tipo==='GOLERO'?'#EDF7F2':'#F0F0EC',color:c.tipo==='GOLERO'?'#2e9b5e':'#5a5a52',border:'1px solid '+(c.tipo==='GOLERO'?'#2e9b5e':'#D0D0CA'),borderRadius:4,padding:'2px 5px'}}>{c.tipo}</span>}</div>
                         <div style={{fontSize:12,fontWeight:600,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.modelo||<span style={{color:'#ccc'}}>—</span>}</div>
-                        <div style={{fontSize:12,color:'#1a1a1a'}}>{c.temporada||<span style={{color:'#ccc'}}>—</span>}</div>
+                        <div style={{fontSize:12,color:'#1a1a1a',whiteSpace:'nowrap'}}>{c.temporada||<span style={{color:'#ccc'}}>—</span>}</div>
                         <div style={{fontWeight:800,fontSize:17,fontFamily:'IBM Plex Mono,monospace',color:'#1a1a1a'}}>{c.numero}</div>
                         <div style={{fontWeight:600,fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'#1a1a1a'}}>
                           {c.jugador || <span style={{color:'#aaa',fontStyle:'italic',fontWeight:400}}>Sin asignar</span>}
@@ -3996,6 +4142,9 @@ tfoot td{padding:9px 12px;font-weight:700}
               'Fútbol Sala Femenino':  '#F48FB1',
               'Deportes Anexos':       '#E53935',
               'Funcionarios':          '#90A4AE',
+              'Marketing':             '#26A69A',
+              'Sponsors':              '#8D6E63',
+              'Canjes':                '#78909C',
             }
             const repUnidades = (db.reposiciones||[]).reduce((s, r) =>
               s + (r.jugadores||[]).reduce((a, j) => a + (Number(j.cantCamiseta)||0) + (Number(j.cantShort)||0), 0), 0)
@@ -4161,6 +4310,11 @@ tfoot td{padding:9px 12px;font-weight:700}
                   const totalDineroMesAdmin  = totalEquiposMesAdmin * PRECIO_CAMISETA + totalShortsMesAdmin * PRECIO_SHORT + totalExtrasMesAdmin
                   return (
                     <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
+                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setShowPartidosModal(true)}>
+                        <div className="kpi-label">PARTIDOS REGISTRADOS</div>
+                        <div className="kpi-value">{new Set((db.reposiciones||[]).map(r=>(r.torneo&&r.fechaTorneo!=null&&r.fechaTorneo!=='')?r.torneo+'|'+r.fechaTorneo:'id:'+r.id)).size}</div>
+                        <div className="kpi-sub">partidos únicos</div>
+                      </div>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepDesglose('camisetas')}>
                         <div className="kpi-label">CAMISETAS ENVIADAS</div>
                         <div className="kpi-value">{totalCamTodas}</div>
@@ -4195,11 +4349,6 @@ tfoot td{padding:9px 12px;font-weight:700}
                         <div className="kpi-label">PLANTEL</div>
                         <div className="kpi-value">{(db.plantel||[]).filter(j=>j.nombre.trim().toLowerCase()!=='libre').length}</div>
                         <div className="kpi-sub">jugadores registrados →</div>
-                      </div>
-                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150}}>
-                        <div className="kpi-label">PARTIDOS REGISTRADOS</div>
-                        <div className="kpi-value">{new Set((db.reposiciones||[]).map(r=>(r.torneo&&r.fechaTorneo!=null&&r.fechaTorneo!=='')?r.torneo+'|'+r.fechaTorneo:'id:'+r.id)).size}</div>
-                        <div className="kpi-sub">partidos únicos</div>
                       </div>
                       <div style={{display:'flex',flexDirection:'column',gap:8,alignSelf:'flex-start'}}>
                         <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed'}}>+ Nueva reposición</button>
@@ -4291,6 +4440,11 @@ tfoot td{padding:9px 12px;font-weight:700}
                   return (
                 <div style={{display:'flex',flexDirection:'column',gap:12}}>
                   <div style={{display:'flex',flexWrap:'wrap',gap:12,alignItems:'flex-start'}}>
+                    <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setShowPartidosModal(true)}>
+                      <div className="kpi-label">PARTIDOS REGISTRADOS</div>
+                      <div className="kpi-value">{new Set((db.reposiciones||[]).map(r=>(r.torneo&&r.fechaTorneo!=null&&r.fechaTorneo!=='')?r.torneo+'|'+r.fechaTorneo:'id:'+r.id)).size}</div>
+                      <div className="kpi-sub">partidos únicos</div>
+                    </div>
                     <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepDesglose('camisetas')}>
                       <div className="kpi-label">CAMISETAS ENVIADAS</div>
                       <div className="kpi-value">{totalCamTodas}</div>
@@ -5037,7 +5191,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 <div style={{fontSize:12.5,color:'#8a8a82',marginTop:2}}>
                   {repDetail.fecha}{repDetail.creadoPor ? ' · '+repDetail.creadoPor : ''}
                   {repDetail.torneo && <span style={{marginLeft:8,fontWeight:700,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:4,padding:'1px 7px',fontSize:11}}>
-                    {repDetail.torneo}{repDetail.fechaTorneo ? (repDetail.fechaTorneo==='Final'||repDetail.fechaTorneo==='NaN'||Number.isNaN(repDetail.fechaTorneo)?' · Final':' · Fecha '+repDetail.fechaTorneo) : ''}
+                    {(()=>{const _f=repDetail.fechaTorneo;const _fin=_f&&(_f==='Final'||_f==='NaN'||Number.isNaN(_f));return _fin?'Final '+repDetail.torneo:repDetail.torneo+(_f?' · Fecha '+_f:'')})()}
                   </span>}
                 </div>
               </div>
@@ -6632,6 +6786,43 @@ tfoot td{padding:9px 12px;font-weight:700}
           </div>
         )
       })()}
+
+      {/* Modal: Partidos Registrados */}
+      {showPartidosModal && (
+        <div className="modal-backdrop" onClick={()=>setShowPartidosModal(false)}>
+          <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:560}}>
+            <div className="modal-header">
+              <div className="modal-title">Partidos Registrados</div>
+              <button className="modal-close" onClick={()=>setShowPartidosModal(false)}>×</button>
+            </div>
+            <div className="modal-body" style={{padding:0,maxHeight:'60vh',overflowY:'auto'}}>
+              {(() => {
+                const seen = new Set()
+                const partidos = []
+                ;(db.reposiciones||[]).forEach(r => {
+                  const key = (r.torneo&&r.fechaTorneo!=null&&r.fechaTorneo!=='') ? r.torneo+'|'+r.fechaTorneo : 'id:'+r.id
+                  if (!seen.has(key)) { seen.add(key); partidos.push(r) }
+                })
+                partidos.sort((a,b)=>{const[da,ma,ya]=(a.fechaPartido||a.fecha||'').split('/');const[db2,mb,yb]=(b.fechaPartido||b.fecha||'').split('/');return(yb-ya)||((mb-ma)||(db2-da))})
+                if (!partidos.length) return <div style={{padding:'20px',color:'#8a8a82',textAlign:'center'}}>Sin partidos registrados.</div>
+                return partidos.map((r,i) => {
+                  const _f = r.fechaTorneo
+                  const _fin = _f!=null&&_f!==''&&(_f==='Final'||_f==='NaN'||Number.isNaN(_f))
+                  const instancia = _fin ? 'Final' : (_f!=null&&_f!=='' ? 'Fecha '+_f : '')
+                  const rival = r.concepto ? r.concepto.replace(/^Reposici[oó]n\.?\s*/i,'').trim() : ''
+                  return (
+                    <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 16px',borderBottom:i<partidos.length-1?'1px solid #F0F0EC':'none',background:i%2===0?'#fff':'#FAFAF8'}}>
+                      <span style={{fontSize:12,color:'#8a8a82',minWidth:76,fontVariantNumeric:'tabular-nums'}}>{r.fechaPartido||r.fecha}</span>
+                      <span style={{flex:1,fontWeight:600,fontSize:13.5}}>{rival||r.concepto}</span>
+                      {r.torneo && <span style={{fontSize:11,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:4,padding:'1px 7px',fontWeight:600,whiteSpace:'nowrap'}}>{r.torneo}{instancia?' · '+instancia:''}</span>}
+                    </div>
+                  )
+                })
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast */}
       {toast && (
