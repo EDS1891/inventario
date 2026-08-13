@@ -4082,31 +4082,31 @@ tfoot td{padding:9px 12px;font-weight:700}
                 )
               })()}
               <div className="card" style={{overflow:'auto'}}>
-                <div style={{display:'grid',gridTemplateColumns:'44px 62px 90px 74px 46px 1fr 110px 1fr 44px 1fr 60px 65px 28px',background:'#121212',padding:'9px 16px',gap:8,minWidth:1004}}>
-                  {['','TIPO','MODELO','TEMP.','NRO.','JUGADOR','ESTAMPADO','COMPETICIÓN','TALLE','PARCHES','UBIC.','',''].map((h,i) => (
-                    <div key={i} style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:.5}}>{h}</div>
+                <div style={{display:'grid',gridTemplateColumns:'44px 74px 62px 90px 46px 44px 1fr 110px 1fr 1fr 60px 65px 28px',background:'#121212',padding:'9px 16px',gap:8,minWidth:1004}}>
+                  {['','TEMP.','USO','MODELO','NRO.','TALLE','JUGADOR','ESTAMPADO','COMPETICIÓN','PARCHES','UBIC.','',''].map((h,i) => (
+                    <div key={i} style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:.5,textAlign:[5,7,9,10].includes(i)?'center':'left'}}>{h}</div>
                   ))}
                 </div>
                 {utiFiltered.length === 0
                   ? <div style={{padding:28,textAlign:'center',color:'#8a8a82',fontSize:13}}>No hay camisetas que coincidan con los filtros.</div>
                   : utiFiltered.map(c => (
-                      <div key={c.id} style={{display:'grid',gridTemplateColumns:'44px 62px 90px 74px 46px 1fr 110px 1fr 44px 1fr 60px 65px 28px',padding:'10px 16px',borderBottom:'1px solid #F0F0EC',alignItems:'center',gap:8,minWidth:1004}}>
+                      <div key={c.id} style={{display:'grid',gridTemplateColumns:'44px 74px 62px 90px 46px 44px 1fr 110px 1fr 1fr 60px 65px 28px',padding:'10px 16px',borderBottom:'1px solid #F0F0EC',alignItems:'center',gap:8,minWidth:1004}}>
                         <div>{(c.photos||[]).length > 0
                           ? <img src={c.photos[0]} alt="foto" style={{width:36,height:36,objectFit:'cover',borderRadius:6,border:'1px solid #E0E0DA',display:'block',cursor:'pointer'}} onClick={()=>setPhotoPreview({photos:c.photos,idx:0})} />
                           : <div style={{width:36,height:36,borderRadius:6,border:'1px dashed #D0D0CA',background:'#F5F5F0',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,color:'#C0C0BA'}}>📷</div>
                         }</div>
+                        <div style={{fontSize:12,color:'#1a1a1a',whiteSpace:'nowrap'}}>{c.temporada||<span style={{color:'#ccc'}}>—</span>}</div>
                         <div>{c.tipo && <span style={{fontSize:10,fontWeight:700,background:c.tipo==='GOLERO'?'#EDF7F2':'#F0F0EC',color:c.tipo==='GOLERO'?'#2e9b5e':'#5a5a52',border:'1px solid '+(c.tipo==='GOLERO'?'#2e9b5e':'#D0D0CA'),borderRadius:4,padding:'2px 5px'}}>{c.tipo}</span>}</div>
                         <div style={{fontSize:12,fontWeight:600,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.modelo||<span style={{color:'#ccc'}}>—</span>}</div>
-                        <div style={{fontSize:12,color:'#1a1a1a',whiteSpace:'nowrap'}}>{c.temporada||<span style={{color:'#ccc'}}>—</span>}</div>
                         <div style={{fontWeight:800,fontSize:17,fontFamily:'IBM Plex Mono,monospace',color:'#1a1a1a'}}>{c.numero}</div>
+                        <div style={{fontSize:13,fontWeight:700,textAlign:'center',color:'#1a1a1a'}}>{c.talle}</div>
                         <div style={{fontWeight:600,fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',color:'#1a1a1a'}}>
                           {c.jugador || <span style={{color:'#aaa',fontStyle:'italic',fontWeight:400}}>Sin asignar</span>}
                         </div>
-                        <div style={{fontSize:12,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.estampado||<span style={{color:'#ccc'}}>—</span>}</div>
+                        <div style={{fontSize:12,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textAlign:'center'}}>{c.estampado||<span style={{color:'#ccc'}}>—</span>}</div>
                         <div style={{fontSize:12,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.competicion||<span style={{color:'#ccc'}}>—</span>}</div>
-                        <div style={{fontSize:13,fontWeight:700,textAlign:'center',color:'#1a1a1a'}}>{c.talle}</div>
-                        <div style={{fontSize:12,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.parches||<span style={{color:'#ccc'}}>—</span>}</div>
-                        <div style={{fontSize:11,fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:c.ubic?'#1a1a1a':'#ccc'}}>{c.ubic||'—'}</div>
+                        <div style={{fontSize:12,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textAlign:'center'}}>{c.parches||<span style={{color:'#ccc'}}>—</span>}</div>
+                        <div style={{fontSize:11,fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:c.ubic?'#1a1a1a':'#ccc',textAlign:'center'}}>{c.ubic||'—'}</div>
                         {!isSoloVista && <button className="btn btn-ghost" style={{padding:'4px 10px',fontSize:12}} onClick={()=>{
                           const ubicMatch = (c.ubic||'').match(/^(\d+)([A-E])$/)
                           setUtiForm({...c, photos:c.photos||[], utiEstante:ubicMatch?ubicMatch[1]:'1', utiAltura:ubicMatch?ubicMatch[2]:'A'})
