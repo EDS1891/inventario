@@ -7,8 +7,8 @@ const TALLES_ADULTO = ['S','M','L','XL','XXL','XXXL','Único']
 const TALLES_NINO   = ['2','4','6','8','10','12','14']
 const RECEPTORES = ['1° División','3° División','Juveniles','Captación','Femenino','Juveniles Femenino','Fútbol Sala Masculino','Fútbol Sala Femenino','Basket','Deportes Anexos','Funcionarios','Marketing','Protocolo','Sponsors','Canjes']
 const DISCIPLINAS_DEPORTES_ANEXOS = ['Atletismo','Bowling','Esports','Fisicoculturismo','Fútbol Inclusivo','Fútbol Playa Masculino','Fútbol Sala Femenino','Handball','Volley','Teqball','Cricket','Footgolf','Ciclismo','Paracaidismo','Maxi Basket','Automovilismo','Motociclismo','Hockey Patín','Esgrima']
-const PRECIO_CAMISETA = 1930
-const PRECIO_SHORT = 1030
+const PRECIO_CAMISETA = 1945
+const PRECIO_SHORT = 1145
 const CATEGORIAS = ['Entrenamiento','Juego','Casual']
 const OCUPACIONES = ['3° División','Juveniles','Juveniles Femenino','Captacion']
 const DIVISIONES            = ['Sub 19','Sub 17','Sub 16','Sub 15','Sub 14']
@@ -26,8 +26,8 @@ const REP_TIPOS_GOLERO  = ['NEGRO','NARANJA','CREMA']
 const getRepTipos = (posicion) => posicion === 'Golero' ? REP_TIPOS_GOLERO : REP_TIPOS_JUGADOR
 const ROLE_LABELS = { admin:'Admin', 'solo-vista':'Solo Vista', receptor:'Receptor', receptor_reposiciones:'Receptor + Repos.' }
 const ROLE_OPTIONS = [['admin','Administrador'],['solo-vista','Solo Vista'],['receptor','Receptor'],['receptor_reposiciones','Receptor + Reposiciones']]
-const PRECIO_DESC_CAMISETA = 1930
-const PRECIO_DESC_SHORT = 1030
+const PRECIO_DESC_CAMISETA = 1945
+const PRECIO_DESC_SHORT = 1145
 const EXTRAS_PRENDAS = [
   {nombre:'Campera Concentración',precio:2245},
   {nombre:'Pantalón Concentración',precio:1660},
@@ -35,7 +35,7 @@ const EXTRAS_PRENDAS = [
   {nombre:'Remera Entrenamiento',precio:1166},
   {nombre:'Buzo Entrenamiento',precio:1660},
   {nombre:'Campera de Lluvia',precio:2470},
-  {nombre:'Short Entrenamiento',precio:1030},
+  {nombre:'Short Entrenamiento',precio:1145},
   {nombre:'Pantalón Entrenamiento',precio:1660},
   {nombre:'Calza Corta',precio:1210},
   {nombre:'Calza Larga',precio:1810},
@@ -43,7 +43,7 @@ const EXTRAS_PRENDAS = [
   {nombre:'Remera Térmica Manga Larga',precio:1320},
   {nombre:'Gorro Lana',precio:820},
   {nombre:'Gorro Visera',precio:820},
-  {nombre:'Camiseta',precio:1930},
+  {nombre:'Camiseta',precio:1945},
   {nombre:'Camiseta niño',precio:1570},
 ]
 
@@ -151,6 +151,20 @@ async function saveToSupabase(db) {
 
 function fmt(n) { return Number(n).toLocaleString('es-UY') }
 function total(a) { return a.sizes.reduce((s,x) => s + x.qty, 0) }
+function removeZeroStock(articles) {
+  const active = articles.filter(a => total(a) > 0)
+  const removed = articles.filter(a => total(a) === 0)
+  removed.forEach(r => {
+    const photos = r.photos?.length ? r.photos : (r.photo ? [r.photo] : [])
+    if (!photos.length) return
+    for (let i = 0; i < active.length; i++) {
+      if (active[i].code === r.code && !active[i].photos?.length && !active[i].photo) {
+        active[i] = {...active[i], photos}
+      }
+    }
+  })
+  return active
+}
 function ini(name) {
   const p = (name||'').trim().split(/\s+/)
   return ((p[0]||'')[0]||'').toUpperCase() + ((p[1]||'')[0]||'').toUpperCase()
@@ -166,6 +180,22 @@ function sizesLabel(a) {
 function today() {
   const d = new Date()
   return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear()
+}
+// Ciclo de liquidación 20→20: día 1-20 queda en el mismo mes, día 21-31 pasa al mes siguiente
+function cicloKey(dateStr) {
+  const p = (dateStr||'').split('/')
+  if (p.length !== 3) return null
+  let dd = Number(p[0]), mm = Number(p[1]), yyyy = Number(p[2])
+  if (dd > 20) { mm += 1; if (mm > 12) { mm = 1; yyyy += 1 } }
+  return String(mm).padStart(2,'0') + '/' + yyyy
+}
+// Etiqueta legible para el ciclo: "Julio - Agosto 2026"
+function cicloLabel(mesKey) {
+  const MESES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+  const [mm, yyyy] = (mesKey||'').split('/').map(Number)
+  if (!mm || !yyyy) return mesKey||''
+  const prevMm = mm === 1 ? 12 : mm - 1
+  return `${MESES[prevMm]} - ${MESES[mm]} ${yyyy}`
 }
 function isLow(a) { return a.sizes.some(s => (s.min||0) > 0 && s.qty <= (s.min||0)) }
 
@@ -268,12 +298,19 @@ export default function App() {
   useEffect(() => {
     loadFromSupabase().then(data => {
       if (data) {
-        setDb(data)
+        setDb({...data, articles: removeZeroStock(data.articles || [])})
         saveEnabled.current = true
       }
       setLoading(false)
     })
   }, [])
+
+  // Redirect to inventario if the selected article was deleted (reached stock 0)
+  useEffect(() => {
+    if (view === 'detalle' && selectedId !== null && !db.articles.find(a => a.id === selectedId)) {
+      setView('inventario')
+    }
+  }, [db.articles, view, selectedId])
 
   // Save to Supabase whenever data changes (debounced 800ms).
   // Skip the first fire right after the initial load to avoid overwriting data that
@@ -834,12 +871,13 @@ ${rowsHtml}
           movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'salida', fecha, talle:l.talle, qty:l.qty, detalle:'Entrega a '+nd.persona+' ('+nd.receptor+(nd.disciplina?' - '+nd.disciplina:'')+')', delId:s.nextDel, creadoPor:currentUser?.displayName||session})
         }
       })
-      if(esDev) { const r = { ...s, articles, movimientos, modal:null, nextMov:mid }; newDbState = r; return r }
+      const activeArticles = removeZeroStock(articles)
+      if(esDev) { const r = { ...s, articles:activeArticles, movimientos, modal:null, nextMov:mid }; newDbState = r; return r }
       const toUser = nd.toUser || null
       const status = toUser ? 'pendiente' : 'aceptado'
       const confirmedAt = toUser ? null : fecha
       const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, disciplina:nd.receptor==='Deportes Anexos'?nd.disciplina.trim():undefined, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, obs:nd.obs?.trim()||undefined, lines:[...nd.lines], toUser, status, confirmedAt, creadoPor:currentUser?.displayName||session}, ...s.deliveries]
-      const r = { ...s, articles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid }
+      const r = { ...s, articles:activeArticles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid }
       newDbState = r; return r
     })
     // Guardar inmediatamente en Supabase sin esperar el debounce de 800ms
@@ -965,7 +1003,7 @@ ${rowsHtml}
       const artName = selA.name
       const articles = s.articles.map(a => { if(a.id!==selectedId) return a; return {...a, sizes:a.sizes.map(z => z.talle===aj.talle?{...z,qty:Math.max(0,q)}:z)} })
       const movimientos = [{id:s.nextMov, code, name:artName, tipo:(delta>0?'entrada':'salida'), fecha, talle:aj.talle, qty:Math.abs(delta), detalle:'Ajuste por recuento (de '+cur+' a '+q+')', creadoPor:currentUser?.displayName||session}, ...s.movimientos]
-      return { ...s, articles, movimientos, nextMov:s.nextMov+1 }
+      return { ...s, articles:removeZeroStock(articles), movimientos, nextMov:s.nextMov+1 }
     })
     setModal(null)
     showToast('Stock ajustado: '+aj.talle+' = '+q+' ('+(delta>0?'+':'')+delta+').')
@@ -1134,7 +1172,10 @@ ${rowsHtml}
         movimientos: [...newMovs, ...s.movimientos],
         articles: s.articles.map(a => {
           if(a.id === editing.id) return {...a, code:newCode, name:editing.name.trim(), cat:editing.cat, ubic:editing.ubic.trim(), precio:parseFloat(editing.precio)||0, photos:newPhotos, photo:'', sizes:newSizes}
-          if(a.code === newCode) return {...a, photos:newPhotos, photo:''}
+          if(a.code === newCode) {
+            const existingPhotos = a.photos?.length ? a.photos : (a.photo ? [a.photo] : [])
+            return {...a, name:editing.name.trim(), cat:editing.cat, photos:newPhotos.length ? newPhotos : existingPhotos, photo:''}
+          }
           return a
         })
       }
@@ -1597,6 +1638,82 @@ ${rowsHtml}
     const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a'); a.href=url; a.download=`${rep.concepto.replace(/[\\/:*?"<>|]/g,'-')}.xlsx`; a.click()
+    URL.revokeObjectURL(url)
+  }
+  const exportDescuentosPivot = async () => {
+    const reposiciones = (db.reposiciones||[]).slice().sort((a,b)=>{
+      const fa=a.fechaPartido||a.fecha||''; const fb=b.fechaPartido||b.fecha||''
+      const toDate = s => { const p=s.split('/'); return p.length===3?new Date(`${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`):new Date(0) }
+      return toDate(fa)-toDate(fb)
+    })
+    const plantel = (db.plantel||[]).slice().sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0))
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('Descuentos por Partido')
+    const YELLOW = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
+    const DARK   = {type:'pattern',pattern:'solid',fgColor:{argb:'FF121212'}}
+    const LIGHT  = {type:'pattern',pattern:'solid',fgColor:{argb:'FFD9D9D9'}}
+    const F_BOLD = {name:'Calibri',size:10,bold:true}
+    const F_NORM = {name:'Calibri',size:10}
+    const F_WITE = {name:'Calibri',size:10,bold:true,color:{argb:'FFFFFFFF'}}
+    const F_YWHI = {name:'Calibri',size:10,bold:true,color:{argb:'FFFFD966'}}
+    const CENTER = {horizontal:'center',vertical:'middle'}
+    const LEFT   = {horizontal:'left',vertical:'middle'}
+    const BORDER = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
+    const s = (cell,fill,font,align) => { cell.fill=fill; cell.font=font; cell.alignment=align||CENTER; cell.border=BORDER }
+    ws.columns = [{width:6},{width:24},...reposiciones.flatMap(()=>[{width:11},{width:9}])]
+    // Fila 1: fechas
+    s(ws.getCell(1,1),DARK,F_WITE); s(ws.getCell(1,2),DARK,F_WITE)
+    reposiciones.forEach((rep,i)=>{
+      const col=3+i*2
+      ws.mergeCells(1,col,1,col+1)
+      const c=ws.getCell(1,col); c.value=rep.fechaPartido||rep.fecha||'—'
+      s(c,YELLOW,F_BOLD)
+    })
+    ws.getRow(1).height=18
+    // Fila 2: rivales
+    s(ws.getCell(2,1),DARK,F_WITE); s(ws.getCell(2,2),DARK,F_WITE)
+    reposiciones.forEach((rep,i)=>{
+      const col=3+i*2
+      ws.mergeCells(2,col,2,col+1)
+      const rival=(rep.concepto||'').replace(/^Reposici[oó]n\.?\s*(vs\.?\s*)?/i,'').trim()||rep.torneo||'—'
+      const c=ws.getCell(2,col); c.value=rival; s(c,LIGHT,F_BOLD)
+    })
+    ws.getRow(2).height=18
+    // Fila 3: cabeceras
+    const r3=ws.getRow(3); r3.height=18
+    const h3=[['N°',DARK,F_WITE,CENTER],['JUGADOR',DARK,F_WITE,LEFT]]
+    h3.forEach(([val,fill,font,align],i)=>{ const c=r3.getCell(i+1); c.value=val; s(c,fill,font,align) })
+    reposiciones.forEach((_,i)=>{
+      ;['CAMISETA','SHORT'].forEach((h,j)=>{ const c=r3.getCell(3+i*2+j); c.value=h; s(c,YELLOW,F_BOLD) })
+    })
+    // Filas de jugadores
+    plantel.forEach((j,rowIdx)=>{
+      const r=ws.getRow(rowIdx+4); r.height=16
+      const fill={type:'pattern',pattern:'solid',fgColor:{argb:rowIdx%2===0?'FFFFFFFF':'FFF9F9F7'}}
+      const c1=r.getCell(1); c1.value=j.numero||''; s(c1,fill,F_NORM)
+      const c2=r.getCell(2); c2.value=j.nombre||''; s(c2,fill,F_NORM,LEFT)
+      reposiciones.forEach((rep,i)=>{
+        const jj=(rep.jugadores||[]).find(x=>String(x.numero)===String(j.numero)||x.nombre===j.nombre)
+        const cam=jj?Number(jj.cantCamiseta)||0:0
+        const sht=jj?Number(jj.cantShort)||0:0
+        const cCam=r.getCell(3+i*2); cCam.value=cam||''; s(cCam,fill,F_NORM)
+        const cSht=r.getCell(4+i*2); cSht.value=sht||''; s(cSht,fill,F_NORM)
+      })
+    })
+    // Fila TOTAL
+    const totRow=ws.getRow(plantel.length+4); totRow.height=18
+    ws.mergeCells(plantel.length+4,1,plantel.length+4,2)
+    const tCell=totRow.getCell(1); tCell.value='TOTAL'; s(tCell,DARK,F_YWHI)
+    reposiciones.forEach((rep,i)=>{
+      const totCam=(rep.jugadores||[]).reduce((s,jj)=>s+(Number(jj.cantCamiseta)||0),0)
+      const totSht=(rep.jugadores||[]).reduce((s,jj)=>s+(Number(jj.cantShort)||0),0)
+      const cCam=totRow.getCell(3+i*2); cCam.value=totCam; s(cCam,DARK,F_YWHI)
+      const cSht=totRow.getCell(4+i*2); cSht.value=totSht; s(cSht,DARK,F_YWHI)
+    })
+    const buf=await wb.xlsx.writeBuffer()
+    const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
+    const url=URL.createObjectURL(blob)
+    const a=document.createElement('a'); a.href=url; a.download='descuentos-por-partido.xlsx'; a.click()
     URL.revokeObjectURL(url)
   }
   const printRemito = (rep) => {
@@ -2850,12 +2967,11 @@ tfoot td{padding:9px 12px;font-weight:700}
           const repsValidas = db.reposiciones||[]
           const mesesMap = {}
           repsValidas.forEach(r => {
-            const p = (r.fechaPartido||r.fecha||'').split('/')
-            const key = p.length===3 ? p[1]+'/'+p[2] : (r.fechaPartido||r.fecha)||'?'
+            const key = cicloKey(r.fechaPartido||r.fecha||'') || '?'
             if (!mesesMap[key]) mesesMap[key] = []
             mesesMap[key].push(r)
           })
-          const mesActualKey = (() => { const p = today().split('/'); return p[1]+'/'+p[2] })()
+          const mesActualKey = cicloKey(today())
           if (!mesesMap[mesActualKey]) mesesMap[mesActualKey] = []
           const mesesOrdenados = Object.keys(mesesMap).sort((a,b)=>{
             const [ma,ya] = a.split('/').map(Number)
@@ -2865,7 +2981,7 @@ tfoot td{padding:9px 12px;font-weight:700}
           const mesMostrado = (resumenMesSel && mesesMap[resumenMesSel]) ? resumenMesSel : (mesesMap[mesActualKey] ? mesActualKey : mesesOrdenados[mesesOrdenados.length-1])
           const calcMes = mesKey => {
             const repsDelMes = mesesMap[mesKey] || []
-            const extrasDelMes = (db.descExtras||[]).filter(e => { const p=e.fecha.split('/'); return p.length===3&&p[1]+'/'+p[2]===mesKey })
+            const extrasDelMes = (db.descExtras||[]).filter(e => cicloKey(e.fecha)===mesKey)
             const jugMapMes = {}
             ;(db.plantel||[]).filter(p=>p.nombre?.trim().toLowerCase()!=='libre').forEach(p => {
               jugMapMes[p.nombre.trim()] = {numero:p.numero||'—', nombre:p.nombre.trim()}
@@ -2886,54 +3002,101 @@ tfoot td{padding:9px 12px;font-weight:700}
             return {filas, totCam, totSht, totExtras, totDesc}
           }
           const {filas, totCam, totSht, totExtras, totDesc} = mesMostrado ? calcMes(mesMostrado) : {filas:[],totCam:0,totSht:0,totExtras:0,totDesc:0}
-          const [mmMostrado, yyyyMostrado] = (mesMostrado||'').split('/')
-          const mesNombreMostrado = mesMostrado ? `${MESES_ES[Number(mmMostrado)]||mmMostrado} ${yyyyMostrado}` : ''
+          const mesNombreMostrado = mesMostrado ? cicloLabel(mesMostrado) : ''
           const datosPorMes = mesesOrdenados.map(mesKey => {
-            const [mm, yyyy] = mesKey.split('/')
-            const mesNombre = `${MESES_ES[Number(mm)]||mm} ${yyyy}`
+            const mesNombre = cicloLabel(mesKey)
             const {filas, totCam, totSht, totExtras, totDesc} = calcMes(mesKey)
             return {mesKey, mesNombre, filas, totCam, totSht, totExtras, totDesc}
           })
           const exportResumenExcel = async () => {
             const wb = new ExcelJS.Workbook()
             const YELLOW   = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
-            const FILL_SUB = {type:'pattern',pattern:'solid',fgColor:{argb:'FFF5F2E8'}}
+            const GRAY_H   = {type:'pattern',pattern:'solid',fgColor:{argb:'FFD9D9D9'}}
+            const DARK     = {type:'pattern',pattern:'solid',fgColor:{argb:'FF121212'}}
             const FILL_WHT = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFFFF'}}
-            const F_BOLD   = {name:'Calibri',size:11,bold:true}
-            const F_NORM   = {name:'Calibri',size:11}
-            const CENTER   = {horizontal:'center',vertical:'middle'}
-            const BORDER   = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
+            const FILL_ALT = {type:'pattern',pattern:'solid',fgColor:{argb:'FFF9F9F7'}}
+            const FILL_DESC= {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFF2CC'}}
             const MONEY_FMT = '"$" #,##0'
-            const style = (cell,fill,font) => { cell.fill=fill; cell.font=font; cell.alignment=CENTER; cell.border=BORDER }
-            datosPorMes.forEach(({mesNombre, filas, totDesc}) => {
-              const nombreHoja = mesNombre.replace(/[\\/:*?"<>|[\]]/g,'-').slice(0,31) || 'Mes'
+            const F_BOLD   = {name:'Calibri',size:10,bold:true}
+            const F_NORM   = {name:'Calibri',size:10}
+            const F_WITE   = {name:'Calibri',size:10,bold:true,color:{argb:'FFFFFFFF'}}
+            const F_YWHI   = {name:'Calibri',size:10,bold:true,color:{argb:'FFFFD966'}}
+            const CENTER   = {horizontal:'center',vertical:'middle'}
+            const LEFT     = {horizontal:'left',vertical:'middle'}
+            const BORDER   = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
+            const s = (cell,fill,font,align) => { cell.fill=fill; cell.font=font; cell.alignment=align||CENTER; cell.border=BORDER }
+            ;[{mesKey:mesMostrado,mesNombre:mesNombreMostrado,filas}].forEach(({mesKey, mesNombre, filas}) => {
+              const reps = (mesesMap[mesKey]||[]).slice().sort((a,b)=>{
+                const toD = str => { const p=(str||'').split('/'); return p.length===3?new Date(`${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`):new Date(0) }
+                return toD(a.fechaPartido||a.fecha)-toD(b.fechaPartido||b.fecha)
+              })
+              const nombreHoja = mesNombre.replace(/[\\/:*?"<>|[\]]/g,'-').slice(0,31)||'Mes'
               const ws = wb.addWorksheet(nombreHoja)
-              ws.columns = [{width:8.5},{width:24},{width:13},{width:10},{width:13},{width:13}]
-              ws.mergeCells('A1:F1')
-              style(ws.getCell('A1'), YELLOW, F_BOLD); ws.getCell('A1').value = mesNombre.toUpperCase(); ws.getRow(1).height = 20
-              ;['Nº','JUGADOR','CAMISETAS','SHORTS','EXTRAS','DESCUENTO'].forEach((h,i) => {
-                const c = ws.getRow(2).getCell(i+1); style(c, YELLOW, F_BOLD); c.value = h
+              const extrasCols = 2 // EXTRAS + DESCUENTO al final
+              const totalCols = 2 + reps.length*2 + extrasCols
+              ws.columns = [{width:7},{width:24},...reps.flatMap(()=>[{width:11},{width:9}]),{width:12},{width:13}]
+              // Fila 1: título del mes
+              ws.mergeCells(1,1,1,totalCols)
+              const tCell=ws.getCell(1,1); tCell.value=mesNombre.toUpperCase(); s(tCell,DARK,F_YWHI)
+              ws.getRow(1).height=20
+              // Cabeceras fusionadas: JUGADOR (A2:B4), EXTRAS (K2:K4), DESCUENTO TOTAL (L2:L4)
+              ws.mergeCells(2,1,4,2)
+              const jugCell=ws.getCell(2,1); jugCell.value='JUGADOR'; s(jugCell,YELLOW,F_BOLD,LEFT)
+              ws.mergeCells(2,totalCols-1,4,totalCols-1)
+              const extCell=ws.getCell(2,totalCols-1); extCell.value='EXTRAS'; s(extCell,YELLOW,F_BOLD)
+              ws.mergeCells(2,totalCols,4,totalCols)
+              const dHCell=ws.getCell(2,totalCols); dHCell.value='DESCUENTO TOTAL'; s(dHCell,YELLOW,F_BOLD); dHCell.alignment={horizontal:'center',vertical:'middle',wrapText:true}
+              // Fila 2: fechas (por partido)
+              reps.forEach((rep,i)=>{
+                const col=3+i*2
+                ws.mergeCells(2,col,2,col+1)
+                const c=ws.getCell(2,col); c.value=rep.fechaPartido||rep.fecha||'—'; s(c,YELLOW,F_BOLD)
               })
-              ws.getRow(2).height = 20
-              filas.forEach((f,idx) => {
-                const r = ws.getRow(idx+3)
-                r.height = 18
-                ;[f.numero||'—', f.nombre, f.cam||0, f.sht||0, f.extras||0, f.desc||0].forEach((v,i) => {
-                  const c = r.getCell(i+1); style(c, i===5?FILL_GRAY:FILL_WHT, i===5?F_BOLD:F_NORM); c.value = v
-                  if (i===4||i===5) c.numFmt = MONEY_FMT
+              ws.getRow(2).height=18
+              // Fila 3: rivales (por partido)
+              reps.forEach((rep,i)=>{
+                const col=3+i*2
+                ws.mergeCells(3,col,3,col+1)
+                const rival=(rep.concepto||'').replace(/^Reposici[oó]n\.?\s*(vs\.?\s*)?/i,'').trim()||rep.torneo||'—'
+                const c=ws.getCell(3,col); c.value=rival; s(c,YELLOW,F_BOLD)
+              })
+              ws.getRow(3).height=18
+              // Fila 4: CAMISETA/SHORT (por partido)
+              reps.forEach((_,i)=>{
+                ;['CAMISETA','SHORT'].forEach((h,j)=>{ const c=ws.getCell(4,3+i*2+j); c.value=h; s(c,YELLOW,F_BOLD) })
+              })
+              ws.getRow(4).height=18
+              // Solo jugadores con descuentos reales
+              const filasExcel=filas.filter(f=>f.desc>0)
+              filasExcel.forEach((f,rowIdx)=>{
+                const r=ws.getRow(rowIdx+5); r.height=16
+                const fill=rowIdx%2===0?FILL_WHT:FILL_ALT
+                const c1=r.getCell(1); c1.value=f.numero||'—'; s(c1,fill,F_NORM)
+                const c2=r.getCell(2); c2.value=f.nombre; s(c2,fill,F_NORM,LEFT)
+                reps.forEach((rep,i)=>{
+                  const jj=(rep.jugadores||[]).find(x=>x.nombre===f.nombre)
+                  const dc=jj?(jj.descuentoCamiseta!==undefined?jj.descuentoCamiseta!==false:jj.descuento!==false):false
+                  const ds=jj?(jj.descuentoShort!==undefined?jj.descuentoShort!==false:jj.descuento!==false):false
+                  const cam=(jj&&dc)?Number(jj.cantCamiseta)||0:0
+                  const sht=(jj&&ds)?Number(jj.cantShort)||0:0
+                  const cCam=r.getCell(3+i*2); cCam.value=cam||''; s(cCam,fill,F_NORM)
+                  const cSht=r.getCell(4+i*2); cSht.value=sht||''; s(cSht,fill,F_NORM)
                 })
+                const cExt=r.getCell(totalCols-1); cExt.value=f.extras||0; cExt.numFmt=MONEY_FMT; s(cExt,fill,F_NORM)
+                const cDesc=r.getCell(totalCols); cDesc.value=f.desc||0; cDesc.numFmt=MONEY_FMT; s(cDesc,FILL_DESC,F_BOLD)
               })
-              const totN = filas.length + 3
-              ws.mergeCells(`A${totN}:E${totN}`)
-              ws.getRow(totN).height = 20
-              style(ws.getRow(totN).getCell(1), FILL_SUB, F_BOLD); ws.getRow(totN).getCell(1).value = 'TOTAL DESCUENTOS'
-              const totCell = ws.getRow(totN).getCell(6)
-              style(totCell, FILL_SUB, F_BOLD); totCell.value = totDesc; totCell.numFmt = MONEY_FMT
+              // Total
+              const totN=filasExcel.length+5
+              ws.mergeCells(totN,1,totN,totalCols-1)
+              const tR=ws.getRow(totN); tR.height=20
+              const tcell=tR.getCell(1); tcell.value='TOTAL DESCUENTOS'; s(tcell,DARK,F_YWHI)
+              const tDesc=filasExcel.reduce((sum,f)=>sum+f.desc,0)
+              const tdCell=tR.getCell(totalCols); tdCell.value=tDesc; tdCell.numFmt=MONEY_FMT; s(tdCell,DARK,F_YWHI)
             })
             const buf = await wb.xlsx.writeBuffer()
             const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
             const url = URL.createObjectURL(blob)
-            const a = document.createElement('a'); a.href=url; a.download='descuentos-mensuales-peniarol.xlsx'; a.click()
+            const a = document.createElement('a'); a.href=url; a.download=`Descuentos ${mesNombreMostrado.replace(/\s+\d{4}$/,'').replace(/\s*-\s*/,'-')}.xlsx`; a.click()
             URL.revokeObjectURL(url)
           }
           return (
@@ -2950,8 +3113,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                       {mesesOrdenados.length > 1 && (
                         <div style={{display:'flex',gap:6,flexWrap:'wrap',padding:'10px 16px',borderBottom:'1px solid #ECECE8',background:'#F8F8F4'}}>
                           {mesesOrdenados.map(key => {
-                            const [mm,yyyy] = key.split('/')
-                            const label = `${MESES_ES[Number(mm)]||mm} ${yyyy}`
+                            const label = cicloLabel(key)
                             const activo = key === mesMostrado
                             return (
                               <button key={key} onClick={e=>{e.stopPropagation();setResumenMesSel(key)}}
@@ -4019,7 +4181,7 @@ tfoot td{padding:9px 12px;font-weight:700}
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:180}}>
                 <div className="kpi-label">CAMISETAS REGISTRADAS</div>
-                <div className="kpi-value">{(db.camisetasUtileria||[]).length}</div>
+                <div className="kpi-value">{(db.camisetasUtileria||[]).reduce((s,c)=>s+(Number(c.cantidad)||1),0)}</div>
                 <div className="kpi-sub">en utilería</div>
               </div>
               {(() => {
@@ -4028,7 +4190,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 const clearAll = () => { setUtiFilter(''); setUtiFilterJugador(''); setUtiFilterTipo(''); setUtiFilterTemp(''); setUtiFilterModelo(''); setUtiFilterUbic('') }
                 const modelosOrden = [...new Set([...MODELOS_JUGADOR,...MODELOS_GOLERO])]
                 const modelosDisponibles = modelosOrden.filter(m => (db.camisetasUtileria||[]).some(c => c.modelo === m && (!utiFilterTipo || c.tipo === utiFilterTipo)))
-                const temporadasOrden = ['2012/2013','2013/2014','2015/2016','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025','2026']
+                const temporadasOrden = ['2012/2013','2013/2014','2014/2015','2015/2016','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025','2026']
                 const temporadasDisponibles = temporadasOrden.filter(t => (db.camisetasUtileria||[]).some(c => c.temporada === t && (!utiFilterTipo || c.tipo === utiFilterTipo)))
                 return (
                   <div style={{display:'flex',gap:8,alignItems:'flex-start',justifyContent:'space-between'}}>
@@ -4096,15 +4258,15 @@ tfoot td{padding:9px 12px;font-weight:700}
                 )
               })()}
               <div className="card" style={{overflow:'auto'}}>
-                <div style={{display:'grid',gridTemplateColumns:'44px 74px 62px 90px 46px 44px 1fr 110px 1fr 1fr 50px 60px 65px 28px',background:'#121212',padding:'9px 16px',gap:8,minWidth:1062}}>
-                  {['','TEMP.','USO','MODELO','NRO.','TALLE','JUGADOR','ESTAMPADO','COMPETICIÓN','PARCHES','CANT.','UBIC.','',''].map((h,i) => (
-                    <div key={i} style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:.5,textAlign:[5,7,9,10,11].includes(i)?'center':'left'}}>{h}</div>
+                <div style={{display:'grid',gridTemplateColumns:'44px 74px 62px 90px 46px 44px 1fr 110px 1fr 1fr 32px 50px 60px 65px 28px 18px',background:'#121212',padding:'9px 16px',gap:8,minWidth:1080}}>
+                  {['','TEMP.','USO','MODELO','NRO.','TALLE','JUGADOR','ESTAMPADO','COMPETICIÓN','PARCHES','OBS.','CANT.','UBIC.','','',''].map((h,i) => (
+                    <div key={i} style={{fontSize:11,fontWeight:700,color:'#f2cb12',letterSpacing:.5,textAlign:[5,7,9,10,11,12].includes(i)?'center':'left'}}>{h}</div>
                   ))}
                 </div>
                 {utiFiltered.length === 0
                   ? <div style={{padding:28,textAlign:'center',color:'#8a8a82',fontSize:13}}>No hay camisetas que coincidan con los filtros.</div>
                   : utiFiltered.map(c => (
-                      <div key={c.id} onClick={()=>setUtiDetalle(c)} style={{display:'grid',gridTemplateColumns:'44px 74px 62px 90px 46px 44px 1fr 110px 1fr 1fr 50px 60px 65px 28px',padding:'10px 16px',borderBottom:'1px solid #F0F0EC',alignItems:'center',gap:8,minWidth:1062,cursor:'pointer'}}
+                      <div key={c.id} onClick={()=>setUtiDetalle(c)} style={{display:'grid',gridTemplateColumns:'44px 74px 62px 90px 46px 44px 1fr 110px 1fr 1fr 32px 50px 60px 65px 28px 18px',padding:'10px 16px',borderBottom:'1px solid #F0F0EC',alignItems:'center',gap:8,minWidth:1080,cursor:'pointer'}}
                         onMouseEnter={e=>e.currentTarget.style.background='#FAFAF6'} onMouseLeave={e=>e.currentTarget.style.background=''}>
                         <div>{(c.photos||[]).length > 0
                           ? <img src={c.photos[0]} alt="foto" style={{width:36,height:36,objectFit:'cover',borderRadius:6,border:'1px solid #E0E0DA',display:'block',cursor:'pointer'}} onClick={e=>{e.stopPropagation(); setPhotoPreview({photos:c.photos,idx:0})}} />
@@ -4121,6 +4283,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                         <div style={{fontSize:12,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textAlign:'center'}}>{c.estampado||<span style={{color:'#ccc'}}>—</span>}</div>
                         <div style={{fontSize:12,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{c.competicion||<span style={{color:'#ccc'}}>—</span>}</div>
                         <div style={{fontSize:12,color:'#1a1a1a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',textAlign:'center'}}>{c.parches||<span style={{color:'#ccc'}}>—</span>}</div>
+                        <div style={{textAlign:'center'}}>{c.detalle ? <span title={c.detalle} onClick={e=>e.stopPropagation()} style={{fontSize:15,color:'#8a8a82',cursor:'help'}}>ℹ</span> : null}</div>
                         <div style={{fontSize:13,fontWeight:700,textAlign:'center',color:'#1a1a1a'}}>{c.cantidad ?? 1}</div>
                         <div style={{fontSize:11,fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:c.ubic?'#1a1a1a':'#ccc',textAlign:'center'}}>{c.ubic||'—'}</div>
                         {!isSoloVista && <button className="btn btn-ghost" style={{padding:'4px 10px',fontSize:12}} onClick={e=>{
@@ -4130,11 +4293,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                           setUtiModal(true)
                         }}>Editar</button>}
                         {!isSoloVista && <button onClick={e=>{ e.stopPropagation(); if(window.confirm('¿Desea eliminar esta camiseta?')) deleteUti(c.id) }} style={{background:'none',border:'none',cursor:'pointer',fontSize:18,color:'#C2473D',padding:'0 4px',lineHeight:1}}>×</button>}
-                        {c.detalle && (
-                          <div style={{gridColumn:'1 / -1',fontSize:12.5,color:'#3a3a34',paddingTop:6,borderTop:'1px dashed #D8D8D2',marginTop:4,lineHeight:1.4}}>
-                            <span style={{fontWeight:700,color:'#1a1a1a'}}>Detalle: </span>{c.detalle}
-                          </div>
-                        )}
+                        <span style={{color:'#C8C8C0',fontSize:16}}>›</span>
                       </div>
                     ))
                 }
@@ -4165,11 +4324,14 @@ tfoot td{padding:9px 12px;font-weight:700}
             }
             const repUnidades = (db.reposiciones||[]).reduce((s, r) =>
               s + (r.jugadores||[]).reduce((a, j) => a + (Number(j.cantCamiseta)||0) + (Number(j.cantShort)||0), 0), 0)
+            const extrasUnidades = (db.descExtras||[]).reduce((s,e) => s + (e.cantidad||1), 0)
+            const extrasMonto    = (db.descExtras||[]).reduce((s,e) => s + e.precio*(e.cantidad||1), 0)
             const baseData = receptorCards
               .map(r => {
-                const extra = r.name === '1° División' ? repUnidades : 0
-                const total = r.unidades + extra
-                return { name: r.name, unidades: total, pct: total / TOTAL_CONTRATO * 100, monto: r.monto }
+                const extraU = r.name === '1° División' ? repUnidades : r.name === 'Protocolo' ? extrasUnidades : 0
+                const extraM = r.name === 'Protocolo' ? extrasMonto : 0
+                const total = r.unidades + extraU
+                return { name: r.name, unidades: total, pct: total / TOTAL_CONTRATO * 100, monto: r.monto + extraM }
               })
             const data = baseData.sort((a, b) => {
                 const ia = RECEPTOR_ORDER.indexOf(a.name)
@@ -4370,6 +4532,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                       <div style={{display:'flex',flexDirection:'column',gap:8,alignSelf:'flex-start'}}>
                         <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed'}}>+ Nueva reposición</button>
                         <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',fecha:'',prendas:[{articulo:'',precio:0,cantidad:1}]});setDescExtraModal(true)}}>+ Descuento</button>
+                        <button className="btn btn-ghost" style={{border:'1px solid #2d6a4f',color:'#2d6a4f',fontSize:12}} onClick={exportDescuentosPivot}>↓ Excel por partido</button>
                       </div>
                     </div>
                   )
@@ -4990,7 +5153,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 <label className="field-label">Temporada</label>
                 <select className="field-input" value={utiForm.temporada} onChange={e=>setUtiForm(p=>({...p,temporada:e.target.value}))}>
                   <option value="">Seleccionar…</option>
-                  {['2012/2013','2013/2014','2015/2016','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025','2026'].map(t => <option key={t} value={t}>{t}</option>)}
+                  {['2012/2013','2013/2014','2014/2015','2015/2016','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025','2026'].map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div className="form-group">
@@ -5072,47 +5235,76 @@ tfoot td{padding:9px 12px;font-weight:700}
             <div style={{fontSize:14,fontWeight:600,color:'#1a1a1a'}}>{value || <span style={{color:'#ccc',fontWeight:400}}>—</span>}</div>
           </div>
         )
+        const filas = [
+          ['Temporada', c.temporada],
+          ['Modelo', c.modelo],
+          ['Talle', c.talle],
+          ['Competición', c.competicion],
+          ['Estampado', c.estampado],
+          ['Parches', c.parches],
+          ['Ubicación', c.ubic],
+          ['Cantidad', c.cantidad ?? 1],
+        ]
         return (
           <div className="modal-backdrop" onClick={()=>setUtiDetalle(null)}>
-            <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:520,width:'96%'}}>
-              <div className="modal-header">
-                <div className="modal-title">
-                  {c.jugador || <span style={{fontStyle:'italic',color:'#aaa'}}>Sin asignar</span>}
-                  {c.numero && <span style={{marginLeft:8,fontFamily:'IBM Plex Mono,monospace',color:'#8a8a82'}}>#{c.numero}</span>}
+            <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:500,width:'96%',padding:0,overflow:'hidden'}}>
+              {/* Header negro */}
+              <div style={{background:'#121212',padding:'18px 20px',display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+                <div>
+                  <div style={{fontSize:10,fontWeight:700,color:'#f2cb12',letterSpacing:1.2,marginBottom:5}}>CAMISETA UTILERÍA</div>
+                  <div style={{fontSize:20,fontWeight:700,color:'#ffffff',lineHeight:1.1}}>
+                    {c.modelo||'—'}
+                    {c.temporada && <span style={{color:'#f2cb12',marginLeft:8,fontWeight:600,fontSize:16}}>{c.temporada}</span>}
+                  </div>
                 </div>
-                <button className="modal-close" onClick={()=>setUtiDetalle(null)}>×</button>
+                <button onClick={()=>setUtiDetalle(null)} style={{background:'none',border:'none',color:'#8a8a82',fontSize:24,cursor:'pointer',lineHeight:1,padding:0,marginTop:-2}}>×</button>
               </div>
-              <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:16}}>
+
+              <div style={{padding:'18px 20px',display:'flex',flexDirection:'column',gap:14}}>
+                {/* Fotos */}
                 {(c.photos||[]).length > 0 ? (
-                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(80px,1fr))',gap:8}}>
+                  <div style={{display:'grid',gridTemplateColumns:(c.photos||[]).length===1?'1fr':'repeat(2,1fr)',gap:8}}>
                     {c.photos.map((src,i) => (
-                      <img key={i} src={src} alt={`foto ${i+1}`} style={{width:'100%',aspectRatio:'1',objectFit:'cover',borderRadius:8,border:'1px solid #E0E0DA',cursor:'pointer'}}
+                      <img key={i} src={src} alt={`foto ${i+1}`} style={{width:'100%',aspectRatio:'4/3',objectFit:'cover',borderRadius:8,border:'1px solid #E0E0DA',cursor:'pointer'}}
                         onClick={()=>setPhotoPreview({photos:c.photos,idx:i})} />
                     ))}
                   </div>
                 ) : (
-                  <div style={{width:'100%',padding:'20px 0',textAlign:'center',color:'#C0C0BA',border:'1px dashed #E0E0DA',borderRadius:8,fontSize:13}}>Sin fotos</div>
+                  <div style={{width:'100%',padding:'18px 0',textAlign:'center',color:'#C0C0BA',border:'1px dashed #E0E0DA',borderRadius:8,fontSize:13}}>Sin fotos</div>
                 )}
-                <div style={{display:'flex',gap:8,alignItems:'center'}}>
-                  {c.tipo && <span style={{fontSize:11,fontWeight:700,background:c.tipo==='GOLERO'?'#EDF7F2':'#F0F0EC',color:c.tipo==='GOLERO'?'#2e9b5e':'#5a5a52',border:'1px solid '+(c.tipo==='GOLERO'?'#2e9b5e':'#D0D0CA'),borderRadius:5,padding:'3px 8px'}}>{c.tipo}</span>}
-                  {c.ubic && <span style={{fontSize:12,fontWeight:700,fontFamily:'IBM Plex Mono,monospace',background:'#121212',color:'#f2cb12',borderRadius:5,padding:'3px 9px'}}>{c.ubic}</span>}
+
+                {/* Jugador */}
+                <div style={{display:'flex',alignItems:'center',gap:14,background:'#F8F8F4',borderRadius:8,padding:'12px 14px',border:'1px solid #EBEBE5'}}>
+                  {c.numero
+                    ? <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:30,fontWeight:800,color:'#121212',lineHeight:1,minWidth:50}}># {c.numero}</div>
+                    : null}
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:15,fontWeight:700,color:'#1a1a1a',marginBottom:5}}>{c.jugador||<span style={{fontStyle:'italic',color:'#aaa',fontWeight:400}}>Sin asignar</span>}</div>
+                    <div style={{display:'flex',gap:6}}>
+                      {c.tipo && <span style={{fontSize:11,fontWeight:700,background:c.tipo==='GOLERO'?'#EDF7F2':'#EFEFEB',color:c.tipo==='GOLERO'?'#2e9b5e':'#5a5a52',border:'1px solid '+(c.tipo==='GOLERO'?'#2e9b5e':'#DEDED8'),borderRadius:4,padding:'2px 7px'}}>{c.tipo}</span>}
+                    </div>
+                  </div>
                 </div>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14}}>
-                  {campo('COMPETICIÓN', c.competicion)}
-                  {campo('TEMPORADA', c.temporada)}
-                  {campo('MODELO', c.modelo)}
-                  {campo('TALLE', c.talle)}
-                  {campo('CANTIDAD', c.cantidad ?? 1)}
-                  {campo('ESTAMPADO', c.estampado)}
-                  {campo('PARCHES', c.parches)}
+
+                {/* Datos */}
+                <div style={{border:'1px solid #EBEBE5',borderRadius:8,overflow:'hidden'}}>
+                  {filas.map(([label,val],i) => (
+                    <div key={i} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 14px',borderBottom:i<filas.length-1?'1px solid #F2F2EE':'none',background:i%2===0?'#ffffff':'#FAFAF8'}}>
+                      <span style={{fontSize:11,fontWeight:700,color:'#9a9a92',letterSpacing:.3}}>{label.toUpperCase()}</span>
+                      <span style={{fontSize:13,fontWeight:600,color:'#1a1a1a'}}>{val||<span style={{color:'#ccc',fontWeight:400}}>—</span>}</span>
+                    </div>
+                  ))}
                 </div>
+
+                {/* Observaciones */}
                 {c.detalle && (
-                  <div style={{borderTop:'1px dashed #E0E0DA',paddingTop:12}}>
-                    <div style={{fontSize:10,fontWeight:700,color:'#8a8a82',letterSpacing:.4,marginBottom:3}}>OBSERVACIONES</div>
-                    <div style={{fontSize:13,color:'#3a3a34',lineHeight:1.4}}>{c.detalle}</div>
+                  <div style={{background:'#FFFBEA',border:'1px solid #F0E08A',borderRadius:8,padding:'10px 14px'}}>
+                    <div style={{fontSize:10,fontWeight:700,color:'#9a7a10',letterSpacing:.5,marginBottom:4}}>OBSERVACIONES</div>
+                    <div style={{fontSize:13,color:'#3a3a34',lineHeight:1.5}}>{c.detalle}</div>
                   </div>
                 )}
               </div>
+
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={()=>setUtiDetalle(null)}>Cerrar</button>
                 {!isSoloVista && <button className="btn btn-dark" onClick={()=>{
@@ -5699,12 +5891,11 @@ tfoot td{padding:9px 12px;font-weight:700}
         // Agrupar por mes (clave MM/YYYY)
         const mesesMap = {}
         repsValidas.forEach(r => {
-          const p = (r.fechaPartido||r.fecha||'').split('/')
-          const key = p.length===3 ? p[1]+'/'+p[2] : (r.fechaPartido||r.fecha)||'?'
+          const key = cicloKey(r.fechaPartido||r.fecha||'') || '?'
           if (!mesesMap[key]) mesesMap[key] = []
           mesesMap[key].push(r)
         })
-        const mesActualKeyMod = (() => { const p = today().split('/'); return p[1]+'/'+p[2] })()
+        const mesActualKeyMod = cicloKey(today())
         if (!mesesMap[mesActualKeyMod]) mesesMap[mesActualKeyMod] = []
         const mesesOrdenados = Object.keys(mesesMap).sort((a,b)=>{
           const [ma,ya] = a.split('/').map(Number)
@@ -5715,7 +5906,7 @@ tfoot td{padding:9px 12px;font-weight:700}
 
         const calcMesAdmin = mesKey => {
           const repsDelMes = mesesMap[mesKey] || []
-          const extrasDelMes = (db.descExtras||[]).filter(e => { const p=e.fecha.split('/'); return p.length===3&&p[1]+'/'+p[2]===mesKey })
+          const extrasDelMes = (db.descExtras||[]).filter(e => cicloKey(e.fecha)===mesKey)
           const jugMapMes = {}
           ;(db.plantel||[]).filter(p=>p.nombre?.trim().toLowerCase()!=='libre').forEach(p => {
             jugMapMes[p.nombre.trim()] = {numero:p.numero||'—', nombre:p.nombre.trim()}
@@ -5737,12 +5928,10 @@ tfoot td{padding:9px 12px;font-weight:700}
         }
 
         const {filas: filasAdmin, totCam: totCamAdmin, totSht: totShtAdmin, totExtras: totExtrasAdmin, totDesc: totDescAdmin} = mesMostradoAdmin ? calcMesAdmin(mesMostradoAdmin) : {filas:[],totCam:0,totSht:0,totExtras:0,totDesc:0}
-        const [mmAdmin, yyyyAdmin] = (mesMostradoAdmin||'').split('/')
-        const mesNombreMod = mesMostradoAdmin ? `${MESES_ES[Number(mmAdmin)]||mmAdmin} ${yyyyAdmin}` : ''
+        const mesNombreMod = mesMostradoAdmin ? cicloLabel(mesMostradoAdmin) : ''
 
         const datosPorMes = mesesOrdenados.map(mesKey => {
-          const [mm, yyyy] = mesKey.split('/')
-          const mesNombre = `${MESES_ES[Number(mm)]||mm} ${yyyy}`
+          const mesNombre = cicloLabel(mesKey)
           const {filas, totCam, totSht, totExtras, totDesc} = calcMesAdmin(mesKey)
           return {mesKey, mesNombre, filas, totCam, totSht, totExtras, totDesc}
         })
@@ -5750,50 +5939,91 @@ tfoot td{padding:9px 12px;font-weight:700}
         const exportResumenExcel = async () => {
           const wb = new ExcelJS.Workbook()
           const YELLOW   = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
-          const FILL_SUB = {type:'pattern',pattern:'solid',fgColor:{argb:'FFF5F2E8'}}
+          const GRAY_H   = {type:'pattern',pattern:'solid',fgColor:{argb:'FFD9D9D9'}}
+          const DARK     = {type:'pattern',pattern:'solid',fgColor:{argb:'FF121212'}}
           const FILL_WHT = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFFFF'}}
-          const FILL_GRAY= {type:'pattern',pattern:'solid',fgColor:{argb:'FFD9D9D9'}}
-          const F_BOLD   = {name:'Calibri',size:11,bold:true}
-          const F_NORM   = {name:'Calibri',size:11}
-          const CENTER   = {horizontal:'center',vertical:'middle'}
-          const BORDER   = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
+          const FILL_ALT = {type:'pattern',pattern:'solid',fgColor:{argb:'FFF9F9F7'}}
+          const FILL_DESC= {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFF2CC'}}
           const MONEY_FMT = '"$" #,##0'
-          const style = (cell,fill,font) => { cell.fill=fill; cell.font=font; cell.alignment=CENTER; cell.border=BORDER }
-
-          datosPorMes.forEach(({mesNombre, filas, totDesc}) => {
-            const nombreHoja = mesNombre.replace(/[\\/:*?"<>|[\]]/g,'-').slice(0,31) || 'Mes'
+          const F_BOLD   = {name:'Calibri',size:10,bold:true}
+          const F_NORM   = {name:'Calibri',size:10}
+          const F_WITE   = {name:'Calibri',size:10,bold:true,color:{argb:'FFFFFFFF'}}
+          const F_YWHI   = {name:'Calibri',size:10,bold:true,color:{argb:'FFFFD966'}}
+          const CENTER   = {horizontal:'center',vertical:'middle'}
+          const LEFT     = {horizontal:'left',vertical:'middle'}
+          const BORDER   = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
+          const s = (cell,fill,font,align) => { cell.fill=fill; cell.font=font; cell.alignment=align||CENTER; cell.border=BORDER }
+          ;[{mesKey:mesMostradoAdmin,mesNombre:mesNombreMod,filas:filasAdmin}].forEach(({mesKey, mesNombre, filas}) => {
+            const reps = (mesesMap[mesKey]||[]).slice().sort((a,b)=>{
+              const toD = str => { const p=(str||'').split('/'); return p.length===3?new Date(`${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`):new Date(0) }
+              return toD(a.fechaPartido||a.fecha)-toD(b.fechaPartido||b.fecha)
+            })
+            const nombreHoja = mesNombre.replace(/[\\/:*?"<>|[\]]/g,'-').slice(0,31)||'Mes'
             const ws = wb.addWorksheet(nombreHoja)
-            ws.columns = [{width:8.5},{width:24},{width:13},{width:10},{width:13},{width:13}]
-
-            ws.mergeCells('A1:F1')
-            style(ws.getCell('A1'), YELLOW, F_BOLD); ws.getCell('A1').value = mesNombre.toUpperCase(); ws.getRow(1).height = 20
-
-            ;['Nº','JUGADOR','CAMISETAS','SHORTS','EXTRAS','DESCUENTO'].forEach((h,i) => {
-              const c = ws.getRow(2).getCell(i+1); style(c, YELLOW, F_BOLD); c.value = h
+            const totalCols = 2 + reps.length*2 + 2
+            ws.columns = [{width:7},{width:24},...reps.flatMap(()=>[{width:11},{width:9}]),{width:12},{width:13}]
+            // Fila 1: título mes
+            ws.mergeCells(1,1,1,totalCols)
+            const tCell=ws.getCell(1,1); tCell.value=mesNombre.toUpperCase(); s(tCell,DARK,F_YWHI)
+            ws.getRow(1).height=20
+            // Cabeceras fusionadas: JUGADOR (A2:B4), EXTRAS (K2:K4), DESCUENTO TOTAL (L2:L4)
+            ws.mergeCells(2,1,4,2)
+            const jugCell=ws.getCell(2,1); jugCell.value='JUGADOR'; s(jugCell,YELLOW,F_BOLD,LEFT)
+            ws.mergeCells(2,totalCols-1,4,totalCols-1)
+            const extCell=ws.getCell(2,totalCols-1); extCell.value='EXTRAS'; s(extCell,YELLOW,F_BOLD)
+            ws.mergeCells(2,totalCols,4,totalCols)
+            const dHCell=ws.getCell(2,totalCols); dHCell.value='DESCUENTO TOTAL'; s(dHCell,YELLOW,F_BOLD); dHCell.alignment={horizontal:'center',vertical:'middle',wrapText:true}
+            // Fila 2: fechas (por partido)
+            reps.forEach((rep,i)=>{
+              const col=3+i*2
+              ws.mergeCells(2,col,2,col+1)
+              const c=ws.getCell(2,col); c.value=rep.fechaPartido||rep.fecha||'—'; s(c,YELLOW,F_BOLD)
             })
-            ws.getRow(2).height = 20
-
-            filas.forEach((f,idx) => {
-              const r = ws.getRow(idx+3)
-              r.height = 18
-              ;[f.numero||'—', f.nombre, f.cam||0, f.sht||0, f.extras||0, f.desc||0].forEach((v,i) => {
-                const c = r.getCell(i+1); style(c, i===5?FILL_GRAY:FILL_WHT, i===5?F_BOLD:F_NORM); c.value = v
-                if (i===4||i===5) c.numFmt = MONEY_FMT
+            ws.getRow(2).height=18
+            // Fila 3: rivales (por partido)
+            reps.forEach((rep,i)=>{
+              const col=3+i*2
+              ws.mergeCells(3,col,3,col+1)
+              const rival=(rep.concepto||'').replace(/^Reposici[oó]n\.?\s*(vs\.?\s*)?/i,'').trim()||rep.torneo||'—'
+              const c=ws.getCell(3,col); c.value=rival; s(c,YELLOW,F_BOLD)
+            })
+            ws.getRow(3).height=18
+            // Fila 4: CAMISETA/SHORT (por partido)
+            reps.forEach((_,i)=>{
+              ;['CAMISETA','SHORT'].forEach((h,j)=>{ const c=ws.getCell(4,3+i*2+j); c.value=h; s(c,YELLOW,F_BOLD) })
+            })
+            ws.getRow(4).height=18
+            // Solo jugadores con descuentos reales
+            const filasExcel=filas.filter(f=>f.desc>0)
+            filasExcel.forEach((f,rowIdx)=>{
+              const r=ws.getRow(rowIdx+5); r.height=16
+              const fill=rowIdx%2===0?FILL_WHT:FILL_ALT
+              const c1=r.getCell(1); c1.value=f.numero||'—'; s(c1,fill,F_NORM)
+              const c2=r.getCell(2); c2.value=f.nombre; s(c2,fill,F_NORM,LEFT)
+              reps.forEach((rep,i)=>{
+                const jj=(rep.jugadores||[]).find(x=>x.nombre===f.nombre)
+                const dc=jj?(jj.descuentoCamiseta!==undefined?jj.descuentoCamiseta!==false:jj.descuento!==false):false
+                const ds=jj?(jj.descuentoShort!==undefined?jj.descuentoShort!==false:jj.descuento!==false):false
+                const cam=(jj&&dc)?Number(jj.cantCamiseta)||0:0
+                const sht=(jj&&ds)?Number(jj.cantShort)||0:0
+                const cCam=r.getCell(3+i*2); cCam.value=cam||''; s(cCam,fill,F_NORM)
+                const cSht=r.getCell(4+i*2); cSht.value=sht||''; s(cSht,fill,F_NORM)
               })
+              const cExt=r.getCell(totalCols-1); cExt.value=f.extras||0; cExt.numFmt=MONEY_FMT; s(cExt,fill,F_NORM)
+              const cDesc=r.getCell(totalCols); cDesc.value=f.desc||0; cDesc.numFmt=MONEY_FMT; s(cDesc,FILL_DESC,F_BOLD)
             })
-
-            const totN = filas.length + 3
-            ws.mergeCells(`A${totN}:E${totN}`)
-            ws.getRow(totN).height = 20
-            style(ws.getRow(totN).getCell(1), FILL_SUB, F_BOLD); ws.getRow(totN).getCell(1).value = 'TOTAL DESCUENTOS'
-            const totCell = ws.getRow(totN).getCell(6)
-            style(totCell, FILL_SUB, F_BOLD); totCell.value = totDesc; totCell.numFmt = MONEY_FMT
+            // Total
+            const totN=filasExcel.length+5
+            ws.mergeCells(totN,1,totN,totalCols-1)
+            const tR=ws.getRow(totN); tR.height=20
+            const tcell=tR.getCell(1); tcell.value='TOTAL DESCUENTOS'; s(tcell,DARK,F_YWHI)
+            const tDesc=filasExcel.reduce((sum,f)=>sum+f.desc,0)
+            const tdCell=tR.getCell(totalCols); tdCell.value=tDesc; tdCell.numFmt=MONEY_FMT; s(tdCell,DARK,F_YWHI)
           })
-
           const buf = await wb.xlsx.writeBuffer()
           const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
           const url = URL.createObjectURL(blob)
-          const a = document.createElement('a'); a.href=url; a.download='descuentos-mensuales-peniarol.xlsx'; a.click()
+          const a = document.createElement('a'); a.href=url; a.download=`Descuentos ${mesNombreMod.replace(/\s+\d{4}$/,'').replace(/\s*-\s*/,'-')}.xlsx`; a.click()
           URL.revokeObjectURL(url)
         }
 
@@ -5811,8 +6041,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                     {mesesOrdenados.length > 1 && (
                       <div style={{display:'flex',gap:6,flexWrap:'wrap',padding:'10px 16px',borderBottom:'1px solid #ECECE8',background:'#F8F8F4'}}>
                         {mesesOrdenados.map(key => {
-                          const [mm,yyyy] = key.split('/')
-                          const label = `${MESES_ES[Number(mm)]||mm} ${yyyy}`
+                          const label = cicloLabel(key)
                           const activo = key === mesMostradoAdmin
                           return (
                             <button key={key} onClick={e=>{e.stopPropagation();setResumenMesSel(key)}}
