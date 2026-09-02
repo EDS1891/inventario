@@ -232,7 +232,7 @@ export default function App() {
   const [utiForm, setUtiForm] = useState({ tipo:'', competicion:'', numero:'', jugador:'', talle:'S', modelo:'', estampado:'', parches:'', detalle:'', temporada:'', cantidad:1, utiEstante:'1', utiAltura:'A', photos:[], id:null })
   const [utiModal, setUtiModal] = useState(false)
   const [utiDetalle, setUtiDetalle] = useState(null)
-  const [repForm, setRepForm] = useState({ editId:null, concepto:'', descuento:true, rows:[], fechaPartido:'' })
+  const [repForm, setRepForm] = useState({ editId:null, concepto:'', descuento:true, rows:[], extraRows:[], fechaPartido:'' })
   const [repModal, setRepModal] = useState(false)
   const [repDetail, setRepDetail] = useState(null)
   const [repResumen, setRepResumen] = useState(null)
@@ -1023,11 +1023,13 @@ ${rowsHtml}
     ws.columns = headers.map((h,i) => ({header:h, width: i===2?32 : i===4?10 : i<5?14 : 7}))
     ws.getRow(1).eachCell(cell => { cell.fill=YELLOW; cell.font=F_BOLD; cell.border=BORDER; cell.alignment={horizontal:'center',vertical:'middle'} })
     ws.getRow(1).height = 20
-    const sorted = [...articles].sort((a, b) => {
-      const pu = u => { if(!u||u==='—') return {n:Infinity,l:''}; const m=u.match(/^(\d+)(.*)/); return m?{n:parseInt(m[1],10),l:m[2]}:{n:Infinity,l:u} }
-      const ua=pu(a.ubic), ub=pu(b.ubic)
-      return ua.n!==ub.n ? ua.n-ub.n : ua.l.localeCompare(ub.l)
-    })
+    const sorted = [...articles]
+      .filter(a => !filterUbic || (a.ubic||'') === filterUbic)
+      .sort((a, b) => {
+        const pu = u => { if(!u||u==='—') return {n:Infinity,l:''}; const m=u.match(/^(\d+)(.*)/); return m?{n:parseInt(m[1],10),l:m[2]}:{n:Infinity,l:u} }
+        const ua=pu(a.ubic), ub=pu(b.ubic)
+        return ua.n!==ub.n ? ua.n-ub.n : ua.l.localeCompare(ub.l)
+      })
     sorted.forEach(a => {
       const vals = [a.ubic||'—', a.code, a.name, a.cat, a.precio||0]
       TALLE_ORDER.forEach(t => { const sz=a.sizes.find(s=>s.talle===t); vals.push(sz?sz.qty:'') })
@@ -1038,7 +1040,7 @@ ${rowsHtml}
     const buf = await wb.xlsx.writeBuffer()
     const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
     const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href=url; a.download='stock-deposito-peniarol.xlsx'; a.click()
+    const a = document.createElement('a'); a.href=url; a.download=filterUbic?`stock-ubicacion-${filterUbic}.xlsx`:'stock-deposito-peniarol.xlsx'; a.click()
     URL.revokeObjectURL(url)
   }
   const exportProductoExcel = async () => {
@@ -1481,18 +1483,32 @@ ${rowsHtml}
       fechaPartido:'',
       tipoCamisetaJugador: REP_TIPOS_JUGADOR[0],
       tipoCamisetaGolero: REP_TIPOS_GOLERO[0],
-      rows:(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j=>({...j,cantCamiseta:'',cantShort:'',descuentoCamiseta:true,descuentoShort:true}))
+      rows:(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j=>({...j,cantCamiseta:'',cantShort:'',descuentoCamiseta:true,descuentoShort:true})),
+      extraRows:[]
     })
     setRepModal(true)
   }
   const openRepEdit = (rep) => {
-    const plantelRows = (db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j => {
-      const ex = (rep.jugadores||[]).find(jj => jj.nombre===j.nombre)
+    const plantel = (db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0))
+    const matchedIdx = new Set()
+    const plantelRows = plantel.map(j => {
+      const idx = (rep.jugadores||[]).findIndex(jj => jj.nombre===j.nombre || (j.numero && String(jj.numero)===String(j.numero)))
+      if (idx >= 0) matchedIdx.add(idx)
+      const ex = idx >= 0 ? rep.jugadores[idx] : null
       const descFallback = ex ? ex.descuento !== false : true
       return { ...j, cantCamiseta: ex ? String(ex.cantCamiseta) : '', cantShort: ex ? String(ex.cantShort) : '',
         descuentoCamiseta: ex ? (ex.descuentoCamiseta !== undefined ? ex.descuentoCamiseta !== false : descFallback) : true,
         descuentoShort: ex ? (ex.descuentoShort !== undefined ? ex.descuentoShort !== false : descFallback) : true }
     })
+    const extraRows = (rep.jugadores||[])
+      .map((jj,idx) => ({jj,idx}))
+      .filter(({idx}) => !matchedIdx.has(idx))
+      .map(({jj}) => ({
+        numero:String(jj.numero||''), nombre:jj.nombre||'',
+        talleCamiseta:jj.talleCamiseta||'L', talleShort:jj.talleShort||'L',
+        cantCamiseta:String(jj.cantCamiseta||''), cantShort:String(jj.cantShort||''),
+        descuentoCamiseta:jj.descuentoCamiseta !== false, descuentoShort:jj.descuentoShort !== false
+      }))
     setRepForm({
       editId: rep.id,
       concepto: rep.concepto,
@@ -1502,7 +1518,8 @@ ${rowsHtml}
       fechaPartido: rep.fechaPartido || '',
       tipoCamisetaJugador: rep.tipoCamisetaJugador || REP_TIPOS_JUGADOR[0],
       tipoCamisetaGolero: rep.tipoCamisetaGolero || REP_TIPOS_GOLERO[0],
-      rows: plantelRows
+      rows: plantelRows,
+      extraRows
     })
     setRepDetail(null)
     setRepModal(true)
@@ -1518,7 +1535,17 @@ ${rowsHtml}
           descuentoCamiseta:r.descuentoCamiseta !== false, descuentoShort:r.descuentoShort !== false,
           tipoCamiseta: tipo, cantCamiseta:Number(r.cantCamiseta)||0, cantShort:Number(r.cantShort)||0 }
       })
-    if (!jugadores.length) { showToast('Ingresá al menos una cantidad.'); return }
+    const extraJugadores = (repForm.extraRows||[])
+      .filter(r => Number(r.cantCamiseta)>0 || Number(r.cantShort)>0)
+      .map(r => ({
+        numero:r.numero||'—', nombre:r.nombre||'', posicion:'Jugador',
+        talleCamiseta:r.talleCamiseta||'L', talleShort:r.talleShort||'L',
+        descuentoCamiseta:r.descuentoCamiseta !== false, descuentoShort:r.descuentoShort !== false,
+        tipoCamiseta:repForm.tipoCamisetaJugador,
+        cantCamiseta:Number(r.cantCamiseta)||0, cantShort:Number(r.cantShort)||0
+      }))
+    const allJugadores = [...jugadores, ...extraJugadores]
+    if (!allJugadores.length) { showToast('Ingresá al menos una cantidad.'); return }
     const tieneFecha = TORNEOS_CON_FECHA.includes(repForm.torneo)
     const notifica = currentUser?.role === 'receptor_reposiciones'
     const pushAlerta = (s, tipo, concepto, detalle) => notifica
@@ -1531,10 +1558,10 @@ ${rowsHtml}
         if (oldRep && oldRep.concepto !== repForm.concepto.trim()) cambios.push('cambió el nombre')
         if (oldRep && oldRep.torneo !== repForm.torneo) cambios.push(`cambió el torneo a ${repForm.torneo}`)
         if (oldRep) {
-          const diffCount = jugadores.filter(j => {
+          const diffCount = allJugadores.filter(j => {
             const old = (oldRep.jugadores||[]).find(x => x.nombre === j.nombre)
             return !old || old.cantCamiseta !== j.cantCamiseta || old.cantShort !== j.cantShort
-          }).length + (oldRep.jugadores||[]).filter(j => !jugadores.find(x => x.nombre === j.nombre)).length
+          }).length + (oldRep.jugadores||[]).filter(j => !allJugadores.find(x => x.nombre === j.nombre)).length
           if (diffCount > 0) cambios.push(`modificó cantidades de ${diffCount} jugador${diffCount !== 1 ? 'es' : ''}`)
         }
         const detalle = cambios.length > 0 ? cambios.join(', ') : null
@@ -1544,7 +1571,7 @@ ${rowsHtml}
             ? {...r, concepto:repForm.concepto.trim(), torneo:repForm.torneo, descuento:repForm.descuento,
                 fechaTorneo: tieneFecha ? (repForm.fechaTorneo === 'Final' ? 'Final' : Number(repForm.fechaTorneo)) : null,
                 fechaPartido: repForm.fechaPartido||null,
-                tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores}
+                tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores:allJugadores}
             : r),
           repoAlertas: pushAlerta(s, 'editar', repForm.concepto.trim(), detalle)
         }
@@ -1555,7 +1582,7 @@ ${rowsHtml}
         const rep = { id:s.nextRep, fecha:today(), concepto:repForm.concepto.trim(), creadoPor:currentUser?.displayName||session,
           torneo:repForm.torneo, fechaTorneo: tieneFecha ? (repForm.fechaTorneo === 'Final' ? 'Final' : Number(repForm.fechaTorneo)) : null, descuento:repForm.descuento,
           fechaPartido: repForm.fechaPartido||null,
-          tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores }
+          tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores:allJugadores }
         return { ...s, reposiciones:[rep,...(s.reposiciones||[])], nextRep:s.nextRep+1, repoAlertas: pushAlerta(s, 'crear', rep.concepto, null) }
       })
       showToast('Reposición registrada.')
@@ -2229,14 +2256,12 @@ tfoot td{padding:9px 12px;font-weight:700}
               const totalShorts   = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
               const totalExtras   = (db.descExtras||[]).reduce((acc,e)=>acc+(e.cantidad||1),0)
               const totalDinero   = totalEquipos * PRECIO_CAMISETA + totalShorts * PRECIO_SHORT
-              const mesActualKey  = (() => { const p = today().split('/'); return p[1]+'/'+p[2] })()
-              const repsDelMesActual = (db.reposiciones||[]).filter(r => {
-                const p = (r.fechaPartido||r.fecha||'').split('/')
-                return p.length===3 && p[1]+'/'+p[2] === mesActualKey
-              })
+              const mesActualKey  = cicloKey(today())
+              const repsDelMesActual = (db.reposiciones||[]).filter(r => cicloKey(r.fechaPartido||r.fecha||'') === mesActualKey)
               const totalEquiposMes = repsDelMesActual.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
               const totalShortsMes  = repsDelMesActual.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
-              const totalExtrasMes  = (db.descExtras||[]).filter(e=>{ const p=e.fecha.split('/'); return p.length===3&&p[1]+'/'+p[2]===mesActualKey }).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
+              const totalExtrasCountMes = (db.descExtras||[]).filter(e=>cicloKey(e.fecha)===mesActualKey).reduce((acc,e)=>acc+(e.cantidad||1),0)
+              const totalExtrasMes  = (db.descExtras||[]).filter(e=>cicloKey(e.fecha)===mesActualKey).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
               const totalDineroMes  = totalEquiposMes * PRECIO_CAMISETA + totalShortsMes * PRECIO_SHORT + totalExtrasMes
               return (
                 <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
@@ -2248,10 +2273,10 @@ tfoot td{padding:9px 12px;font-weight:700}
                   <div className="kpi-card" style={{alignSelf:'flex-start',cursor:'pointer',background:'#D6D6D0',border:'1px solid #121212'}} onClick={()=>setRepResumen('ambos')}>
                     <div className="kpi-label">INDUMENTARIA A DESCONTAR {['','ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'][Number(mesActualKey.split('/')[0])]}</div>
                     <div style={{display:'flex',alignItems:'flex-end',gap:24,marginTop:6}}>
-                      <div><div className="kpi-value">{totalEquipos}</div><div className="kpi-sub">camisetas →</div></div>
+                      <div><div className="kpi-value">{totalEquiposMes}</div><div className="kpi-sub">camisetas →</div></div>
                       <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/>
-                      <div><div className="kpi-value">{totalShorts}</div><div className="kpi-sub">shorts →</div></div>
-                      <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/><div><div className="kpi-value">{totalExtras}</div><div className="kpi-sub">extras →</div></div>
+                      <div><div className="kpi-value">{totalShortsMes}</div><div className="kpi-sub">shorts →</div></div>
+                      <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/><div><div className="kpi-value">{totalExtrasCountMes}</div><div className="kpi-sub">extras →</div></div>
                     </div>
                   </div>
                   <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#f2cb12'}} onClick={()=>{ setResumenMesSel(mesActualKey); setRepResumen('ambos') }}>
@@ -2620,13 +2645,11 @@ tfoot td{padding:9px 12px;font-weight:700}
                     </select>
                   </div>
                 </div>
-                {/* Fecha Partido — solo para reposiciones con descuento cross-mes */}
-                {/reposici[oó]n/i.test(repForm.concepto) && (
+                {/* Fecha Partido — siempre visible */}
                 <div className="form-group" style={{marginTop:10}}>
                   <label className="field-label">Fecha Partido <span style={{fontWeight:400,color:'#8a8a82'}}>(DD/MM/YYYY — opcional, define el mes para descuentos)</span></label>
                   <input className="field-input" value={repForm.fechaPartido||''} onChange={e=>setRepForm(p=>({...p,fechaPartido:e.target.value}))} placeholder="Ej. 31/07/2025" style={{maxWidth:160}} />
                 </div>
-                )}
                 {/* Selector de tipo de camiseta — uno por posición */}
                 <div style={{display:'flex',gap:16,marginTop:14}}>
                   <div style={{flex:1}}>
@@ -2700,6 +2723,53 @@ tfoot td{padding:9px 12px;font-weight:700}
                       </div>
                     )
                   })}
+                </div>
+                {/* Camisetas adicionales (juveniles / números no fijos) */}
+                <div style={{marginTop:16,borderTop:'1px dashed #E0E0D8',paddingTop:12}}>
+                  <div style={{fontSize:10,fontWeight:700,color:'#8a8a82',letterSpacing:'.05em',marginBottom:8}}>CAMISETAS ADICIONALES</div>
+                  {(repForm.extraRows||[]).map((r,i) => {
+                    const hasQty = Number(r.cantCamiseta)>0 || Number(r.cantShort)>0
+                    const dcam = r.descuentoCamiseta !== false
+                    const dsht = r.descuentoShort !== false
+                    const upd = (field,val) => setRepForm(p=>({...p,extraRows:p.extraRows.map((x,ix)=>ix===i?{...x,[field]:val}:x)}))
+                    const tog = (field) => upd(field, !r[field])
+                    const rem = () => setRepForm(p=>({...p,extraRows:p.extraRows.filter((_,ix)=>ix!==i)}))
+                    return (
+                      <div key={i} style={{display:'grid',gridTemplateColumns:'46px 1fr 54px 52px 36px 54px 52px 36px 24px',gap:4,marginBottom:4,alignItems:'center',padding:'5px 6px',borderRadius:6,
+                        background:hasQty?'#FFFDF0':'#F9F9F6',border:hasQty?'1px solid #f2cb12':'1px solid #E8E8E0'}}>
+                        <input className="field-input mono" value={r.numero} onChange={e=>upd('numero',e.target.value)}
+                          placeholder="Nº" style={{textAlign:'center',padding:'5px 2px',fontWeight:700}} />
+                        <input className="field-input" value={r.nombre} onChange={e=>upd('nombre',e.target.value)}
+                          placeholder="Nombre (opcional)" style={{padding:'5px 6px',fontSize:12}} />
+                        <select className="field-input" value={r.talleCamiseta} onChange={e=>upd('talleCamiseta',e.target.value)} style={{padding:'5px 2px',fontSize:11}}>
+                          {[...TALLES_ADULTO,...TALLES_NINO].map(t=><option key={t} value={t}>{t}</option>)}
+                        </select>
+                        <input className="field-input mono" type="number" min="0" value={r.cantCamiseta} onChange={e=>upd('cantCamiseta',e.target.value)}
+                          placeholder="0" style={{textAlign:'center',padding:'5px 2px'}} />
+                        <button type="button" onClick={()=>tog('descuentoCamiseta')}
+                          style={{padding:'4px 2px',borderRadius:5,border:'2px solid',fontWeight:700,fontSize:10,cursor:'pointer',width:'100%',
+                            borderColor:dcam?'#2d6a4f':'#ccc',background:dcam?'#d8f3dc':'#f5f5f5',color:dcam?'#1b4332':'#999'}}>
+                          {dcam?'SÍ':'NO'}
+                        </button>
+                        <select className="field-input" value={r.talleShort} onChange={e=>upd('talleShort',e.target.value)} style={{padding:'5px 2px',fontSize:11}}>
+                          {[...TALLES_ADULTO,...TALLES_NINO].map(t=><option key={t} value={t}>{t}</option>)}
+                        </select>
+                        <input className="field-input mono" type="number" min="0" value={r.cantShort} onChange={e=>upd('cantShort',e.target.value)}
+                          placeholder="0" style={{textAlign:'center',padding:'5px 2px'}} />
+                        <button type="button" onClick={()=>tog('descuentoShort')}
+                          style={{padding:'4px 2px',borderRadius:5,border:'2px solid',fontWeight:700,fontSize:10,cursor:'pointer',width:'100%',
+                            borderColor:dsht?'#2d6a4f':'#ccc',background:dsht?'#d8f3dc':'#f5f5f5',color:dsht?'#1b4332':'#999'}}>
+                          {dsht?'SÍ':'NO'}
+                        </button>
+                        <button type="button" onClick={rem} style={{padding:'4px',border:'none',background:'none',cursor:'pointer',color:'#C00',fontSize:18,lineHeight:1,textAlign:'center'}}>×</button>
+                      </div>
+                    )
+                  })}
+                  <button type="button"
+                    onClick={()=>setRepForm(p=>({...p,extraRows:[...(p.extraRows||[]),{numero:'',nombre:'',talleCamiseta:'L',talleShort:'L',cantCamiseta:'',cantShort:'',descuentoCamiseta:true,descuentoShort:true}]}))}
+                    style={{marginTop:4,padding:'7px 14px',borderRadius:6,border:'1px dashed #C0C0B8',background:'transparent',color:'#666',fontSize:12,cursor:'pointer',fontWeight:600}}>
+                    + Agregar camiseta
+                  </button>
                 </div>
               </div>
               <div className="modal-footer">
@@ -4480,12 +4550,13 @@ tfoot td{padding:9px 12px;font-weight:700}
                   const totalDinero  = totalEquipos * PRECIO_CAMISETA + totalShorts * PRECIO_SHORT
                   const totalCamTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
                   const totalShtTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
-                  const mesActualKeyAdmin = (() => { const p = today().split('/'); return p[1]+'/'+p[2] })()
+                  const mesActualKeyAdmin = cicloKey(today())
                   const mesNombreAdmin = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][Number(mesActualKeyAdmin.split('/')[0])]
-                  const repsDelMesAdmin = (db.reposiciones||[]).filter(r => { const p=(r.fechaPartido||r.fecha||'').split('/'); return p.length===3&&p[1]+'/'+p[2]===mesActualKeyAdmin })
+                  const repsDelMesAdmin = (db.reposiciones||[]).filter(r => cicloKey(r.fechaPartido||r.fecha||'') === mesActualKeyAdmin)
                   const totalEquiposMesAdmin = repsDelMesAdmin.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
                   const totalShortsMesAdmin  = repsDelMesAdmin.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
-                  const totalExtrasMesAdmin  = (db.descExtras||[]).filter(e=>{ const p=e.fecha.split('/'); return p.length===3&&p[1]+'/'+p[2]===mesActualKeyAdmin }).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
+                  const totalExtrasCountMesAdmin = (db.descExtras||[]).filter(e=>cicloKey(e.fecha)===mesActualKeyAdmin).reduce((acc,e)=>acc+(e.cantidad||1),0)
+                  const totalExtrasMesAdmin  = (db.descExtras||[]).filter(e=>cicloKey(e.fecha)===mesActualKeyAdmin).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
                   const totalDineroMesAdmin  = totalEquiposMesAdmin * PRECIO_CAMISETA + totalShortsMesAdmin * PRECIO_SHORT + totalExtrasMesAdmin
                   return (
                     <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
@@ -4508,15 +4579,15 @@ tfoot td{padding:9px 12px;font-weight:700}
                         <div className="kpi-label">INDUMENTARIA A DESCONTAR {mesNombreAdmin.toUpperCase()}</div>
                         <div style={{display:'flex',alignItems:'flex-end',gap:24,marginTop:6}}>
                           <div>
-                            <div className="kpi-value">{totalEquipos}</div>
+                            <div className="kpi-value">{totalEquiposMesAdmin}</div>
                             <div className="kpi-sub">camisetas →</div>
                           </div>
                           <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/>
                           <div>
-                            <div className="kpi-value">{totalShorts}</div>
+                            <div className="kpi-value">{totalShortsMesAdmin}</div>
                             <div className="kpi-sub">shorts →</div>
                           </div>
-                          <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/><div><div className="kpi-value">{totalExtras}</div><div className="kpi-sub">extras →</div></div>
+                          <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/><div><div className="kpi-value">{totalExtrasCountMesAdmin}</div><div className="kpi-sub">extras →</div></div>
                         </div>
                       </div>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#f2cb12'}} onClick={()=>{ setResumenMesSel(mesActualKeyAdmin); setRepResumen('ambos') }}>
@@ -4610,12 +4681,13 @@ tfoot td{padding:9px 12px;font-weight:700}
                   const totalExtras  = (db.descExtras||[]).reduce((acc,e)=>acc+(e.cantidad||1),0)
                   const totalCamTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
                   const totalShtTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
-                  const mesActualKeyAdmin = (() => { const p = today().split('/'); return p[1]+'/'+p[2] })()
+                  const mesActualKeyAdmin = cicloKey(today())
                   const mesNombreAdmin = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][Number(mesActualKeyAdmin.split('/')[0])]
-                  const repsDelMesAdmin = (db.reposiciones||[]).filter(r => { const p=(r.fechaPartido||r.fecha||'').split('/'); return p.length===3&&p[1]+'/'+p[2]===mesActualKeyAdmin })
+                  const repsDelMesAdmin = (db.reposiciones||[]).filter(r => cicloKey(r.fechaPartido||r.fecha||'') === mesActualKeyAdmin)
                   const totalEquiposMesAdmin = repsDelMesAdmin.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
                   const totalShortsMesAdmin  = repsDelMesAdmin.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
-                  const totalExtrasMesAdmin  = (db.descExtras||[]).filter(e=>{ const p=e.fecha.split('/'); return p.length===3&&p[1]+'/'+p[2]===mesActualKeyAdmin }).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
+                  const totalExtrasCountMesAdmin = (db.descExtras||[]).filter(e=>cicloKey(e.fecha)===mesActualKeyAdmin).reduce((acc,e)=>acc+(e.cantidad||1),0)
+                  const totalExtrasMesAdmin  = (db.descExtras||[]).filter(e=>cicloKey(e.fecha)===mesActualKeyAdmin).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
                   const totalDineroMesAdmin  = totalEquiposMesAdmin * PRECIO_CAMISETA + totalShortsMesAdmin * PRECIO_SHORT + totalExtrasMesAdmin
                   return (
                 <div style={{display:'flex',flexDirection:'column',gap:12}}>
@@ -4862,7 +4934,7 @@ tfoot td{padding:9px 12px;font-weight:700}
         const j = (db.plantel||[]).find(x => x.id === selectedPlantelId)
         if (!j) return null
         const reps = (db.reposiciones||[])
-          .filter(r => (r.jugadores||[]).some(jj => jj.nombre === j.nombre))
+          .filter(r => (r.jugadores||[]).some(jj => jj.nombre === j.nombre || (j.numero && String(jj.numero) === String(j.numero))))
           .sort((a,b) => (b.fecha||'').localeCompare(a.fecha||''))
         return (
           <div className="modal-backdrop" onClick={() => setSelectedPlantelId(null)}>
@@ -4893,7 +4965,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                       </div>
                     </div>
                     {reps.map(r => {
-                      const jj = (r.jugadores||[]).find(x => x.nombre === j.nombre)
+                      const jj = (r.jugadores||[]).find(x => x.nombre === j.nombre || (j.numero && String(x.numero) === String(j.numero)))
                       if (!jj) return null
                       const dc = jj.descuentoCamiseta !== undefined ? jj.descuentoCamiseta !== false : jj.descuento !== false
                       const ds = jj.descuentoShort !== undefined ? jj.descuentoShort !== false : jj.descuento !== false
@@ -5355,13 +5427,11 @@ tfoot td{padding:9px 12px;font-weight:700}
                   </select>
                 </div>
               </div>
-              {/* Fecha Partido — solo para reposiciones con descuento cross-mes */}
-              {/reposici[oó]n/i.test(repForm.concepto) && (
+              {/* Fecha Partido — siempre visible */}
               <div className="form-group" style={{marginTop:10}}>
                 <label className="field-label">Fecha Partido <span style={{fontWeight:400,color:'#8a8a82'}}>(DD/MM/YYYY — opcional, define el mes para descuentos)</span></label>
                 <input className="field-input" value={repForm.fechaPartido||''} onChange={e=>setRepForm(p=>({...p,fechaPartido:e.target.value}))} placeholder="Ej. 31/07/2025" style={{maxWidth:160}} />
               </div>
-              )}
               {/* Selector de tipo de camiseta — uno por posición */}
               <div style={{display:'flex',gap:16,marginTop:14}}>
                 <div style={{flex:1}}>
@@ -5435,6 +5505,53 @@ tfoot td{padding:9px 12px;font-weight:700}
                     </div>
                   )
                 })}
+              </div>
+              {/* Camisetas adicionales (juveniles / números no fijos) */}
+              <div style={{marginTop:16,borderTop:'1px dashed #E0E0D8',paddingTop:12}}>
+                <div style={{fontSize:10,fontWeight:700,color:'#8a8a82',letterSpacing:'.05em',marginBottom:8}}>CAMISETAS ADICIONALES</div>
+                {(repForm.extraRows||[]).map((r,i) => {
+                  const hasQty = Number(r.cantCamiseta)>0 || Number(r.cantShort)>0
+                  const dcam = r.descuentoCamiseta !== false
+                  const dsht = r.descuentoShort !== false
+                  const upd = (field,val) => setRepForm(p=>({...p,extraRows:p.extraRows.map((x,ix)=>ix===i?{...x,[field]:val}:x)}))
+                  const tog = (field) => upd(field, !r[field])
+                  const rem = () => setRepForm(p=>({...p,extraRows:p.extraRows.filter((_,ix)=>ix!==i)}))
+                  return (
+                    <div key={i} style={{display:'grid',gridTemplateColumns:'46px 1fr 54px 52px 36px 54px 52px 36px 24px',gap:4,marginBottom:4,alignItems:'center',padding:'5px 6px',borderRadius:6,
+                      background:hasQty?'#FFFDF0':'#F9F9F6',border:hasQty?'1px solid #f2cb12':'1px solid #E8E8E0'}}>
+                      <input className="field-input mono" value={r.numero} onChange={e=>upd('numero',e.target.value)}
+                        placeholder="Nº" style={{textAlign:'center',padding:'5px 2px',fontWeight:700}} />
+                      <input className="field-input" value={r.nombre} onChange={e=>upd('nombre',e.target.value)}
+                        placeholder="Nombre (opcional)" style={{padding:'5px 6px',fontSize:12}} />
+                      <select className="field-input" value={r.talleCamiseta} onChange={e=>upd('talleCamiseta',e.target.value)} style={{padding:'5px 2px',fontSize:11}}>
+                        {[...TALLES_ADULTO,...TALLES_NINO].map(t=><option key={t} value={t}>{t}</option>)}
+                      </select>
+                      <input className="field-input mono" type="number" min="0" value={r.cantCamiseta} onChange={e=>upd('cantCamiseta',e.target.value)}
+                        placeholder="0" style={{textAlign:'center',padding:'5px 2px'}} />
+                      <button type="button" onClick={()=>tog('descuentoCamiseta')}
+                        style={{padding:'4px 2px',borderRadius:5,border:'2px solid',fontWeight:700,fontSize:10,cursor:'pointer',width:'100%',
+                          borderColor:dcam?'#2d6a4f':'#ccc',background:dcam?'#d8f3dc':'#f5f5f5',color:dcam?'#1b4332':'#999'}}>
+                        {dcam?'SÍ':'NO'}
+                      </button>
+                      <select className="field-input" value={r.talleShort} onChange={e=>upd('talleShort',e.target.value)} style={{padding:'5px 2px',fontSize:11}}>
+                        {[...TALLES_ADULTO,...TALLES_NINO].map(t=><option key={t} value={t}>{t}</option>)}
+                      </select>
+                      <input className="field-input mono" type="number" min="0" value={r.cantShort} onChange={e=>upd('cantShort',e.target.value)}
+                        placeholder="0" style={{textAlign:'center',padding:'5px 2px'}} />
+                      <button type="button" onClick={()=>tog('descuentoShort')}
+                        style={{padding:'4px 2px',borderRadius:5,border:'2px solid',fontWeight:700,fontSize:10,cursor:'pointer',width:'100%',
+                          borderColor:dsht?'#2d6a4f':'#ccc',background:dsht?'#d8f3dc':'#f5f5f5',color:dsht?'#1b4332':'#999'}}>
+                        {dsht?'SÍ':'NO'}
+                      </button>
+                      <button type="button" onClick={rem} style={{padding:'4px',border:'none',background:'none',cursor:'pointer',color:'#C00',fontSize:18,lineHeight:1,textAlign:'center'}}>×</button>
+                    </div>
+                  )
+                })}
+                <button type="button"
+                  onClick={()=>setRepForm(p=>({...p,extraRows:[...(p.extraRows||[]),{numero:'',nombre:'',talleCamiseta:'L',talleShort:'L',cantCamiseta:'',cantShort:'',descuentoCamiseta:true,descuentoShort:true}]}))}
+                  style={{marginTop:4,padding:'7px 14px',borderRadius:6,border:'1px dashed #C0C0B8',background:'transparent',color:'#666',fontSize:12,cursor:'pointer',fontWeight:600}}>
+                  + Agregar camiseta
+                </button>
               </div>
             </div>
             <div className="modal-footer">
