@@ -232,7 +232,8 @@ export default function App() {
   const [utiForm, setUtiForm] = useState({ tipo:'', competicion:'', numero:'', jugador:'', talle:'S', modelo:'', estampado:'', parches:'', detalle:'', temporada:'', cantidad:1, utiEstante:'1', utiAltura:'A', photos:[], id:null })
   const [utiModal, setUtiModal] = useState(false)
   const [utiDetalle, setUtiDetalle] = useState(null)
-  const [repForm, setRepForm] = useState({ editId:null, concepto:'', descuento:true, rows:[], extraRows:[], fechaPartido:'' })
+  const [repForm, setRepForm] = useState({ editId:null, concepto:'', descuento:true, rows:[], extraRows:[], fechaPartido:'', observaciones:'' })
+  const [repObsEdit, setRepObsEdit] = useState(null)
   const [repModal, setRepModal] = useState(false)
   const [repDetail, setRepDetail] = useState(null)
   const [repResumen, setRepResumen] = useState(null)
@@ -255,7 +256,6 @@ export default function App() {
   const [repTab, setRepTab] = useState('reposiciones')
   const [plantelForm, setPlantelForm] = useState({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',cantCamiseta:1,talleShort:'L',cantShort:1})
   const [plantelModal, setPlantelModal] = useState(false)
-  const [showPartidosModal, setShowPartidosModal] = useState(false)
   const [descExtraModal, setDescExtraModal] = useState(false)
   const [descExtraForm, setDescExtraForm] = useState({jugadorNombre:'',jugadorNumero:'',articulo:'',precio:0,cantidad:1,fecha:''})
   const [extrasExpandedKey, setExtrasExpandedKey] = useState(null)
@@ -282,7 +282,7 @@ export default function App() {
   const dbRef = useRef(db)
 
   // delivery/devolución form
-  const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', disciplina:'', fecha:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'', obs:'' })
+  const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', disciplina:'', fecha:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, estampado:null, lines:[], toUser:'', obs:'' })
   // new article form
   const [na, setNa] = useState({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', precio:'', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' })
   // reponer form
@@ -448,10 +448,10 @@ export default function App() {
   const openDetail = (code) => { setSelectedCode(code); setView('detalle'); setSidebarOpen(false) }
 
   // ---- Entregas / Devoluciones ----
-  const openEntrega = () => { setNd({ mode:'entrega', persona:'', receptor:'', disciplina:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'', obs:'' }); setModal('entrega') }
-  const openDevolucion = () => { setNd({ mode:'devolucion', persona:'', receptor:'', disciplina:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'', obs:'' }); setModal('entrega') }
-  const openEntregaFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'entrega', persona:'', receptor:'', disciplina:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'', obs:'' }); setModal('entrega') }
-  const openDevolucionFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'devolucion', persona:'', receptor:'', disciplina:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, lines:[], toUser:'', obs:'' }); setModal('entrega') }
+  const openEntrega = () => { setNd({ mode:'entrega', persona:'', receptor:'', disciplina:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, estampado:null, lines:[], toUser:'', obs:'' }); setModal('entrega') }
+  const openDevolucion = () => { setNd({ mode:'devolucion', persona:'', receptor:'', disciplina:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, estampado:null, lines:[], toUser:'', obs:'' }); setModal('entrega') }
+  const openEntregaFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'entrega', persona:'', receptor:'', disciplina:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, estampado:null, lines:[], toUser:'', obs:'' }); setModal('entrega') }
+  const openDevolucionFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'devolucion', persona:'', receptor:'', disciplina:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, estampado:null, lines:[], toUser:'', obs:'' }); setModal('entrega') }
 
   const ndAddLine = () => {
     const qty = parseInt(nd.cQty, 10)
@@ -766,6 +766,7 @@ ${rowsHtml}
         id: s.nextDel, fecha, persona, receptor: nd.receptor,
         disciplina: nd.receptor==='Deportes Anexos' ? nd.disciplina.trim() : undefined,
         paga: nd.receptor==='Protocolo' ? nd.paga : null, monto: null,
+        estampado: nd.receptor==='Protocolo' && nd.paga==='si' ? nd.estampado : null,
         obs: nd.obs?.trim()||undefined, lines, toUser: nd.toUser||null,
         status: 'pendiente_separar', confirmedAt: null, creadoPor: currentUser?.displayName||session
       }, ...s.deliveries]
@@ -788,7 +789,19 @@ ${rowsHtml}
       const hasUser = !!del.toUser
       const newStatus = hasUser ? 'pendiente' : 'aceptado'
       const confirmedAt = hasUser ? null : today()
-      const deliveries = s.deliveries.map(d => d.id === delId ? {...d, status:newStatus, confirmedAt} : d)
+      let updMonto = del.monto
+      if (del.paga === 'si' && del.receptor === 'Protocolo') {
+        const base = del.lines.reduce((sum,l) => { const art = s.articles.find(a=>a.code===l.code); return sum+(art?.precio||0)*l.qty }, 0) * 0.5
+        const totalQty = del.lines.reduce((sum,l) => sum+l.qty, 0)
+        const estCant = Math.min(Number(del.estampado?.cantidad||1), totalQty)
+        const estCosto = del.estampado?.tipo
+          ? del.estampado.tipo==='numero'
+            ? String(del.estampado.valor||'').replace(/\D/g,'').length * 180 * estCant
+            : 200 * estCant
+          : 0
+        updMonto = base + estCosto
+      }
+      const deliveries = s.deliveries.map(d => d.id === delId ? {...d, status:newStatus, confirmedAt, monto:updMonto} : d)
       const r = {...s, deliveries}
       newDbState = r; return r
     })
@@ -876,7 +889,7 @@ ${rowsHtml}
       const toUser = nd.toUser || null
       const status = toUser ? 'pendiente' : 'aceptado'
       const confirmedAt = toUser ? null : fecha
-      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, disciplina:nd.receptor==='Deportes Anexos'?nd.disciplina.trim():undefined, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, obs:nd.obs?.trim()||undefined, lines:[...nd.lines], toUser, status, confirmedAt, creadoPor:currentUser?.displayName||session}, ...s.deliveries]
+      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, disciplina:nd.receptor==='Deportes Anexos'?nd.disciplina.trim():undefined, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, estampado:nd.receptor==='Protocolo'&&nd.paga==='si'?nd.estampado:null, estampadoCosto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndEstampado:null, obs:nd.obs?.trim()||undefined, lines:[...nd.lines], toUser, status, confirmedAt, creadoPor:currentUser?.displayName||session}, ...s.deliveries]
       const r = { ...s, articles:activeArticles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid }
       newDbState = r; return r
     })
@@ -1410,7 +1423,7 @@ ${rowsHtml}
   const filteredDeliveryRows = deliveryRows
     .filter(d => !delFilterReceptor || delFilterReceptor === REP_FILTER || d.receptor === delFilterReceptor)
     .filter(d => delFilterReceptor !== 'Deportes Anexos' || !delFilterDisciplina || d.disciplina === delFilterDisciplina)
-    .filter(d => !delFilterPersona || d.persona.toLowerCase().includes(delFilterPersona.toLowerCase()))
+    .filter(d => !delFilterPersona || d.persona.toLowerCase().includes(delFilterPersona.toLowerCase()) || (d.obs||'').toLowerCase().includes(delFilterPersona.toLowerCase()))
     .filter(d => delFilterReceptor !== 'Protocolo' || !delFilterPaga || d.paga === delFilterPaga)
   const repRows = (db.reposiciones||[]).map(r => {
     const totalCamisetas = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
@@ -1484,7 +1497,7 @@ ${rowsHtml}
       tipoCamisetaJugador: REP_TIPOS_JUGADOR[0],
       tipoCamisetaGolero: REP_TIPOS_GOLERO[0],
       rows:(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j=>({...j,cantCamiseta:'',cantShort:'',descuentoCamiseta:true,descuentoShort:true})),
-      extraRows:[]
+      extraRows:[], observaciones:''
     })
     setRepModal(true)
   }
@@ -1519,7 +1532,7 @@ ${rowsHtml}
       tipoCamisetaJugador: rep.tipoCamisetaJugador || REP_TIPOS_JUGADOR[0],
       tipoCamisetaGolero: rep.tipoCamisetaGolero || REP_TIPOS_GOLERO[0],
       rows: plantelRows,
-      extraRows
+      extraRows, observaciones: rep.observaciones || ''
     })
     setRepDetail(null)
     setRepModal(true)
@@ -1571,6 +1584,7 @@ ${rowsHtml}
             ? {...r, concepto:repForm.concepto.trim(), torneo:repForm.torneo, descuento:repForm.descuento,
                 fechaTorneo: tieneFecha ? (repForm.fechaTorneo === 'Final' ? 'Final' : Number(repForm.fechaTorneo)) : null,
                 fechaPartido: repForm.fechaPartido||null,
+                observaciones: repForm.observaciones?.trim()||null,
                 tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores:allJugadores}
             : r),
           repoAlertas: pushAlerta(s, 'editar', repForm.concepto.trim(), detalle)
@@ -1582,6 +1596,7 @@ ${rowsHtml}
         const rep = { id:s.nextRep, fecha:today(), concepto:repForm.concepto.trim(), creadoPor:currentUser?.displayName||session,
           torneo:repForm.torneo, fechaTorneo: tieneFecha ? (repForm.fechaTorneo === 'Final' ? 'Final' : Number(repForm.fechaTorneo)) : null, descuento:repForm.descuento,
           fechaPartido: repForm.fechaPartido||null,
+          observaciones: repForm.observaciones?.trim()||null,
           tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores:allJugadores }
         return { ...s, reposiciones:[rep,...(s.reposiciones||[])], nextRep:s.nextRep+1, repoAlertas: pushAlerta(s, 'crear', rep.concepto, null) }
       })
@@ -1910,6 +1925,13 @@ tfoot td{padding:9px 12px;font-weight:700}
     setRepConceptoEdit(null)
     showToast('Concepto actualizado.')
   }
+  const saveRepObs = () => {
+    const obs = (repObsEdit||'').trim() || null
+    setDb(s => ({...s, reposiciones:(s.reposiciones||[]).map(r=>r.id===repDetail.id?{...r,observaciones:obs}:r)}))
+    setRepDetail(p => ({...p, observaciones:obs}))
+    setRepObsEdit(null)
+    showToast('Observaciones guardadas.')
+  }
   const saveDescExtra = () => {
     if (!descExtraForm.jugadorNombre) { showToast('Seleccioná un jugador.'); return }
     const fecha = descExtraForm.fecha || today()
@@ -2035,8 +2057,15 @@ tfoot td{padding:9px 12px;font-weight:700}
   let stockHint = ''
   if(nd.cCode && nd.cTalle && ndArts.length > 0) { const qty=ndArts.reduce((s,a)=>s+(a.sizes.find(z=>z.talle===nd.cTalle)?.qty||0),0); if(qty>0) stockHint='Disponible: '+qty+' u. en talle '+nd.cTalle+(effectiveUbic?' · Ubic. '+effectiveUbic:'') }
   const ndTotal = nd.lines.reduce((s,l) => s+l.qty, 0)
+  const ndTotalQty = nd.lines.reduce((s,l) => s + l.qty, 0)
+  const ndEstCant = Math.min(Number(nd.estampado?.cantidad||1), ndTotalQty||1)
+  const ndEstampado = nd.receptor === 'Protocolo' && nd.paga === 'si' && nd.estampado?.tipo
+    ? nd.estampado.tipo === 'numero'
+      ? String(nd.estampado.valor||'').replace(/\D/g,'').length * 180 * ndEstCant
+      : 200 * ndEstCant
+    : 0
   const ndMonto = nd.receptor === 'Protocolo' && nd.paga === 'si'
-    ? nd.lines.reduce((s,l) => { const art=articles.find(a=>a.code===l.code); return s+(art?.precio||0)*l.qty }, 0) * 0.5
+    ? nd.lines.reduce((s,l) => { const art=articles.find(a=>a.code===l.code); return s+(art?.precio||0)*l.qty }, 0) * 0.5 + ndEstampado
     : 0
   const ndOk = nd.persona && nd.persona.trim() && nd.receptor && nd.lines.length > 0 && (nd.receptor !== 'Deportes Anexos' || nd.disciplina.trim())
 
@@ -2265,11 +2294,6 @@ tfoot td{padding:9px 12px;font-weight:700}
               const totalDineroMes  = totalEquiposMes * PRECIO_CAMISETA + totalShortsMes * PRECIO_SHORT + totalExtrasMes
               return (
                 <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
-                  <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setShowPartidosModal(true)}>
-                    <div className="kpi-label">PARTIDOS REGISTRADOS</div>
-                    <div className="kpi-value">{new Set((db.reposiciones||[]).map(r=>(r.torneo&&r.fechaTorneo!=null&&r.fechaTorneo!=='')?r.torneo+'|'+r.fechaTorneo:'id:'+r.id)).size}</div>
-                    <div className="kpi-sub">partidos únicos</div>
-                  </div>
                   <div className="kpi-card" style={{alignSelf:'flex-start',cursor:'pointer',background:'#D6D6D0',border:'1px solid #121212'}} onClick={()=>setRepResumen('ambos')}>
                     <div className="kpi-label">INDUMENTARIA A DESCONTAR {['','ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'][Number(mesActualKey.split('/')[0])]}</div>
                     <div style={{display:'flex',alignItems:'flex-end',gap:24,marginTop:6}}>
@@ -2317,8 +2341,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                       </div>
                     )}
                     <div className="card" style={{padding:0,overflow:'hidden'}}>
-                      <div className="table-header" style={{gridTemplateColumns:'110px 1fr 70px 70px 120px 36px'}}>
-                        <div>FECHA</div><div>CONCEPTO</div><div style={{textAlign:'right'}}>CAM.</div><div style={{textAlign:'right'}}>SHT.</div><div style={{textAlign:'right'}}>DESCUENTOS</div><div/>
+                      <div className="table-header" style={{gridTemplateColumns:'110px 1fr 32px 70px 70px 120px 36px'}}>
+                        <div>FECHA</div><div>CONCEPTO</div><div style={{textAlign:'center'}}>OBS.</div><div style={{textAlign:'right'}}>CAM.</div><div style={{textAlign:'right'}}>SHT.</div><div style={{textAlign:'right'}}>DESCUENTOS</div><div/>
                       </div>
                       {filtered.length === 0
                         ? <div style={{color:'#8a8a82',fontSize:13,textAlign:'center',padding:'24px 0'}}>Sin reposiciones para este torneo.</div>
@@ -2334,7 +2358,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                           const _isFinal = r.fechaTorneo!=null&&r.fechaTorneo!==''&&(r.fechaTorneo==='Final'||r.fechaTorneo==='NaN'||Number.isNaN(r.fechaTorneo))
                           const torneoStr = [_isFinal?'Final':null, r.torneo, !_isFinal&&r.fechaTorneo!=null&&r.fechaTorneo!==''?'F.'+r.fechaTorneo:null].filter(Boolean).join(' ')
                           return (
-                          <div key={r.id} className="table-row" style={{gridTemplateColumns:'110px 1fr 70px 70px 120px 36px',cursor:'pointer',padding:'10px 20px'}} onClick={() => setRepDetail(r)}>
+                          <div key={r.id} className="table-row" style={{gridTemplateColumns:'110px 1fr 32px 70px 70px 120px 36px',cursor:'pointer',padding:'10px 20px'}} onClick={() => setRepDetail(r)}>
                             <div>
                               <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#1a1a1a',fontWeight:700}}>{r.fecha}</div>
                               {r.fechaPartido && <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#1a1a1a',marginTop:2}}>P: {r.fechaPartido}</div>}
@@ -2345,6 +2369,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                               </div>
                               {equipoStr && <div style={{fontSize:11,color:'#8a8a82',marginTop:2}}>{equipoStr}</div>}
                             </div>
+                            <div style={{textAlign:'center'}}>{r.observaciones ? <span title={r.observaciones} style={{fontSize:15,color:'#8a8a82',cursor:'help'}}>ℹ</span> : null}</div>
                             <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totCam>0?'#1a1a1a':'#ccc'}}>{totCam>0?totCam:'—'}</div>
                             <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totSht>0?'#1a1a1a':'#ccc'}}>{totSht>0?totSht:'—'}</div>
                             <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:totalDesc>0?'#1a1a1a':'#ccc'}}>{totalDesc>0?'$'+totalDesc.toLocaleString('es-UY'):'—'}</div>
@@ -2771,6 +2796,14 @@ tfoot td{padding:9px 12px;font-weight:700}
                     + Agregar camiseta
                   </button>
                 </div>
+                {/* Observaciones */}
+                <div style={{marginTop:16,borderTop:'1px dashed #E0E0D8',paddingTop:12}}>
+                  <label className="field-label">Observaciones <span style={{fontWeight:400,color:'#8a8a82'}}>(opcional)</span></label>
+                  <textarea className="field-input" rows={3} value={repForm.observaciones||''}
+                    onChange={e=>setRepForm(p=>({...p,observaciones:e.target.value}))}
+                    placeholder="Notas internas sobre esta reposición..."
+                    style={{resize:'vertical',fontFamily:'inherit',fontSize:13,lineHeight:1.5}} />
+                </div>
               </div>
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={() => setRepModal(false)}>Cancelar</button>
@@ -2861,9 +2894,33 @@ tfoot td{padding:9px 12px;font-weight:700}
                     {totSht > 0 && <span>{totSht} short{totSht!==1?'s':''}</span>}
                   </div>
                 })()}
+                {/* Observaciones */}
+                <div style={{marginTop:14,borderTop:'1px solid #F0F0EC',paddingTop:12}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                    <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em'}}>OBSERVACIONES</span>
+                    {repObsEdit === null && <button onClick={()=>setRepObsEdit(repDetail.observaciones||'')} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:13,padding:'1px 4px',lineHeight:1}}>✎</button>}
+                  </div>
+                  {repObsEdit !== null ? (
+                    <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                      <textarea className="field-input" rows={3} value={repObsEdit} autoFocus
+                        onChange={e=>setRepObsEdit(e.target.value)}
+                        onKeyDown={e=>{if(e.key==='Escape')setRepObsEdit(null)}}
+                        style={{resize:'vertical',fontFamily:'inherit',fontSize:13,lineHeight:1.5}} />
+                      <div style={{display:'flex',gap:6}}>
+                        <button className="btn btn-dark" style={{padding:'5px 12px',fontSize:12}} onClick={saveRepObs}>Guardar</button>
+                        <button className="btn btn-ghost" style={{padding:'5px 10px',fontSize:12}} onClick={()=>setRepObsEdit(null)}>Cancelar</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{fontSize:13,color:repDetail.observaciones?'#1a1a1a':'#aaa',fontStyle:repDetail.observaciones?'normal':'italic',lineHeight:1.5,cursor:'pointer',minHeight:28}}
+                      onClick={()=>setRepObsEdit(repDetail.observaciones||'')}>
+                      {repDetail.observaciones || 'Sin observaciones — hacer clic para agregar'}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="modal-footer">
-                <button className="btn btn-ghost" onClick={() => setRepDetail(null)}>Cerrar</button>
+                <button className="btn btn-ghost" onClick={() => { setRepObsEdit(null); setRepDetail(null) }}>Cerrar</button>
                 <button className="btn btn-ghost" style={{border:'1px solid #2d6a4f',color:'#2d6a4f'}} onClick={() => exportRepToExcel(repDetail)}>↓ Excel</button>
                 <button className="btn btn-dark" onClick={() => openRepEdit(repDetail)}>Editar</button>
                 <button style={{padding:'8px 16px',borderRadius:7,border:'1px solid #C2473D',background:'#FBEAE8',color:'#C2473D',fontWeight:700,cursor:'pointer'}}
@@ -3435,42 +3492,6 @@ tfoot td{padding:9px 12px;font-weight:700}
           )
         })()}
 
-        {/* Modal: Partidos Registrados (receptor) */}
-        {showPartidosModal && (
-          <div className="modal-backdrop" onClick={()=>setShowPartidosModal(false)}>
-            <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:560}}>
-              <div className="modal-header">
-                <div className="modal-title">Partidos Registrados</div>
-                <button className="modal-close" onClick={()=>setShowPartidosModal(false)}>×</button>
-              </div>
-              <div className="modal-body" style={{padding:0,maxHeight:'60vh',overflowY:'auto'}}>
-                {(() => {
-                  const seen = new Set()
-                  const partidos = []
-                  ;(db.reposiciones||[]).forEach(r => {
-                    const key = (r.torneo&&r.fechaTorneo!=null&&r.fechaTorneo!=='') ? r.torneo+'|'+r.fechaTorneo : 'id:'+r.id
-                    if (!seen.has(key)) { seen.add(key); partidos.push(r) }
-                  })
-                  partidos.sort((a,b)=>{const[da,ma,ya]=(a.fechaPartido||a.fecha||'').split('/');const[db2,mb,yb]=(b.fechaPartido||b.fecha||'').split('/');return(yb-ya)||((mb-ma)||(db2-da))})
-                  if (!partidos.length) return <div style={{padding:'20px',color:'#8a8a82',textAlign:'center'}}>Sin partidos registrados.</div>
-                  return partidos.map((r,i) => {
-                    const _f = r.fechaTorneo
-                    const _fin = _f!=null&&_f!==''&&(_f==='Final'||_f==='NaN'||Number.isNaN(_f))
-                    const instancia = _fin ? 'Final' : (_f!=null&&_f!=='' ? 'Fecha '+_f : '')
-                    const rival = r.concepto ? r.concepto.replace(/^Reposici[oó]n\.?\s*/i,'').trim() : ''
-                    return (
-                      <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 16px',borderBottom:i<partidos.length-1?'1px solid #F0F0EC':'none',background:i%2===0?'#fff':'#FAFAF8'}}>
-                        <span style={{fontSize:12,color:'#8a8a82',minWidth:76,fontVariantNumeric:'tabular-nums'}}>{r.fechaPartido||r.fecha}</span>
-                        <span style={{flex:1,fontWeight:600,fontSize:13.5}}>{rival||r.concepto}</span>
-                        {r.torneo && <span style={{fontSize:11,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:4,padding:'1px 7px',fontWeight:600,whiteSpace:'nowrap'}}>{r.torneo}{instancia?' · '+instancia:''}</span>}
-                      </div>
-                    )
-                  })
-                })()}
-              </div>
-            </div>
-          </div>
-        )}
 
         {toast && (
           <div className="toast">
@@ -4374,7 +4395,7 @@ tfoot td{padding:9px 12px;font-weight:700}
           {/* CONTRATO PUMA */}
           {view === 'contrato-puma' && (() => {
             const TOTAL_CONTRATO = 17200
-            const RECEPTOR_ORDER = ['Protocolo','1° División','3 División','Juveniles','Femenino','Juveniles Femenino','Basket','Captación','Futbol Sala Masculino','Futbol Sala Femenino','Funcionarios']
+            const RECEPTOR_ORDER = ['Protocolo','1° División','Equipos de juego 1° División','3 División','Juveniles','Femenino','Juveniles Femenino','Basket','Captación','Futbol Sala Masculino','Futbol Sala Femenino','Funcionarios']
             const RECEPTOR_COLORS = {
               'Protocolo':             '#7BC67E',
               '1° División':           '#f2cb12',
@@ -4391,6 +4412,7 @@ tfoot td{padding:9px 12px;font-weight:700}
               'Marketing':             '#26A69A',
               'Sponsors':              '#8D6E63',
               'Canjes':                '#78909C',
+              'Equipos de juego 1° División': '#FFD600',
             }
             const repUnidades = (db.reposiciones||[]).reduce((s, r) =>
               s + (r.jugadores||[]).reduce((a, j) => a + (Number(j.cantCamiseta)||0) + (Number(j.cantShort)||0), 0), 0)
@@ -4398,11 +4420,12 @@ tfoot td{padding:9px 12px;font-weight:700}
             const extrasMonto    = (db.descExtras||[]).reduce((s,e) => s + e.precio*(e.cantidad||1), 0)
             const baseData = receptorCards
               .map(r => {
-                const extraU = r.name === '1° División' ? repUnidades : r.name === 'Protocolo' ? extrasUnidades : 0
+                const extraU = r.name === 'Protocolo' ? extrasUnidades : 0
                 const extraM = r.name === 'Protocolo' ? extrasMonto : 0
                 const total = r.unidades + extraU
                 return { name: r.name, unidades: total, pct: total / TOTAL_CONTRATO * 100, monto: r.monto + extraM }
               })
+            baseData.push({ name: 'Equipos de juego 1° División', unidades: repUnidades, pct: repUnidades / TOTAL_CONTRATO * 100, monto: 0 })
             const data = baseData.sort((a, b) => {
                 const ia = RECEPTOR_ORDER.indexOf(a.name)
                 const ib = RECEPTOR_ORDER.indexOf(b.name)
@@ -4560,11 +4583,6 @@ tfoot td{padding:9px 12px;font-weight:700}
                   const totalDineroMesAdmin  = totalEquiposMesAdmin * PRECIO_CAMISETA + totalShortsMesAdmin * PRECIO_SHORT + totalExtrasMesAdmin
                   return (
                     <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
-                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setShowPartidosModal(true)}>
-                        <div className="kpi-label">PARTIDOS REGISTRADOS</div>
-                        <div className="kpi-value">{new Set((db.reposiciones||[]).map(r=>(r.torneo&&r.fechaTorneo!=null&&r.fechaTorneo!=='')?r.torneo+'|'+r.fechaTorneo:'id:'+r.id)).size}</div>
-                        <div className="kpi-sub">partidos únicos</div>
-                      </div>
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepDesglose('camisetas')}>
                         <div className="kpi-label">CAMISETAS ENVIADAS</div>
                         <div className="kpi-value">{totalCamTodas}</div>
@@ -4629,8 +4647,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                           </div>
                         )}
                         <div className="card" style={{padding:0,overflow:'hidden'}}>
-                          <div className="table-header" style={{gridTemplateColumns:'110px 1fr 70px 70px 120px 36px'}}>
-                            <div>FECHA</div><div>CONCEPTO</div><div style={{textAlign:'right'}}>CAM.</div><div style={{textAlign:'right'}}>SHT.</div><div style={{textAlign:'right'}}>DESCUENTOS</div><div/>
+                          <div className="table-header" style={{gridTemplateColumns:'110px 1fr 32px 70px 70px 120px 36px'}}>
+                            <div>FECHA</div><div>CONCEPTO</div><div style={{textAlign:'center'}}>OBS.</div><div style={{textAlign:'right'}}>CAM.</div><div style={{textAlign:'right'}}>SHT.</div><div style={{textAlign:'right'}}>DESCUENTOS</div><div/>
                           </div>
                           {filtered.length === 0
                             ? <div style={{color:'#8a8a82',fontSize:13,textAlign:'center',padding:'24px 0'}}>Sin reposiciones para este torneo.</div>
@@ -4646,7 +4664,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                               const _isFinal = r.fechaTorneo!=null&&r.fechaTorneo!==''&&(r.fechaTorneo==='Final'||r.fechaTorneo==='NaN'||Number.isNaN(r.fechaTorneo))
                           const torneoStr = [_isFinal?'Final':null, r.torneo, !_isFinal&&r.fechaTorneo!=null&&r.fechaTorneo!==''?'F.'+r.fechaTorneo:null].filter(Boolean).join(' ')
                               return (
-                              <div key={r.id} className="table-row" style={{gridTemplateColumns:'110px 1fr 70px 70px 120px 36px',cursor:'pointer',padding:'10px 20px'}} onClick={() => setRepDetail(r)}>
+                              <div key={r.id} className="table-row" style={{gridTemplateColumns:'110px 1fr 32px 70px 70px 120px 36px',cursor:'pointer',padding:'10px 20px'}} onClick={() => setRepDetail(r)}>
                                 <div>
                                   <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#1a1a1a',fontWeight:700}}>{r.fecha}</div>
                                   {r.fechaPartido && <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#1a1a1a',marginTop:2}}>P: {r.fechaPartido}</div>}
@@ -4657,6 +4675,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                                   </div>
                                   {equipoStr && <div style={{fontSize:11,color:'#8a8a82',marginTop:2}}>{equipoStr}</div>}
                                 </div>
+                                <div style={{textAlign:'center'}}>{r.observaciones ? <span title={r.observaciones} style={{fontSize:15,color:'#8a8a82',cursor:'help'}}>ℹ</span> : null}</div>
                                 <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totCam>0?'#1a1a1a':'#ccc'}}>{totCam>0?totCam:'—'}</div>
                                 <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totSht>0?'#1a1a1a':'#ccc'}}>{totSht>0?totSht:'—'}</div>
                                 <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:totalDesc>0?'#1a1a1a':'#ccc'}}>{totalDesc>0?'$'+totalDesc.toLocaleString('es-UY'):'—'}</div>
@@ -4692,11 +4711,6 @@ tfoot td{padding:9px 12px;font-weight:700}
                   return (
                 <div style={{display:'flex',flexDirection:'column',gap:12}}>
                   <div style={{display:'flex',flexWrap:'wrap',gap:12,alignItems:'flex-start'}}>
-                    <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setShowPartidosModal(true)}>
-                      <div className="kpi-label">PARTIDOS REGISTRADOS</div>
-                      <div className="kpi-value">{new Set((db.reposiciones||[]).map(r=>(r.torneo&&r.fechaTorneo!=null&&r.fechaTorneo!=='')?r.torneo+'|'+r.fechaTorneo:'id:'+r.id)).size}</div>
-                      <div className="kpi-sub">partidos únicos</div>
-                    </div>
                     <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepDesglose('camisetas')}>
                       <div className="kpi-label">CAMISETAS ENVIADAS</div>
                       <div className="kpi-value">{totalCamTodas}</div>
@@ -5070,9 +5084,29 @@ tfoot td{padding:9px 12px;font-weight:700}
                   <span style={{fontWeight:800,fontSize:16,fontFamily:'IBM Plex Mono,monospace'}}>{d.totalUd}</span>
                 </div>
                 {d.paga === 'si' && d.monto > 0 && (
-                  <div style={{padding:'10px 20px',background:'#F0FAF4',borderTop:'1px solid #b6e4c8',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                    <span style={{fontSize:13,color:'#1a5c33',fontWeight:600}}>Total a cobrar</span>
-                    <span style={{fontWeight:800,fontSize:15,color:'#1a5c33'}}>$ {d.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                  <div style={{padding:'10px 20px',background:'#F0FAF4',borderTop:'1px solid #b6e4c8',fontSize:13,color:'#1a5c33'}}>
+                    {d.estampado && (d.estampadoCosto||0) > 0 && (
+                      <>
+                        <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
+                          <span>Indumentaria (50%)</span>
+                          <span>$ {(d.monto-(d.estampadoCosto||0)).toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                        </div>
+                        <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
+                          <span>Estampado ({d.estampado.tipo==='numero'?`núm. ${d.estampado.valor}`:'nombre'}{(d.estampado.cantidad>1||d.totalUd>1)?` · ${d.estampado.cantidad||1} prenda${(d.estampado.cantidad||1)!==1?'s':''}`:''  })</span>
+                          <span>$ {(d.estampadoCosto||0).toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                        </div>
+                        <div style={{borderTop:'1px solid #b6e4c8',paddingTop:6,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                          <span style={{fontWeight:600}}>Total a cobrar</span>
+                          <span style={{fontWeight:800,fontSize:15}}>$ {d.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                        </div>
+                      </>
+                    )}
+                    {(!d.estampado || !(d.estampadoCosto||0)) && (
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                        <span style={{fontWeight:600}}>Total a cobrar</span>
+                        <span style={{fontWeight:800,fontSize:15}}>$ {d.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -5553,6 +5587,14 @@ tfoot td{padding:9px 12px;font-weight:700}
                   + Agregar camiseta
                 </button>
               </div>
+              {/* Observaciones */}
+              <div style={{marginTop:16,borderTop:'1px dashed #E0E0D8',paddingTop:12}}>
+                <label className="field-label">Observaciones <span style={{fontWeight:400,color:'#8a8a82'}}>(opcional)</span></label>
+                <textarea className="field-input" rows={3} value={repForm.observaciones||''}
+                  onChange={e=>setRepForm(p=>({...p,observaciones:e.target.value}))}
+                  placeholder="Notas internas sobre esta reposición..."
+                  style={{resize:'vertical',fontFamily:'inherit',fontSize:13,lineHeight:1.5}} />
+              </div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => setRepModal(false)}>Cancelar</button>
@@ -5642,9 +5684,33 @@ tfoot td{padding:9px 12px;font-weight:700}
                   {totSht > 0 && <span>{totSht} short{totSht!==1?'s':''}</span>}
                 </div>
               })()}
+              {/* Observaciones */}
+              <div style={{marginTop:14,borderTop:'1px solid #F0F0EC',paddingTop:12}}>
+                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                  <span style={{fontSize:11,fontWeight:700,color:'#8a8a82',letterSpacing:'.04em'}}>OBSERVACIONES</span>
+                  {repObsEdit === null && <button onClick={()=>setRepObsEdit(repDetail.observaciones||'')} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:13,padding:'1px 4px',lineHeight:1}}>✎</button>}
+                </div>
+                {repObsEdit !== null ? (
+                  <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                    <textarea className="field-input" rows={3} value={repObsEdit} autoFocus
+                      onChange={e=>setRepObsEdit(e.target.value)}
+                      onKeyDown={e=>{if(e.key==='Escape')setRepObsEdit(null)}}
+                      style={{resize:'vertical',fontFamily:'inherit',fontSize:13,lineHeight:1.5}} />
+                    <div style={{display:'flex',gap:6}}>
+                      <button className="btn btn-dark" style={{padding:'5px 12px',fontSize:12}} onClick={saveRepObs}>Guardar</button>
+                      <button className="btn btn-ghost" style={{padding:'5px 10px',fontSize:12}} onClick={()=>setRepObsEdit(null)}>Cancelar</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{fontSize:13,color:repDetail.observaciones?'#1a1a1a':'#aaa',fontStyle:repDetail.observaciones?'normal':'italic',lineHeight:1.5,cursor:'pointer',minHeight:28}}
+                    onClick={()=>setRepObsEdit(repDetail.observaciones||'')}>
+                    {repDetail.observaciones || 'Sin observaciones — hacer clic para agregar'}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-ghost" onClick={() => setRepDetail(null)}>Cerrar</button>
+              <button className="btn btn-ghost" onClick={() => { setRepObsEdit(null); setRepDetail(null) }}>Cerrar</button>
               <button className="btn btn-ghost" style={{border:'1px solid #2d6a4f',color:'#2d6a4f'}} onClick={() => exportRepToExcel(repDetail)}>↓ Excel</button>
               <button className="btn btn-dark" onClick={() => openRepEdit(repDetail)}>Editar</button>
               <button style={{padding:'8px 16px',borderRadius:7,border:'1px solid #C2473D',background:'#FBEAE8',color:'#C2473D',fontWeight:700,cursor:'pointer'}}
@@ -6375,7 +6441,7 @@ tfoot td{padding:9px 12px;font-weight:700}
               </div>
               <div className="form-group">
                 <label className="field-label">Grupo / Plantel</label>
-                <select className="field-input" value={nd.receptor} onChange={e => setNd(p=>({...p,receptor:e.target.value,paga:null,disciplina:''}))}>
+                <select className="field-input" value={nd.receptor} onChange={e => setNd(p=>({...p,receptor:e.target.value,paga:null,estampado:null,disciplina:''}))}>
                   <option value="">Seleccionar grupo…</option>
                   {RECEPTORES.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
@@ -6414,14 +6480,84 @@ tfoot td{padding:9px 12px;font-weight:700}
                         background:nd.paga===v?'#f2cb12':'#F5F5F0',
                         borderColor:nd.paga===v?'#e6be00':'#E0E0DA',
                         color:nd.paga===v?'#121212':'#8a8a82'}}
-                        onClick={() => setNd(p=>({...p,paga:v}))}>
+                        onClick={() => setNd(p=>({...p,paga:v,estampado:v==='si'?p.estampado:null}))}>
                         {label}
                       </button>
                     ))}
                   </div>
                   {nd.paga === 'si' && nd.lines.length > 0 && (
                     <div style={{marginTop:10,padding:'8px 12px',background:'#F0FAF4',border:'1px solid #b6e4c8',borderRadius:6,fontSize:13,color:'#1a5c33'}}>
-                      Total a cobrar: <b style={{fontSize:15}}>$ {ndMonto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</b>
+                      {ndEstampado > 0 ? (
+                        <>
+                          <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
+                            <span>Indumentaria (50%)</span>
+                            <span>$ {(ndMonto-ndEstampado).toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                          </div>
+                          <div style={{display:'flex',justifyContent:'space-between',marginBottom:5}}>
+                            <span>Estampado</span>
+                            <span>$ {ndEstampado.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                          </div>
+                          <div style={{borderTop:'1px solid #b6e4c8',paddingTop:5,display:'flex',justifyContent:'space-between',fontWeight:700}}>
+                            <span>Total a cobrar</span>
+                            <b style={{fontSize:15}}>$ {ndMonto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</b>
+                          </div>
+                        </>
+                      ) : (
+                        <span>Total a cobrar: <b style={{fontSize:15}}>$ {ndMonto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</b></span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              {nd.receptor === 'Protocolo' && !ndIsDev && nd.paga === 'si' && (
+                <div className="form-group">
+                  <label className="field-label">¿Agrega estampado?</label>
+                  <div style={{display:'flex',gap:8}}>
+                    {[['si','SÍ'],['no','NO']].map(([v,label]) => (
+                      <button key={v} style={{flex:1,padding:'7px 0',borderRadius:6,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:13,
+                        background:(v==='si'?!!nd.estampado:!nd.estampado)?'#f2cb12':'#F5F5F0',
+                        borderColor:(v==='si'?!!nd.estampado:!nd.estampado)?'#e6be00':'#E0E0DA',
+                        color:(v==='si'?!!nd.estampado:!nd.estampado)?'#121212':'#8a8a82'}}
+                        onClick={() => setNd(p=>({...p,estampado:v==='si'?{tipo:'numero',valor:'',cantidad:1}:null}))}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {nd.estampado && (
+                    <div style={{marginTop:8}}>
+                      <div style={{display:'flex',gap:8,marginBottom:8}}>
+                        {[['numero','Número'],['nombre','Nombre']].map(([t,label]) => (
+                          <button key={t} style={{flex:1,padding:'6px 0',borderRadius:6,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:13,
+                            background:nd.estampado.tipo===t?'#121212':'#F5F5F0',
+                            borderColor:nd.estampado.tipo===t?'#121212':'#E0E0DA',
+                            color:nd.estampado.tipo===t?'#f2cb12':'#8a8a82'}}
+                            onClick={() => setNd(p=>({...p,estampado:{tipo:t,valor:'',cantidad:p.estampado?.cantidad||1}}))}>
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                      {nd.estampado.tipo === 'numero' && (
+                        <input className="field-input" type="text" placeholder="Número a estampar (ej: 10)"
+                          value={nd.estampado.valor||''}
+                          onChange={e => setNd(p=>({...p,estampado:{...p.estampado,valor:e.target.value}}))}
+                          style={{marginBottom:8}} />
+                      )}
+                      <div style={{display:'flex',alignItems:'center',gap:10}}>
+                        <span style={{fontSize:12.5,color:'#4a4a42',whiteSpace:'nowrap'}}>Prendas con estampado:</span>
+                        <input className="field-input" type="number" min={1} max={ndTotalQty||1}
+                          value={nd.estampado.cantidad||1}
+                          onChange={e => setNd(p=>({...p,estampado:{...p.estampado,cantidad:Math.max(1,Math.min(Number(e.target.value)||1,ndTotalQty||1))}}))}
+                          style={{width:70,textAlign:'center'}} />
+                        {ndTotalQty > 0 && <span style={{fontSize:12,color:'#8a8a82'}}>de {ndTotalQty}</span>}
+                      </div>
+                      {nd.lines.length > 0 && (nd.estampado.tipo === 'nombre' || String(nd.estampado.valor||'').replace(/\D/g,'').length > 0) && (
+                        <div style={{marginTop:8,padding:'7px 10px',background:'#FFF8D6',border:'1px solid #e6c900',borderRadius:6,fontSize:12.5,color:'#7a5800'}}>
+                          {nd.estampado.tipo === 'numero'
+                            ? `${String(nd.estampado.valor||'').replace(/\D/g,'').length} dígito${String(nd.estampado.valor||'').replace(/\D/g,'').length!==1?'s':''} × $180 × ${ndEstCant} prenda${ndEstCant!==1?'s':''} = $${ndEstampado.toLocaleString('es-UY')}`
+                            : `$200 × ${ndEstCant} prenda${ndEstCant!==1?'s':''} = $${ndEstampado.toLocaleString('es-UY')}`
+                          }
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -7218,42 +7354,6 @@ tfoot td{padding:9px 12px;font-weight:700}
         )
       })()}
 
-      {/* Modal: Partidos Registrados */}
-      {showPartidosModal && (
-        <div className="modal-backdrop" onClick={()=>setShowPartidosModal(false)}>
-          <div className="modal" onClick={e=>e.stopPropagation()} style={{maxWidth:560}}>
-            <div className="modal-header">
-              <div className="modal-title">Partidos Registrados</div>
-              <button className="modal-close" onClick={()=>setShowPartidosModal(false)}>×</button>
-            </div>
-            <div className="modal-body" style={{padding:0,maxHeight:'60vh',overflowY:'auto'}}>
-              {(() => {
-                const seen = new Set()
-                const partidos = []
-                ;(db.reposiciones||[]).forEach(r => {
-                  const key = (r.torneo&&r.fechaTorneo!=null&&r.fechaTorneo!=='') ? r.torneo+'|'+r.fechaTorneo : 'id:'+r.id
-                  if (!seen.has(key)) { seen.add(key); partidos.push(r) }
-                })
-                partidos.sort((a,b)=>{const[da,ma,ya]=(a.fechaPartido||a.fecha||'').split('/');const[db2,mb,yb]=(b.fechaPartido||b.fecha||'').split('/');return(yb-ya)||((mb-ma)||(db2-da))})
-                if (!partidos.length) return <div style={{padding:'20px',color:'#8a8a82',textAlign:'center'}}>Sin partidos registrados.</div>
-                return partidos.map((r,i) => {
-                  const _f = r.fechaTorneo
-                  const _fin = _f!=null&&_f!==''&&(_f==='Final'||_f==='NaN'||Number.isNaN(_f))
-                  const instancia = _fin ? 'Final' : (_f!=null&&_f!=='' ? 'Fecha '+_f : '')
-                  const rival = r.concepto ? r.concepto.replace(/^Reposici[oó]n\.?\s*/i,'').trim() : ''
-                  return (
-                    <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 16px',borderBottom:i<partidos.length-1?'1px solid #F0F0EC':'none',background:i%2===0?'#fff':'#FAFAF8'}}>
-                      <span style={{fontSize:12,color:'#8a8a82',minWidth:76,fontVariantNumeric:'tabular-nums'}}>{r.fechaPartido||r.fecha}</span>
-                      <span style={{flex:1,fontWeight:600,fontSize:13.5}}>{rival||r.concepto}</span>
-                      {r.torneo && <span style={{fontSize:11,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:4,padding:'1px 7px',fontWeight:600,whiteSpace:'nowrap'}}>{r.torneo}{instancia?' · '+instancia:''}</span>}
-                    </div>
-                  )
-                })
-              })()}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Toast */}
       {toast && (

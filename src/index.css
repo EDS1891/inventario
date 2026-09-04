@@ -30,7 +30,7 @@ button, input, select, textarea { font-family: 'Archivo', sans-serif; }
   align-items: center;
   gap: 10px;
 }
-.sidebar-logo img { height: 52px; width: auto; display: block; }
+.sidebar-logo img { height: 72px; width: auto; display: block; }
 .sidebar-logo-text .name { font-family: 'Oswald', sans-serif; font-weight: 600; font-size: 13px; color: #f2cb12; letter-spacing: .06em; line-height: 1.2; text-transform: uppercase; }
 .sidebar-logo-text .sub { font-family: 'Oswald', sans-serif; font-weight: 400; font-size: 10px; color: #cfcfcf; letter-spacing: .14em; margin-top: 3px; text-transform: uppercase; }
 
