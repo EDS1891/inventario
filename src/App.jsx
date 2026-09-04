@@ -1113,6 +1113,7 @@ ${rowsHtml}
       const src = selA.sizes.find(sz => sz.talle === t)
       if(!src || q > src.qty) { showToast('Stock insuficiente para talle ' + t + '.'); return }
     }
+    let newDbState = null
     setDb(prev => {
       const code = curCode()
       let arts = [...prev.articles]
@@ -1149,8 +1150,10 @@ ${rowsHtml}
         })
         arts = [...arts, {id:nextId++, code, name:selA.name, cat:selA.cat, ubic:newUbic, sizes:newSizes, precio:selA.precio||0, photos:srcPhotos}]
       }
-      return {...prev, articles:arts, nextId}
+      const r = {...prev, articles:arts, nextId}
+      newDbState = r; return r
     })
+    if (newDbState) saveToSupabase(newDbState)
     setModal(null); setView('inventario')
     showToast('Movido a ' + (mv.estante === 'TRANSITO' ? 'TRANSITO' : mv.estante + mv.altura) + '.')
   }
@@ -1455,20 +1458,30 @@ ${rowsHtml}
     if(!utiForm.numero.trim()) { showToast('Ingresá el número de camiseta.'); return }
     const ubic = utiForm.utiEstante + utiForm.utiAltura
     const toSave = {...utiForm, ubic, cantidad: Math.max(1, Number(utiForm.cantidad)||1)}
+    let newDbState = null
     setDb(prev => {
       const list = prev.camisetasUtileria || []
+      let newList
       if(utiForm.id !== null) {
-        return {...prev, camisetasUtileria: list.map(c => c.id === utiForm.id ? toSave : c)}
+        newList = list.map(c => c.id === utiForm.id ? toSave : c)
       } else {
         const newId = list.length > 0 ? Math.max(...list.map(c => c.id)) + 1 : 1
-        return {...prev, camisetasUtileria: [...list, {...toSave, id: newId}]}
+        newList = [...list, {...toSave, id: newId}]
       }
+      const r = {...prev, camisetasUtileria: newList}
+      newDbState = r; return r
     })
+    if (newDbState) saveToSupabase(newDbState)
     setUtiModal(false)
     showToast(utiForm.id !== null ? 'Camiseta actualizada.' : 'Camiseta agregada.')
   }
   const deleteUti = (id) => {
-    setDb(prev => ({...prev, camisetasUtileria: (prev.camisetasUtileria||[]).filter(c => c.id !== id)}))
+    let newDbState = null
+    setDb(prev => {
+      const r = {...prev, camisetasUtileria: (prev.camisetasUtileria||[]).filter(c => c.id !== id)}
+      newDbState = r; return r
+    })
+    if (newDbState) saveToSupabase(newDbState)
     showToast('Camiseta eliminada.')
   }
 
