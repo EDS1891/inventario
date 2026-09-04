@@ -282,7 +282,7 @@ export default function App() {
   const dbRef = useRef(db)
 
   // delivery/devolución form
-  const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', disciplina:'', fecha:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, estampado:null, lines:[], toUser:'', obs:'' })
+  const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', disciplina:'', fecha:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, estampados:[], lines:[], toUser:'', obs:'' })
   // new article form
   const [na, setNa] = useState({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', precio:'', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' })
   // reponer form
@@ -448,10 +448,10 @@ export default function App() {
   const openDetail = (code) => { setSelectedCode(code); setView('detalle'); setSidebarOpen(false) }
 
   // ---- Entregas / Devoluciones ----
-  const openEntrega = () => { setNd({ mode:'entrega', persona:'', receptor:'', disciplina:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, estampado:null, lines:[], toUser:'', obs:'' }); setModal('entrega') }
-  const openDevolucion = () => { setNd({ mode:'devolucion', persona:'', receptor:'', disciplina:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, estampado:null, lines:[], toUser:'', obs:'' }); setModal('entrega') }
-  const openEntregaFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'entrega', persona:'', receptor:'', disciplina:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, estampado:null, lines:[], toUser:'', obs:'' }); setModal('entrega') }
-  const openDevolucionFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'devolucion', persona:'', receptor:'', disciplina:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, estampado:null, lines:[], toUser:'', obs:'' }); setModal('entrega') }
+  const openEntrega = () => { setNd({ mode:'entrega', persona:'', receptor:'', disciplina:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, estampados:[], lines:[], toUser:'', obs:'' }); setModal('entrega') }
+  const openDevolucion = () => { setNd({ mode:'devolucion', persona:'', receptor:'', disciplina:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, estampados:[], lines:[], toUser:'', obs:'' }); setModal('entrega') }
+  const openEntregaFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'entrega', persona:'', receptor:'', disciplina:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, estampados:[], lines:[], toUser:'', obs:'' }); setModal('entrega') }
+  const openDevolucionFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'devolucion', persona:'', receptor:'', disciplina:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, estampados:[], lines:[], toUser:'', obs:'' }); setModal('entrega') }
 
   const ndAddLine = () => {
     const qty = parseInt(nd.cQty, 10)
@@ -766,7 +766,7 @@ ${rowsHtml}
         id: s.nextDel, fecha, persona, receptor: nd.receptor,
         disciplina: nd.receptor==='Deportes Anexos' ? nd.disciplina.trim() : undefined,
         paga: nd.receptor==='Protocolo' ? nd.paga : null, monto: null,
-        estampado: nd.receptor==='Protocolo' && nd.paga==='si' ? nd.estampado : null,
+        estampados: nd.receptor==='Protocolo' && nd.paga==='si' ? nd.estampados : [],
         obs: nd.obs?.trim()||undefined, lines, toUser: nd.toUser||null,
         status: 'pendiente_separar', confirmedAt: null, creadoPor: currentUser?.displayName||session
       }, ...s.deliveries]
@@ -793,12 +793,7 @@ ${rowsHtml}
       if (del.paga === 'si' && del.receptor === 'Protocolo') {
         const base = del.lines.reduce((sum,l) => { const art = s.articles.find(a=>a.code===l.code); return sum+(art?.precio||0)*l.qty }, 0) * 0.5
         const totalQty = del.lines.reduce((sum,l) => sum+l.qty, 0)
-        const estCant = Math.min(Number(del.estampado?.cantidad||1), totalQty)
-        const estCosto = del.estampado?.tipo
-          ? del.estampado.tipo==='numero'
-            ? String(del.estampado.valor||'').replace(/\D/g,'').length * 180 * estCant
-            : 200 * estCant
-          : 0
+        const estCosto = (del.estampados||[]).reduce((sum,e) => sum + String(e.numero||'').replace(/\D/g,'').length*180 + (e.nombre?200:0), 0)
         updMonto = base + estCosto
       }
       const deliveries = s.deliveries.map(d => d.id === delId ? {...d, status:newStatus, confirmedAt, monto:updMonto} : d)
@@ -889,7 +884,7 @@ ${rowsHtml}
       const toUser = nd.toUser || null
       const status = toUser ? 'pendiente' : 'aceptado'
       const confirmedAt = toUser ? null : fecha
-      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, disciplina:nd.receptor==='Deportes Anexos'?nd.disciplina.trim():undefined, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, estampado:nd.receptor==='Protocolo'&&nd.paga==='si'?nd.estampado:null, estampadoCosto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndEstampado:null, obs:nd.obs?.trim()||undefined, lines:[...nd.lines], toUser, status, confirmedAt, creadoPor:currentUser?.displayName||session}, ...s.deliveries]
+      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, disciplina:nd.receptor==='Deportes Anexos'?nd.disciplina.trim():undefined, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, estampados:nd.receptor==='Protocolo'&&nd.paga==='si'?nd.estampados:[], estampadoCosto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndEstampado:0, obs:nd.obs?.trim()||undefined, lines:[...nd.lines], toUser, status, confirmedAt, creadoPor:currentUser?.displayName||session}, ...s.deliveries]
       const r = { ...s, articles:activeArticles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid }
       newDbState = r; return r
     })
@@ -2058,11 +2053,8 @@ tfoot td{padding:9px 12px;font-weight:700}
   if(nd.cCode && nd.cTalle && ndArts.length > 0) { const qty=ndArts.reduce((s,a)=>s+(a.sizes.find(z=>z.talle===nd.cTalle)?.qty||0),0); if(qty>0) stockHint='Disponible: '+qty+' u. en talle '+nd.cTalle+(effectiveUbic?' · Ubic. '+effectiveUbic:'') }
   const ndTotal = nd.lines.reduce((s,l) => s+l.qty, 0)
   const ndTotalQty = nd.lines.reduce((s,l) => s + l.qty, 0)
-  const ndEstCant = Math.min(Number(nd.estampado?.cantidad||1), ndTotalQty||1)
-  const ndEstampado = nd.receptor === 'Protocolo' && nd.paga === 'si' && nd.estampado?.tipo
-    ? nd.estampado.tipo === 'numero'
-      ? String(nd.estampado.valor||'').replace(/\D/g,'').length * 180 * ndEstCant
-      : 200 * ndEstCant
+  const ndEstampado = nd.receptor === 'Protocolo' && nd.paga === 'si'
+    ? (nd.estampados||[]).reduce((sum,e) => sum + String(e.numero||'').replace(/\D/g,'').length*180 + (e.nombre?200:0), 0)
     : 0
   const ndMonto = nd.receptor === 'Protocolo' && nd.paga === 'si'
     ? nd.lines.reduce((s,l) => { const art=articles.find(a=>a.code===l.code); return s+(art?.precio||0)*l.qty }, 0) * 0.5 + ndEstampado
@@ -5085,23 +5077,30 @@ tfoot td{padding:9px 12px;font-weight:700}
                 </div>
                 {d.paga === 'si' && d.monto > 0 && (
                   <div style={{padding:'10px 20px',background:'#F0FAF4',borderTop:'1px solid #b6e4c8',fontSize:13,color:'#1a5c33'}}>
-                    {d.estampado && (d.estampadoCosto||0) > 0 && (
+                    {d.estampados?.length > 0 && (d.estampadoCosto||0) > 0 && (
                       <>
-                        <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
+                        <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
                           <span>Indumentaria (50%)</span>
                           <span>$ {(d.monto-(d.estampadoCosto||0)).toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
                         </div>
-                        <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
-                          <span>Estampado ({d.estampado.tipo==='numero'?`núm. ${d.estampado.valor}`:'nombre'}{(d.estampado.cantidad>1||d.totalUd>1)?` · ${d.estampado.cantidad||1} prenda${(d.estampado.cantidad||1)!==1?'s':''}`:''  })</span>
-                          <span>$ {(d.estampadoCosto||0).toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
-                        </div>
-                        <div style={{borderTop:'1px solid #b6e4c8',paddingTop:6,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                        {d.estampados.map((e,i) => {
+                          const c = String(e.numero||'').replace(/\D/g,'').length*180+(e.nombre?200:0)
+                          if(!c) return null
+                          const desc = [e.numero&&`núm. ${e.numero}`, e.nombre&&'nombre'].filter(Boolean).join(' + ')
+                          return (
+                            <div key={i} style={{display:'flex',justifyContent:'space-between',marginBottom:2,fontSize:12}}>
+                              <span style={{color:'#2e7d4f'}}>· Prenda #{i+1}{desc?` (${desc})`:''}</span>
+                              <span>$ {c.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
+                            </div>
+                          )
+                        })}
+                        <div style={{borderTop:'1px solid #b6e4c8',marginTop:5,paddingTop:6,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                           <span style={{fontWeight:600}}>Total a cobrar</span>
                           <span style={{fontWeight:800,fontSize:15}}>$ {d.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
                         </div>
                       </>
                     )}
-                    {(!d.estampado || !(d.estampadoCosto||0)) && (
+                    {(!d.estampados?.length || !(d.estampadoCosto||0)) && (
                       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                         <span style={{fontWeight:600}}>Total a cobrar</span>
                         <span style={{fontWeight:800,fontSize:15}}>$ {d.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
@@ -6441,7 +6440,7 @@ tfoot td{padding:9px 12px;font-weight:700}
               </div>
               <div className="form-group">
                 <label className="field-label">Grupo / Plantel</label>
-                <select className="field-input" value={nd.receptor} onChange={e => setNd(p=>({...p,receptor:e.target.value,paga:null,estampado:null,disciplina:''}))}>
+                <select className="field-input" value={nd.receptor} onChange={e => setNd(p=>({...p,receptor:e.target.value,paga:null,estampados:[],disciplina:''}))}>
                   <option value="">Seleccionar grupo…</option>
                   {RECEPTORES.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
@@ -6480,7 +6479,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                         background:nd.paga===v?'#f2cb12':'#F5F5F0',
                         borderColor:nd.paga===v?'#e6be00':'#E0E0DA',
                         color:nd.paga===v?'#121212':'#8a8a82'}}
-                        onClick={() => setNd(p=>({...p,paga:v,estampado:v==='si'?p.estampado:null}))}>
+                        onClick={() => setNd(p=>({...p,paga:v,estampados:v==='si'?p.estampados:[]}))}>
                         {label}
                       </button>
                     ))}
@@ -6511,53 +6510,40 @@ tfoot td{padding:9px 12px;font-weight:700}
               )}
               {nd.receptor === 'Protocolo' && !ndIsDev && nd.paga === 'si' && (
                 <div className="form-group">
-                  <label className="field-label">¿Agrega estampado?</label>
-                  <div style={{display:'flex',gap:8}}>
-                    {[['si','SÍ'],['no','NO']].map(([v,label]) => (
-                      <button key={v} style={{flex:1,padding:'7px 0',borderRadius:6,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:13,
-                        background:(v==='si'?!!nd.estampado:!nd.estampado)?'#f2cb12':'#F5F5F0',
-                        borderColor:(v==='si'?!!nd.estampado:!nd.estampado)?'#e6be00':'#E0E0DA',
-                        color:(v==='si'?!!nd.estampado:!nd.estampado)?'#121212':'#8a8a82'}}
-                        onClick={() => setNd(p=>({...p,estampado:v==='si'?{tipo:'numero',valor:'',cantidad:1}:null}))}>
-                        {label}
-                      </button>
-                    ))}
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                    <label className="field-label" style={{marginBottom:0}}>Estampados</label>
+                    <button style={{padding:'4px 12px',borderRadius:5,border:'1px solid #E0E0DA',background:'#F5F5F0',cursor:'pointer',fontWeight:700,fontSize:12.5,color:'#4a4a42'}}
+                      onClick={() => setNd(p=>({...p,estampados:[...p.estampados,{id:Date.now(),numero:'',nombre:false}]}))}>
+                      + Agregar prenda
+                    </button>
                   </div>
-                  {nd.estampado && (
-                    <div style={{marginTop:8}}>
-                      <div style={{display:'flex',gap:8,marginBottom:8}}>
-                        {[['numero','Número'],['nombre','Nombre']].map(([t,label]) => (
-                          <button key={t} style={{flex:1,padding:'6px 0',borderRadius:6,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:13,
-                            background:nd.estampado.tipo===t?'#121212':'#F5F5F0',
-                            borderColor:nd.estampado.tipo===t?'#121212':'#E0E0DA',
-                            color:nd.estampado.tipo===t?'#f2cb12':'#8a8a82'}}
-                            onClick={() => setNd(p=>({...p,estampado:{tipo:t,valor:'',cantidad:p.estampado?.cantidad||1}}))}>
-                            {label}
-                          </button>
-                        ))}
+                  {nd.estampados.length === 0 && (
+                    <div style={{fontSize:12.5,color:'#8a8a82',fontStyle:'italic'}}>Sin estampados — hacé clic en "+ Agregar prenda" para cada prenda que lleve estampado.</div>
+                  )}
+                  {nd.estampados.map((e,i) => {
+                    const digits = String(e.numero||'').replace(/\D/g,'').length
+                    const cost = digits*180+(e.nombre?200:0)
+                    return (
+                      <div key={e.id} style={{display:'flex',gap:6,alignItems:'center',marginBottom:6,padding:'8px 10px',background:'#F5F5F0',borderRadius:6,border:'1px solid #E0E0DA'}}>
+                        <span style={{fontSize:11,color:'#8a8a82',fontWeight:700,minWidth:18}}>#{i+1}</span>
+                        <input type="text" placeholder="Número (ej: 10)" className="field-input"
+                          value={e.numero} style={{flex:1,minWidth:0}}
+                          onChange={ev => setNd(p=>({...p,estampados:p.estampados.map(x=>x.id===e.id?{...x,numero:ev.target.value}:x)}))} />
+                        <button style={{padding:'5px 10px',borderRadius:5,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:12,whiteSpace:'nowrap',
+                          background:e.nombre?'#121212':'#F5F5F0',borderColor:e.nombre?'#121212':'#E0E0DA',color:e.nombre?'#f2cb12':'#8a8a82'}}
+                          onClick={() => setNd(p=>({...p,estampados:p.estampados.map(x=>x.id===e.id?{...x,nombre:!x.nombre}:x)}))}>
+                          Nombre
+                        </button>
+                        <span style={{fontSize:12,color:'#1a5c33',fontWeight:700,minWidth:52,textAlign:'right'}}>{cost>0?`$${cost.toLocaleString('es-UY')}`:'—'}</span>
+                        <button style={{background:'none',border:'none',cursor:'pointer',color:'#C2473D',fontSize:18,lineHeight:1,padding:'0 2px',fontWeight:700}}
+                          onClick={() => setNd(p=>({...p,estampados:p.estampados.filter(x=>x.id!==e.id)}))}>×</button>
                       </div>
-                      {nd.estampado.tipo === 'numero' && (
-                        <input className="field-input" type="text" placeholder="Número a estampar (ej: 10)"
-                          value={nd.estampado.valor||''}
-                          onChange={e => setNd(p=>({...p,estampado:{...p.estampado,valor:e.target.value}}))}
-                          style={{marginBottom:8}} />
-                      )}
-                      <div style={{display:'flex',alignItems:'center',gap:10}}>
-                        <span style={{fontSize:12.5,color:'#4a4a42',whiteSpace:'nowrap'}}>Prendas con estampado:</span>
-                        <input className="field-input" type="number" min={1} max={ndTotalQty||1}
-                          value={nd.estampado.cantidad||1}
-                          onChange={e => setNd(p=>({...p,estampado:{...p.estampado,cantidad:Math.max(1,Math.min(Number(e.target.value)||1,ndTotalQty||1))}}))}
-                          style={{width:70,textAlign:'center'}} />
-                        {ndTotalQty > 0 && <span style={{fontSize:12,color:'#8a8a82'}}>de {ndTotalQty}</span>}
-                      </div>
-                      {nd.lines.length > 0 && (nd.estampado.tipo === 'nombre' || String(nd.estampado.valor||'').replace(/\D/g,'').length > 0) && (
-                        <div style={{marginTop:8,padding:'7px 10px',background:'#FFF8D6',border:'1px solid #e6c900',borderRadius:6,fontSize:12.5,color:'#7a5800'}}>
-                          {nd.estampado.tipo === 'numero'
-                            ? `${String(nd.estampado.valor||'').replace(/\D/g,'').length} dígito${String(nd.estampado.valor||'').replace(/\D/g,'').length!==1?'s':''} × $180 × ${ndEstCant} prenda${ndEstCant!==1?'s':''} = $${ndEstampado.toLocaleString('es-UY')}`
-                            : `$200 × ${ndEstCant} prenda${ndEstCant!==1?'s':''} = $${ndEstampado.toLocaleString('es-UY')}`
-                          }
-                        </div>
-                      )}
+                    )
+                  })}
+                  {nd.estampados.length > 0 && ndEstampado > 0 && (
+                    <div style={{marginTop:2,padding:'6px 10px',background:'#F0FAF4',border:'1px solid #b6e4c8',borderRadius:6,fontSize:12.5,color:'#1a5c33',fontWeight:600,display:'flex',justifyContent:'space-between'}}>
+                      <span>Total estampado</span>
+                      <span>$ {ndEstampado.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
                     </div>
                   )}
                 </div>
