@@ -1906,13 +1906,15 @@ tfoot td{padding:9px 12px;font-weight:700}
     const updatedMonto = receptor === 'Protocolo' && paga === 'si'
       ? capturedLines.reduce((sum, l) => { const art = findArt(articles, l.code, l.ubic); return sum + (art?.precio||0) * l.qty }, 0) * 0.5
       : null
+    const newDetalle = 'Entrega a ' + persona.trim() + ' (' + receptor + ')'
     const newDb = {
       ...db,
       articles,
       deliveries: db.deliveries.map(d => {
         if (d.id !== delId) return d
         return {...d, receptor, persona:persona.trim(), fecha, paga:updatedPaga, monto:updatedMonto, obs:obs?.trim()||undefined, lines:capturedLines}
-      })
+      }),
+      movimientos: db.movimientos.map(m => m.delId === delId ? {...m, detalle:newDetalle} : m)
     }
     setDb(newDb)
     saveToSupabase(newDb)
