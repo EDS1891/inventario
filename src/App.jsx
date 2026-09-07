@@ -282,7 +282,7 @@ export default function App() {
   const dbRef = useRef(db)
 
   // delivery/devolución form
-  const [nd, setNd] = useState({ mode:'entrega', persona:'', receptor:'', disciplina:'', fecha:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, estampados:[], lines:[], toUser:'', obs:'' })
+  const [nd, setNd] = useState({ mode:'entrega', tipoPrestamo:false, persona:'', receptor:'', disciplina:'', fecha:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, estampados:[], lines:[], toUser:'', obs:'' })
   // new article form
   const [na, setNa] = useState({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', precio:'', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' })
   // reponer form
@@ -448,10 +448,10 @@ export default function App() {
   const openDetail = (code) => { setSelectedCode(code); setView('detalle'); setSidebarOpen(false) }
 
   // ---- Entregas / Devoluciones ----
-  const openEntrega = () => { setNd({ mode:'entrega', persona:'', receptor:'', disciplina:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, estampados:[], lines:[], toUser:'', obs:'' }); setModal('entrega') }
-  const openDevolucion = () => { setNd({ mode:'devolucion', persona:'', receptor:'', disciplina:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, estampados:[], lines:[], toUser:'', obs:'' }); setModal('entrega') }
-  const openEntregaFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'entrega', persona:'', receptor:'', disciplina:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, estampados:[], lines:[], toUser:'', obs:'' }); setModal('entrega') }
-  const openDevolucionFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'devolucion', persona:'', receptor:'', disciplina:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, estampados:[], lines:[], toUser:'', obs:'' }); setModal('entrega') }
+  const openEntrega = () => { setNd({ mode:'entrega', tipoPrestamo:false, persona:'', receptor:'', disciplina:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, estampados:[], lines:[], toUser:'', obs:'' }); setModal('entrega') }
+  const openDevolucion = () => { setNd({ mode:'devolucion', tipoPrestamo:false, persona:'', receptor:'', disciplina:'', cCode:'', cSearch:'', cTalle:'', cQty:'', paga:null, estampados:[], lines:[], toUser:'', obs:'' }); setModal('entrega') }
+  const openEntregaFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'entrega', tipoPrestamo:false, persona:'', receptor:'', disciplina:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, estampados:[], lines:[], toUser:'', obs:'' }); setModal('entrega') }
+  const openDevolucionFromDetail = () => { const a = byCode(selectedCode); setNd({ mode:'devolucion', tipoPrestamo:false, persona:'', receptor:'', disciplina:'', cCode:a?a.code:'', cSearch:'', cTalle:'', cQty:'', paga:null, estampados:[], lines:[], toUser:'', obs:'' }); setModal('entrega') }
 
   const ndAddLine = () => {
     const qty = parseInt(nd.cQty, 10)
@@ -824,6 +824,45 @@ ${rowsHtml}
     showToast('Entrega confirmada.')
   }
 
+  const devolverPrestamo = (delId) => {
+    const del = db.deliveries.find(d => d.id === delId)
+    if (!del) return
+    let newDbState = null
+    setDb(s => {
+      let articles = s.articles.map(a => ({...a, sizes: a.sizes.map(z => ({...z}))}))
+      const movimientos = [...s.movimientos]
+      let nextId = s.nextId
+      let mid = s.nextMov
+      const fecha = today()
+      del.lines.forEach(l => {
+        const usCode = l.code + 'US'
+        const origArt = s.articles.find(a => a.code === l.code)
+        const usName = (origArt?.name || l.name || l.code) + ' (Usado)'
+        const usCat = origArt?.cat || 'Entrenamiento'
+        const usPrecio = origArt?.precio || 0
+        const usUbic = origArt?.ubic || ''
+        const existing = articles.find(a => a.code === usCode)
+        if (!existing) {
+          articles.push({ id: nextId++, code: usCode, name: usName, cat: usCat, precio: usPrecio, ubic: usUbic, sizes: [{talle: l.talle, qty: l.qty, min: 0}], photos: origArt?.photos || [] })
+        } else {
+          articles = articles.map(a => {
+            if (a.code !== usCode) return a
+            const sz = a.sizes.find(z => z.talle === l.talle)
+            if (sz) return {...a, sizes: a.sizes.map(z => z.talle === l.talle ? {...z, qty: z.qty + l.qty} : z)}
+            return {...a, sizes: [...a.sizes, {talle: l.talle, qty: l.qty, min: 0}]}
+          })
+        }
+        movimientos.unshift({id: mid++, code: usCode, name: usName, tipo: 'entrada', fecha, talle: l.talle, qty: l.qty, detalle: 'Devolución de préstamo de ' + del.persona + ' — ingresa como usado', creadoPor: currentUser?.displayName || session})
+      })
+      const deliveries = s.deliveries.map(d => d.id === delId ? {...d, status: 'devuelto', devueltoAt: fecha} : d)
+      const r = {...s, articles, movimientos, deliveries, nextId, nextMov: mid}
+      newDbState = r; return r
+    })
+    if (newDbState) saveToSupabase(newDbState)
+    setSelectedDeliveryId(null)
+    showToast('Préstamo devuelto. Artículos ingresados como usados.')
+  }
+
   const migrarStockPendientes = () => {
     let newDbState = null
     setDb(s => {
@@ -876,7 +915,7 @@ ${rowsHtml}
         if(esDev) {
           movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'entrada', fecha, talle:l.talle, qty:l.qty, detalle:'Devolución de '+nd.persona+' ('+nd.receptor+')', creadoPor:currentUser?.displayName||session})
         } else {
-          movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'salida', fecha, talle:l.talle, qty:l.qty, detalle:'Entrega a '+nd.persona+' ('+nd.receptor+(nd.disciplina?' - '+nd.disciplina:'')+')', delId:s.nextDel, creadoPor:currentUser?.displayName||session})
+          movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'salida', fecha, talle:l.talle, qty:l.qty, detalle:(nd.tipoPrestamo?'Préstamo a ':'Entrega a ')+nd.persona+' ('+nd.receptor+(nd.disciplina?' - '+nd.disciplina:'')+')', delId:s.nextDel, creadoPor:currentUser?.displayName||session})
         }
       })
       const activeArticles = removeZeroStock(articles)
@@ -884,7 +923,7 @@ ${rowsHtml}
       const toUser = nd.toUser || null
       const status = toUser ? 'pendiente' : 'aceptado'
       const confirmedAt = toUser ? null : fecha
-      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, disciplina:nd.receptor==='Deportes Anexos'?nd.disciplina.trim():undefined, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, estampados:nd.receptor==='Protocolo'&&nd.paga==='si'?nd.estampados:[], estampadoCosto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndEstampado:0, obs:nd.obs?.trim()||undefined, lines:[...nd.lines], toUser, status, confirmedAt, creadoPor:currentUser?.displayName||session}, ...s.deliveries]
+      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, disciplina:nd.receptor==='Deportes Anexos'?nd.disciplina.trim():undefined, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, estampados:nd.receptor==='Protocolo'&&nd.paga==='si'?nd.estampados:[], estampadoCosto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndEstampado:0, obs:nd.obs?.trim()||undefined, tipo:nd.tipoPrestamo?'prestamo':'entrega', lines:[...nd.lines], toUser, status, confirmedAt, creadoPor:currentUser?.displayName||session}, ...s.deliveries]
       const r = { ...s, articles:activeArticles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid }
       newDbState = r; return r
     })
@@ -4135,6 +4174,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                           <div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.persona}</div>
                           <div style={{fontSize:11.5,color:'#8a8a82'}}>
                             {d.receptor}
+                            {d.tipo==='prestamo' && <span style={{marginLeft:6,fontWeight:700,color:d.status==='devuelto'?'#6a6a62':'#7a4f00',background:d.status==='devuelto'?'#EBEBEB':'#FFF3CD',borderRadius:4,padding:'1px 6px',fontSize:11}}>Préstamo{d.status==='devuelto'?' · Devuelto':' · Activo'}</span>}
                             {d.paga !== null && d.paga !== undefined && <span style={{marginLeft:6,fontWeight:600,color:d.paga==='si'?'#2e9b5e':'#C2473D'}}>· Paga: {d.paga==='si'?'Sí':'No'}{d.paga==='si'&&d.monto>0?' — $ '+d.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}):''}</span>}
                           </div>
                         </div>
@@ -5127,6 +5167,12 @@ tfoot td{padding:9px 12px;font-weight:700}
               <div className="modal-footer">
                 {st !== 'pendiente_separar' && <button className="btn btn-ghost" onClick={() => setSelectedDeliveryId(null)}>Cerrar</button>}
                 <button className="btn btn-ghost" style={{border:'1px solid #7a5800',color:'#7a5800'}} onClick={() => openPrintWindow(buildRemitoHtml(d.lines, d.persona, d.receptor, d.disciplina, d.fecha, d.obs, d.paga, d.monto))}>↓ Remito</button>
+                {!isSoloVista && d.tipo === 'prestamo' && d.status !== 'devuelto' && (
+                  <button className="btn" style={{background:'#2e9b5e',color:'#fff',fontWeight:700}}
+                    onClick={() => { if(window.confirm('¿Confirmar devolución del préstamo? Se crearán artículos "Usado" con el stock devuelto.')) devolverPrestamo(d.id) }}>
+                    ↩ Devolver préstamo
+                  </button>
+                )}
                 {!isSoloVista && st === 'pendiente_separar' && (
                   <button className="btn" style={{background:'#f2cb12',color:'#121212',fontWeight:700}}
                     onClick={() => confirmarSeparar(d.id)}>✓ Confirmar entrega</button>
@@ -6429,10 +6475,23 @@ tfoot td{padding:9px 12px;font-weight:700}
         <div className="modal-backdrop" onClick={closeModal}>
           <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <div className="modal-title">{ndIsDev ? 'Registrar devolución' : 'Registrar entrega'}</div>
+              <div className="modal-title">{ndIsDev ? 'Registrar devolución' : nd.tipoPrestamo ? 'Registrar préstamo' : 'Registrar entrega'}</div>
               <button className="modal-close" onClick={closeModal}>×</button>
             </div>
             <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:14}}>
+              {!ndIsDev && (
+                <div style={{display:'flex',gap:8,marginBottom:2}}>
+                  {[['entrega','Entrega'],['prestamo','Préstamo']].map(([v,label]) => (
+                    <button key={v} style={{flex:1,padding:'7px 0',borderRadius:6,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:13,
+                      background:(v==='prestamo'?nd.tipoPrestamo:!nd.tipoPrestamo)?'#121212':'#F5F5F0',
+                      borderColor:(v==='prestamo'?nd.tipoPrestamo:!nd.tipoPrestamo)?'#121212':'#E0E0DA',
+                      color:(v==='prestamo'?nd.tipoPrestamo:!nd.tipoPrestamo)?'#f2cb12':'#8a8a82'}}
+                      onClick={() => setNd(p=>({...p,tipoPrestamo:v==='prestamo'}))}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="form-group">
                 <label className="field-label">{ndIsDev ? 'Integrante que devuelve' : 'Integrante que recibe'}</label>
                 <input className="field-input" value={nd.persona} onChange={e => setNd(p=>({...p,persona:e.target.value}))} placeholder="Ej. Maximiliano Olivera" />
