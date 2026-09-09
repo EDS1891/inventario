@@ -3421,23 +3421,11 @@ tfoot td{padding:9px 12px;font-weight:700}
                       {TALLES_ADULTO.map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
                   </div>
-                  <div className="form-group" style={{width:72}}>
-                    <label className="field-label">Cant.</label>
-                    <input className="field-input mono" type="number" min="1" max="99" value={plantelForm.cantCamiseta||1}
-                      onChange={e => setPlantelForm(p=>({...p,cantCamiseta:Math.max(1,parseInt(e.target.value)||1)}))}
-                      style={{textAlign:'center'}} />
-                  </div>
                   <div className="form-group" style={{flex:1}}>
                     <label className="field-label">Talle Short</label>
                     <select className="field-input" value={plantelForm.talleShort} onChange={e => setPlantelForm(p=>({...p,talleShort:e.target.value}))}>
                       {TALLES_ADULTO.map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
-                  </div>
-                  <div className="form-group" style={{width:72}}>
-                    <label className="field-label">Cant.</label>
-                    <input className="field-input mono" type="number" min="1" max="99" value={plantelForm.cantShort||1}
-                      onChange={e => setPlantelForm(p=>({...p,cantShort:Math.max(1,parseInt(e.target.value)||1)}))}
-                      style={{textAlign:'center'}} />
                   </div>
                 </div>
               </div>
