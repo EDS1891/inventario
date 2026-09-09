@@ -2304,6 +2304,7 @@ tfoot td{padding:9px 12px;font-weight:700}
             </div>
             <div style={{display:'flex',justifyContent:'flex-end',gap:2}}>
               <button title="Sincronizar" onClick={() => saveToSupabase(db).then(ok => showToast(ok ? 'Datos sincronizados.' : 'Error al sincronizar.'))} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 6px'}}>↺</button>
+              <button title="Cambiar contraseña" onClick={()=>{setChangePassForm({current:'',newPass:'',newPass2:'',err:''});setModal('cambiar-pass')}} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:16,padding:'0 6px'}}>🔑</button>
               <button title="Cerrar sesión" onClick={doLogout} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 6px'}}>⏻</button>
             </div>
           </div>
