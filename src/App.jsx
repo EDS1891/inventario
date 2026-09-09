@@ -4800,10 +4800,10 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <div className="kpi-card" style={{alignSelf:'flex-start',cursor:'pointer',background:'#D6D6D0',border:'1px solid #121212'}} onClick={()=>setRepResumen('ambos')}>
                       <div className="kpi-label">INDUMENTARIA A DESCONTAR {mesNombreAdmin.toUpperCase()}</div>
                       <div style={{display:'flex',alignItems:'flex-end',gap:24,marginTop:6}}>
-                        <div><div className="kpi-value">{totalEquipos}</div><div className="kpi-sub">camisetas →</div></div>
+                        <div><div className="kpi-value">{totalEquiposMesAdmin}</div><div className="kpi-sub">camisetas →</div></div>
                         <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/>
-                        <div><div className="kpi-value">{totalShorts}</div><div className="kpi-sub">shorts →</div></div>
-                        <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/><div><div className="kpi-value">{totalExtras}</div><div className="kpi-sub">extras →</div></div>
+                        <div><div className="kpi-value">{totalShortsMesAdmin}</div><div className="kpi-sub">shorts →</div></div>
+                        <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/><div><div className="kpi-value">{totalExtrasCountMesAdmin}</div><div className="kpi-sub">extras →</div></div>
                       </div>
                     </div>
                     <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#f2cb12'}} onClick={()=>{ setResumenMesSel(mesActualKeyAdmin); setRepResumen('ambos') }}>
