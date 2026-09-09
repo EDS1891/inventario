@@ -1463,7 +1463,7 @@ ${rowsHtml}
     .filter(d => delFilterReceptor !== 'Deportes Anexos' || !delFilterDisciplina || d.disciplina === delFilterDisciplina)
     .filter(d => !delFilterPersona || d.persona.toLowerCase().includes(delFilterPersona.toLowerCase()) || (d.obs||'').toLowerCase().includes(delFilterPersona.toLowerCase()))
     .filter(d => delFilterReceptor !== 'Protocolo' || !delFilterPaga || d.paga === delFilterPaga)
-    .filter(d => !delFilterPrenda || d.lines.some(l => (codeName[l.code]||l.code||'').toLowerCase().includes(delFilterPrenda.toLowerCase())))
+    .filter(d => !delFilterPrenda || d.lines.some(l => (codeName[l.code]||'').toLowerCase().includes(delFilterPrenda.toLowerCase()) || (l.code||'').toLowerCase().includes(delFilterPrenda.toLowerCase())))
   const repRows = (db.reposiciones||[]).map(r => {
     const totalCamisetas = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
     const totalShorts = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
