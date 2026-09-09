@@ -217,6 +217,7 @@ export default function App() {
   const [delFilterDisciplina, setDelFilterDisciplina] = useState('')
   const [delFilterPersona, setDelFilterPersona] = useState('')
   const [delFilterPaga, setDelFilterPaga] = useState('')
+  const [delFilterPrenda, setDelFilterPrenda] = useState('')
   const [selectedDeliveryId, setSelectedDeliveryId] = useState(null)
   const [remitoSelIds, setRemitoSelIds] = useState(null)
   const [movsExpanded, setMovsExpanded] = useState(false)
@@ -1462,6 +1463,7 @@ ${rowsHtml}
     .filter(d => delFilterReceptor !== 'Deportes Anexos' || !delFilterDisciplina || d.disciplina === delFilterDisciplina)
     .filter(d => !delFilterPersona || d.persona.toLowerCase().includes(delFilterPersona.toLowerCase()) || (d.obs||'').toLowerCase().includes(delFilterPersona.toLowerCase()))
     .filter(d => delFilterReceptor !== 'Protocolo' || !delFilterPaga || d.paga === delFilterPaga)
+    .filter(d => !delFilterPrenda || d.lines.some(l => (codeName[l.code]||l.code||'').toLowerCase().includes(delFilterPrenda.toLowerCase())))
   const repRows = (db.reposiciones||[]).map(r => {
     const totalCamisetas = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
     const totalShorts = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
@@ -4068,6 +4070,17 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <button key={r} className={`chip${delFilterReceptor===r?' active':''}`} onClick={() => { setDelFilterReceptor(r); setDelFilterDisciplina(''); setDelFilterPaga('') }}>{r}</button>
                   ))}
                 </div>
+              </div>
+              <div style={{marginBottom:12,position:'relative'}}>
+                <input
+                  className="field-input"
+                  style={{paddingLeft:32,fontSize:13}}
+                  placeholder="Buscar por prenda…"
+                  value={delFilterPrenda}
+                  onChange={e => setDelFilterPrenda(e.target.value)}
+                />
+                <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:14,color:'#aaa',pointerEvents:'none'}}>🔍</span>
+                {delFilterPrenda && <button onClick={() => setDelFilterPrenda('')} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',fontSize:14,color:'#aaa',padding:0}}>✕</button>}
               </div>
               {delFilterReceptor==='Deportes Anexos' && deportesAnexosDisciplinas.length > 0 && (
                 <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:12}}>
