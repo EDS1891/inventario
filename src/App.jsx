@@ -3528,6 +3528,33 @@ tfoot td{padding:9px 12px;font-weight:700}
         })()}
 
 
+        {modal === 'cambiar-pass' && (
+          <div className="modal-overlay" onClick={closeModal}>
+            <div className="modal-box" onClick={e=>e.stopPropagation()} style={{maxWidth:400}}>
+              <div className="modal-header">
+                <div className="modal-title">Cambiar contraseña</div>
+                <button className="modal-close" onClick={closeModal}>✕</button>
+              </div>
+              <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:14}}>
+                <div className="form-group">
+                  <label className="field-label">CONTRASEÑA ACTUAL</label>
+                  <input className="field-input" type="password" value={changePassForm.current} onChange={e=>setChangePassForm(p=>({...p,current:e.target.value,err:''}))} placeholder="••••••••" />
+                </div>
+                <div className="form-group">
+                  <label className="field-label">NUEVA CONTRASEÑA</label>
+                  <input className="field-input" type="password" value={changePassForm.newPass} onChange={e=>setChangePassForm(p=>({...p,newPass:e.target.value,err:''}))} placeholder="Mín. 6 caracteres" />
+                </div>
+                <div className="form-group">
+                  <label className="field-label">REPETIR NUEVA CONTRASEÑA</label>
+                  <input className="field-input" type="password" value={changePassForm.newPass2} onChange={e=>setChangePassForm(p=>({...p,newPass2:e.target.value,err:''}))} placeholder="••••••••" />
+                </div>
+                {changePassForm.err && <div style={{fontSize:12.5,color:'#C2473D',fontWeight:600}}>{changePassForm.err}</div>}
+                <button className="btn btn-dark" style={{width:'100%',justifyContent:'center',height:42}} onClick={doChangePass}>Guardar contraseña</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {toast && (
           <div className="toast">
             <span className="toast-dot"/>
