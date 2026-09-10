@@ -3202,7 +3202,12 @@ tfoot td{padding:9px 12px;font-weight:700}
             const BORDER   = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
             const s = (cell,fill,font,align) => { cell.fill=fill; cell.font=font; cell.alignment=align||CENTER; cell.border=BORDER }
             ;[{mesKey:mesMostrado,mesNombre:mesNombreMostrado,filas}].forEach(({mesKey, mesNombre, filas}) => {
-              const reps = (mesesMap[mesKey]||[]).slice().sort((a,b)=>{
+              const hasDesc = rep => (rep.jugadores||[]).some(j => {
+                const dc = j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
+                const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
+                return (dc && Number(j.cantCamiseta) > 0) || (ds && Number(j.cantShort) > 0)
+              })
+              const reps = (mesesMap[mesKey]||[]).filter(hasDesc).sort((a,b)=>{
                 const toD = str => { const p=(str||'').split('/'); return p.length===3?new Date(`${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`):new Date(0) }
                 return toD(a.fechaPartido||a.fecha)-toD(b.fechaPartido||b.fecha)
               })
@@ -6226,7 +6231,12 @@ tfoot td{padding:9px 12px;font-weight:700}
           const BORDER   = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
           const s = (cell,fill,font,align) => { cell.fill=fill; cell.font=font; cell.alignment=align||CENTER; cell.border=BORDER }
           ;[{mesKey:mesMostradoAdmin,mesNombre:mesNombreMod,filas:filasAdmin}].forEach(({mesKey, mesNombre, filas}) => {
-            const reps = (mesesMap[mesKey]||[]).slice().sort((a,b)=>{
+            const hasDesc = rep => (rep.jugadores||[]).some(j => {
+              const dc = j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
+              const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
+              return (dc && Number(j.cantCamiseta) > 0) || (ds && Number(j.cantShort) > 0)
+            })
+            const reps = (mesesMap[mesKey]||[]).filter(hasDesc).sort((a,b)=>{
               const toD = str => { const p=(str||'').split('/'); return p.length===3?new Date(`${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`):new Date(0) }
               return toD(a.fechaPartido||a.fecha)-toD(b.fechaPartido||b.fecha)
             })
