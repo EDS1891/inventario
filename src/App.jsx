@@ -71,6 +71,7 @@ async function loadFromSupabase() {
     supabase.from('deposito_state').select('deliveries,articles').eq('id', 4).single(),
   ])
   if (error || !data) { console.error('[Supabase] Error cargando datos:', error?.message, error?.code, error?.details); return null }
+  if (!utiRow) { console.error('[Supabase] Error cargando fila id=3 (plantel/reposiciones) — abortando carga para evitar sobreescribir datos'); return null }
   let users = (usersRow?.deliveries?.length > 0 && usersRow.deliveries[0]?.username)
     ? usersRow.deliveries
     : null
