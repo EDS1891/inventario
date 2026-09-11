@@ -183,11 +183,22 @@ function today() {
   const d = new Date()
   return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear()
 }
+function normFecha(s) {
+  if (!s) return null
+  const p = String(s).trim().split('/')
+  if (p.length !== 3) return s
+  const dd = String(Number(p[0])).padStart(2,'0')
+  const mm = String(Number(p[1])).padStart(2,'0')
+  let yyyy = Number(p[2])
+  if (yyyy < 100) yyyy += 2000
+  return `${dd}/${mm}/${yyyy}`
+}
 // Ciclo de liquidación 20→20: día 1-20 queda en el mismo mes, día 21-31 pasa al mes siguiente
 function cicloKey(dateStr) {
   const p = (dateStr||'').split('/')
   if (p.length !== 3) return null
   let dd = Number(p[0]), mm = Number(p[1]), yyyy = Number(p[2])
+  if (yyyy < 100) yyyy += 2000
   if (dd > 20) { mm += 1; if (mm > 12) { mm = 1; yyyy += 1 } }
   return String(mm).padStart(2,'0') + '/' + yyyy
 }
@@ -1634,7 +1645,7 @@ ${rowsHtml}
           reposiciones: (s.reposiciones||[]).map(r => r.id===repForm.editId
             ? {...r, concepto:repForm.concepto.trim(), torneo:repForm.torneo, descuento:repForm.descuento,
                 fechaTorneo: tieneFecha ? (repForm.fechaTorneo === 'Final' ? 'Final' : Number(repForm.fechaTorneo)) : null,
-                fechaPartido: repForm.fechaPartido||null,
+                fechaPartido: normFecha(repForm.fechaPartido)||null,
                 observaciones: repForm.observaciones?.trim()||null,
                 tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores:allJugadores}
             : r),
@@ -1646,7 +1657,7 @@ ${rowsHtml}
       setDb(s => {
         const rep = { id:s.nextRep, fecha:today(), concepto:repForm.concepto.trim(), creadoPor:currentUser?.displayName||session,
           torneo:repForm.torneo, fechaTorneo: tieneFecha ? (repForm.fechaTorneo === 'Final' ? 'Final' : Number(repForm.fechaTorneo)) : null, descuento:repForm.descuento,
-          fechaPartido: repForm.fechaPartido||null,
+          fechaPartido: normFecha(repForm.fechaPartido)||null,
           observaciones: repForm.observaciones?.trim()||null,
           tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores:allJugadores }
         return { ...s, reposiciones:[rep,...(s.reposiciones||[])], nextRep:s.nextRep+1, repoAlertas: pushAlerta(s, 'crear', rep.concepto, null) }
@@ -1736,7 +1747,7 @@ ${rowsHtml}
   const exportDescuentosPivot = async () => {
     const reposiciones = (db.reposiciones||[]).slice().sort((a,b)=>{
       const fa=a.fechaPartido||a.fecha||''; const fb=b.fechaPartido||b.fecha||''
-      const toDate = s => { const p=s.split('/'); return p.length===3?new Date(`${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`):new Date(0) }
+      const toDate = s => { const n=normFecha(s)||''; const p=n.split('/'); return p.length===3?new Date(`${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`):new Date(0) }
       return toDate(fa)-toDate(fb)
     })
     const plantel = (db.plantel||[]).slice().sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0))
