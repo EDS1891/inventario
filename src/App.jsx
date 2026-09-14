@@ -64,6 +64,8 @@ const SESSION_KEY = 'dep_session'
 
 // Tracks the timestamp of the data version we have loaded/saved, to detect external changes
 let ownSaveTimestamp = 0
+// When a conflict is detected, saves are blocked until the user explicitly syncs
+let savesBlocked = false
 
 async function loadFromSupabase() {
   const [{ data, error }, { data: usersRow }, { data: utiRow }, { data: alertasRow }] = await Promise.all([
@@ -122,6 +124,10 @@ async function loadFromSupabase() {
 }
 
 async function saveToSupabase(db) {
+  if (savesBlocked) {
+    console.warn('[Save] Bloqueado por conflicto — sincronizá primero')
+    return false
+  }
   ownSaveTimestamp = Date.now()
   // Row id=2 (users) is managed exclusively by saveUsers() to avoid session-collision overwrites
   const [r1, r3, r4] = await Promise.all([
@@ -330,9 +336,10 @@ export default function App() {
     loadFromSupabase().then(data => {
       if (data) {
         if (data._utiUpdatedAt) ownSaveTimestamp = new Date(data._utiUpdatedAt).getTime()
+        savesBlocked = false
         const { _utiUpdatedAt, ...rest } = data
         setDb({...rest, articles: removeZeroStock(rest.articles || [])})
-        showToast('Datos actualizados.')
+        showToast('Datos actualizados. Guardado reactivado.')
       }
       setSyncBanner(false)
     })
@@ -344,7 +351,10 @@ export default function App() {
         const { data } = await supabase.from('deposito_state').select('updated_at').eq('id', 3).single()
         if (data?.updated_at) {
           const remoteTs = new Date(data.updated_at).getTime()
-          if (remoteTs > ownSaveTimestamp + 5000) setSyncBanner(true)
+          if (remoteTs > ownSaveTimestamp + 5000) {
+            savesBlocked = true
+            setSyncBanner(true)
+          }
         }
       } catch {}
     }, 30000)
@@ -2314,9 +2324,8 @@ tfoot td{padding:9px 12px;font-weight:700}
       <div className="app-shell">
         {syncBanner && (
           <div style={{position:'fixed',top:0,left:0,right:0,zIndex:9999,background:'#e8a000',color:'#1a1a1a',display:'flex',alignItems:'center',justifyContent:'center',gap:12,padding:'9px 16px',fontSize:13,fontWeight:600,boxShadow:'0 2px 8px rgba(0,0,0,.3)'}}>
-            <span>⚠ Hay cambios realizados por otro usuario</span>
-            <button onClick={doLoadSync} style={{background:'#1a1a1a',color:'#f2cb12',border:'none',borderRadius:6,padding:'4px 14px',cursor:'pointer',fontSize:12,fontWeight:700}}>Sincronizar</button>
-            <button onClick={() => setSyncBanner(false)} style={{background:'none',border:'none',color:'#1a1a1a',cursor:'pointer',fontSize:18,lineHeight:1,padding:'0 2px'}}>✕</button>
+            <span>⚠ Otro usuario hizo cambios — tus cambios <strong>no se están guardando</strong>. Sincronizá para continuar.</span>
+            <button onClick={doLoadSync} style={{background:'#1a1a1a',color:'#f2cb12',border:'none',borderRadius:6,padding:'4px 14px',cursor:'pointer',fontSize:12,fontWeight:700}}>Sincronizar ahora</button>
           </div>
         )}
         <div className={`mobile-overlay${sidebarOpen?' open':''}`} onClick={() => setSidebarOpen(false)} />
