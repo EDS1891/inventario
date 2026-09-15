@@ -1656,7 +1656,22 @@ ${rowsHtml}
   }
   const closeRepModal = () => {
     if (repSaving) return
-    const changed = repFormSnapshotRef.current !== JSON.stringify(repForm)
+    let changed = false
+    if (repFormSnapshotRef.current) {
+      const snap = JSON.parse(repFormSnapshotRef.current)
+      const rowKey = r => `${r.nombre}|${Number(r.cantCamiseta)||0}|${Number(r.cantShort)||0}|${r.descuentoCamiseta}|${r.descuentoShort}`
+      changed =
+        snap.concepto !== repForm.concepto ||
+        snap.descuento !== repForm.descuento ||
+        snap.torneo !== repForm.torneo ||
+        String(snap.fechaTorneo) !== String(repForm.fechaTorneo) ||
+        (snap.fechaPartido||'') !== (repForm.fechaPartido||'') ||
+        snap.tipoCamisetaJugador !== repForm.tipoCamisetaJugador ||
+        snap.tipoCamisetaGolero !== repForm.tipoCamisetaGolero ||
+        (snap.rows||[]).map(rowKey).join(',') !== (repForm.rows||[]).map(rowKey).join(',') ||
+        (snap.extraRows||[]).map(rowKey).join(',') !== (repForm.extraRows||[]).map(rowKey).join(',') ||
+        (snap.observaciones||'') !== (repForm.observaciones||'')
+    }
     if (changed && !window.confirm('¿Salir sin guardar? Los cambios se perderán.')) return
     setRepModal(false)
   }
