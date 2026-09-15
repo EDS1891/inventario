@@ -272,6 +272,7 @@ export default function App() {
   const [descExtraModal, setDescExtraModal] = useState(false)
   const [descExtraForm, setDescExtraForm] = useState({jugadorNombre:'',jugadorNumero:'',articulo:'',precio:0,cantidad:1,fecha:'',observaciones:''})
   const [extrasExpandedKey, setExtrasExpandedKey] = useState(null)
+  const [descExtraDetail, setDescExtraDetail] = useState(null)
   const [selectedPlantelId, setSelectedPlantelId] = useState(null)
   const [plantelHoverRow, setPlantelHoverRow] = useState(null)
   const [rechazarModal, setRechazarModal] = useState({ delId: null, motivo: '' })
@@ -2667,35 +2668,17 @@ tfoot td{padding:9px 12px;font-weight:700}
                             {_gOrder.map((k,gi)=>{
                               const g=_gMap[k]
                               const total=g.items.reduce((s,e)=>s+e.precio*(e.cantidad||1),0)
-                              const expanded=extrasExpandedKey===k
                               const resumen=g.items.map(e=>`${e.articulo}${(e.cantidad||1)>1?' ×'+(e.cantidad||1):''}`).join(', ')
                               return (
-                                <Fragment key={k}>
-                                  <tr onClick={()=>setExtrasExpandedKey(expanded?null:k)} style={{borderBottom:'1px solid #F0F0EC',background:gi%2===0?'#fff':'#FAFAF8',cursor:'pointer'}}>
-                                    <td style={{padding:'8px 12px',fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>{g.fecha}</td>
-                                    <td style={{padding:'8px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
-                                      <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#8a8a82',marginRight:6}}>{g.jugadorNumero}</span>{g.jugadorNombre}
-                                    </td>
-                                    <td style={{padding:'8px 12px',fontSize:12,color:'#5a5a50'}}>{resumen}</td>
-                                    <td style={{padding:'8px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>$ {total.toLocaleString('es-UY')}</td>
-                                    <td style={{padding:'8px 10px',textAlign:'right',fontSize:11,color:'#8a8a82'}}>{expanded?'▲':'▼'}</td>
-                                  </tr>
-                                  {expanded && g.items.map(e=>(
-                                    <tr key={e.id} style={{borderBottom:'1px solid #F0F0EC',background:'#F5F5F0'}}>
-                                      <td style={{padding:'5px 12px'}}></td>
-                                      <td style={{padding:'5px 12px'}}></td>
-                                      <td style={{padding:'5px 12px 5px 24px',fontSize:12}}>
-                                        <div>{e.articulo} <span style={{color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>×{e.cantidad||1}</span></div>
-                                        {e.observaciones && <div style={{fontSize:11,color:'#8a8a82',fontStyle:'italic',marginTop:2}}>{e.observaciones}</div>}
-                                      </td>
-                                      <td style={{padding:'5px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:12}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</td>
-                                      <td style={{padding:'5px 6px',textAlign:'right',whiteSpace:'nowrap'}}>
-                                        <button onClick={ev=>{ev.stopPropagation();setDescExtraForm({...e,observaciones:e.observaciones||''});setDescExtraModal(true)}} title="Editar" style={{background:'none',border:'none',cursor:'pointer',color:'#5a5a50',fontSize:14,padding:'2px 6px'}}>✎</button>
-                                        <button onClick={ev=>{ev.stopPropagation();deleteDescExtra(e.id)}} title="Eliminar" style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:16,padding:'2px 6px',lineHeight:1}}>×</button>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </Fragment>
+                                <tr key={k} onClick={()=>setDescExtraDetail(g)} style={{borderBottom:'1px solid #F0F0EC',background:gi%2===0?'#fff':'#FAFAF8',cursor:'pointer'}}>
+                                  <td style={{padding:'8px 12px',fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>{g.fecha}</td>
+                                  <td style={{padding:'8px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
+                                    <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#8a8a82',marginRight:6}}>{g.jugadorNumero}</span>{g.jugadorNombre}
+                                  </td>
+                                  <td style={{padding:'8px 12px',fontSize:12,color:'#5a5a50'}}>{resumen}</td>
+                                  <td style={{padding:'8px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>$ {total.toLocaleString('es-UY')}</td>
+                                  <td style={{padding:'8px 10px',textAlign:'right',fontSize:11,color:'#8a8a82'}}>›</td>
+                                </tr>
                               )
                             })}
                           </tbody>
@@ -2997,6 +2980,58 @@ tfoot td{padding:9px 12px;font-weight:700}
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={closeRepModal} disabled={repSaving}>Cancelar</button>
                 <button className="btn btn-dark" onClick={saveReposicion} disabled={repSaving}>{repSaving ? 'Guardando…' : (repForm.editId ? 'Guardar cambios' : 'Guardar reposición')}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: Detalle Descuento Extra */}
+        {descExtraDetail && (
+          <div className="modal-backdrop" onClick={() => setDescExtraDetail(null)}>
+            <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:480,width:'96%'}}>
+              <div className="modal-header">
+                <div>
+                  <div style={{fontWeight:700,fontSize:16}}>
+                    <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:13,color:'#8a8a82',marginRight:8}}>{descExtraDetail.jugadorNumero}</span>
+                    {descExtraDetail.jugadorNombre}
+                  </div>
+                  <div style={{fontSize:12,color:'#8a8a82',marginTop:2}}>{descExtraDetail.fecha}</div>
+                </div>
+                <button className="modal-close" onClick={() => setDescExtraDetail(null)}>×</button>
+              </div>
+              <div className="modal-body" style={{maxHeight:'60vh',overflowY:'auto',padding:'12px 16px'}}>
+                <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                  <thead>
+                    <tr style={{color:'#8a8a82',fontSize:11,textTransform:'uppercase',borderBottom:'1px solid #E0E0D8'}}>
+                      <th style={{padding:'4px 8px 8px',textAlign:'left',fontWeight:600}}>Prenda</th>
+                      <th style={{padding:'4px 8px 8px',textAlign:'center',fontWeight:600}}>Cant.</th>
+                      <th style={{padding:'4px 8px 8px',textAlign:'right',fontWeight:600}}>Total</th>
+                      <th style={{padding:'4px 4px 8px'}}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {descExtraDetail.items.map(e => (
+                      <tr key={e.id} style={{borderBottom:'1px solid #F0F0EC'}}>
+                        <td style={{padding:'9px 8px'}}>
+                          <div style={{fontWeight:500}}>{e.articulo}</div>
+                          {e.observaciones && <div style={{fontSize:11,color:'#8a8a82',fontStyle:'italic',marginTop:2}}>{e.observaciones}</div>}
+                        </td>
+                        <td style={{padding:'9px 8px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace'}}>{e.cantidad||1}</td>
+                        <td style={{padding:'9px 8px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</td>
+                        <td style={{padding:'9px 4px',textAlign:'right',whiteSpace:'nowrap'}}>
+                          <button onClick={() => { setDescExtraForm({...e,observaciones:e.observaciones||''}); setDescExtraModal(true) }} title="Editar" style={{background:'none',border:'none',cursor:'pointer',color:'#5a5a50',fontSize:14,padding:'2px 5px'}}>✎</button>
+                          <button onClick={() => { deleteDescExtra(e.id); setDescExtraDetail(p => p.items.length===1 ? null : {...p, items: p.items.filter(x=>x.id!==e.id)}) }} title="Eliminar" style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:16,padding:'2px 5px',lineHeight:1}}>×</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',fontSize:14,padding:'10px 8px 0',borderTop:'2px solid #E0E0D8',marginTop:4}}>
+                  Total: $ {descExtraDetail.items.reduce((s,e)=>s+e.precio*(e.cantidad||1),0).toLocaleString('es-UY')}
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={() => setDescExtraDetail(null)}>Cerrar</button>
               </div>
             </div>
           </div>
@@ -4999,35 +5034,17 @@ tfoot td{padding:9px 12px;font-weight:700}
                                   {_gOrder2.map((k,gi)=>{
                                     const g=_gMap2[k]
                                     const total=g.items.reduce((s,e)=>s+e.precio*(e.cantidad||1),0)
-                                    const expanded=extrasExpandedKey===k
                                     const resumen=g.items.map(e=>`${e.articulo}${(e.cantidad||1)>1?' ×'+(e.cantidad||1):''}`).join(', ')
                                     return (
-                                      <Fragment key={k}>
-                                        <tr onClick={()=>setExtrasExpandedKey(expanded?null:k)} style={{borderBottom:'1px solid #F0F0EC',background:gi%2===0?'#fff':'#FAFAF8',cursor:'pointer'}}>
-                                          <td style={{padding:'8px 12px',fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>{g.fecha}</td>
-                                          <td style={{padding:'8px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
-                                            <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#8a8a82',marginRight:6}}>{g.jugadorNumero}</span>{g.jugadorNombre}
-                                          </td>
-                                          <td style={{padding:'8px 12px',fontSize:12,color:'#5a5a50'}}>{resumen}</td>
-                                          <td style={{padding:'8px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>$ {total.toLocaleString('es-UY')}</td>
-                                          <td style={{padding:'8px 10px',textAlign:'right',fontSize:11,color:'#8a8a82'}}>{expanded?'▲':'▼'}</td>
-                                        </tr>
-                                        {expanded && g.items.map(e=>(
-                                          <tr key={e.id} style={{borderBottom:'1px solid #F0F0EC',background:'#F5F5F0'}}>
-                                            <td style={{padding:'5px 12px'}}></td>
-                                            <td style={{padding:'5px 12px'}}></td>
-                                            <td style={{padding:'5px 12px 5px 24px',fontSize:12}}>
-                                              <div>{e.articulo} <span style={{color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>×{e.cantidad||1}</span></div>
-                                              {e.observaciones && <div style={{fontSize:11,color:'#8a8a82',fontStyle:'italic',marginTop:2}}>{e.observaciones}</div>}
-                                            </td>
-                                            <td style={{padding:'5px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:12}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</td>
-                                            <td style={{padding:'5px 6px',textAlign:'right',whiteSpace:'nowrap'}}>
-                                              <button onClick={ev=>{ev.stopPropagation();setDescExtraForm({...e,observaciones:e.observaciones||''});setDescExtraModal(true)}} title="Editar" style={{background:'none',border:'none',cursor:'pointer',color:'#5a5a50',fontSize:14,padding:'2px 6px'}}>✎</button>
-                                              <button onClick={ev=>{ev.stopPropagation();deleteDescExtra(e.id)}} title="Eliminar" style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:16,padding:'2px 6px',lineHeight:1}}>×</button>
-                                            </td>
-                                          </tr>
-                                        ))}
-                                      </Fragment>
+                                      <tr key={k} onClick={()=>setDescExtraDetail(g)} style={{borderBottom:'1px solid #F0F0EC',background:gi%2===0?'#fff':'#FAFAF8',cursor:'pointer'}}>
+                                        <td style={{padding:'8px 12px',fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>{g.fecha}</td>
+                                        <td style={{padding:'8px 12px',fontWeight:500,whiteSpace:'nowrap'}}>
+                                          <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#8a8a82',marginRight:6}}>{g.jugadorNumero}</span>{g.jugadorNombre}
+                                        </td>
+                                        <td style={{padding:'8px 12px',fontSize:12,color:'#5a5a50'}}>{resumen}</td>
+                                        <td style={{padding:'8px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>$ {total.toLocaleString('es-UY')}</td>
+                                        <td style={{padding:'8px 10px',textAlign:'right',fontSize:11,color:'#8a8a82'}}>›</td>
+                                      </tr>
                                     )
                                   })}
                                 </tbody>
@@ -5852,6 +5869,58 @@ tfoot td{padding:9px 12px;font-weight:700}
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={closeRepModal} disabled={repSaving}>Cancelar</button>
               <button className="btn btn-dark" onClick={saveReposicion} disabled={repSaving}>{repSaving ? 'Guardando…' : (repForm.editId ? 'Guardar cambios' : 'Guardar reposición')}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Detalle Descuento Extra */}
+      {descExtraDetail && (
+        <div className="modal-backdrop" onClick={() => setDescExtraDetail(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:480,width:'96%'}}>
+            <div className="modal-header">
+              <div>
+                <div style={{fontWeight:700,fontSize:16}}>
+                  <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:13,color:'#8a8a82',marginRight:8}}>{descExtraDetail.jugadorNumero}</span>
+                  {descExtraDetail.jugadorNombre}
+                </div>
+                <div style={{fontSize:12,color:'#8a8a82',marginTop:2}}>{descExtraDetail.fecha}</div>
+              </div>
+              <button className="modal-close" onClick={() => setDescExtraDetail(null)}>×</button>
+            </div>
+            <div className="modal-body" style={{maxHeight:'60vh',overflowY:'auto',padding:'12px 16px'}}>
+              <table style={{width:'100%',borderCollapse:'collapse',fontSize:13}}>
+                <thead>
+                  <tr style={{color:'#8a8a82',fontSize:11,textTransform:'uppercase',borderBottom:'1px solid #E0E0D8'}}>
+                    <th style={{padding:'4px 8px 8px',textAlign:'left',fontWeight:600}}>Prenda</th>
+                    <th style={{padding:'4px 8px 8px',textAlign:'center',fontWeight:600}}>Cant.</th>
+                    <th style={{padding:'4px 8px 8px',textAlign:'right',fontWeight:600}}>Total</th>
+                    <th style={{padding:'4px 4px 8px'}}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {descExtraDetail.items.map(e => (
+                    <tr key={e.id} style={{borderBottom:'1px solid #F0F0EC'}}>
+                      <td style={{padding:'9px 8px'}}>
+                        <div style={{fontWeight:500}}>{e.articulo}</div>
+                        {e.observaciones && <div style={{fontSize:11,color:'#8a8a82',fontStyle:'italic',marginTop:2}}>{e.observaciones}</div>}
+                      </td>
+                      <td style={{padding:'9px 8px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace'}}>{e.cantidad||1}</td>
+                      <td style={{padding:'9px 8px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</td>
+                      <td style={{padding:'9px 4px',textAlign:'right',whiteSpace:'nowrap'}}>
+                        <button onClick={() => { setDescExtraForm({...e,observaciones:e.observaciones||''}); setDescExtraModal(true) }} title="Editar" style={{background:'none',border:'none',cursor:'pointer',color:'#5a5a50',fontSize:14,padding:'2px 5px'}}>✎</button>
+                        <button onClick={() => { deleteDescExtra(e.id); setDescExtraDetail(p => p.items.length===1 ? null : {...p, items: p.items.filter(x=>x.id!==e.id)}) }} title="Eliminar" style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:16,padding:'2px 5px',lineHeight:1}}>×</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',fontSize:14,padding:'10px 8px 0',borderTop:'2px solid #E0E0D8',marginTop:4}}>
+                Total: $ {descExtraDetail.items.reduce((s,e)=>s+e.precio*(e.cantidad||1),0).toLocaleString('es-UY')}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setDescExtraDetail(null)}>Cerrar</button>
             </div>
           </div>
         </div>
