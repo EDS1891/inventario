@@ -1694,6 +1694,9 @@ ${rowsHtml}
     const pushAlerta = (s, tipo, concepto, detalle) => notifica
       ? [{id:Date.now(), tipo, concepto, detalle, por:currentUser?.displayName||session, fecha:today()}, ...(s.repoAlertas||[])]
       : (s.repoAlertas||[])
+    // Cancel any pending auto-save before manual save to prevent race condition
+    clearTimeout(saveTimer.current)
+    hasPendingSave.current = false
     let newDbState = null
     if (repForm.editId) {
       setDb(s => {
