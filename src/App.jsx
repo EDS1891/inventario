@@ -158,6 +158,9 @@ async function saveToSupabase(db) {
       updated_at: new Date().toISOString(),
     }),
   ])
+  if (r1.error) console.error('[Save] Error fila 1:', r1.error.message, r1.error.code, r1.error.details)
+  if (r3.error) console.error('[Save] Error fila 3:', r3.error.message, r3.error.code, r3.error.details)
+  if (r4.error) console.error('[Save] Error fila 4:', r4.error.message, r4.error.code, r4.error.details)
   return !r1.error && !r3.error && !r4.error
 }
 
