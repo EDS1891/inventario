@@ -311,6 +311,8 @@ export default function App() {
   const dbRef = useRef(db)
   const repFormSnapshotRef = useRef(null)
   const repSavedRef = useRef(false)
+  const repDirtyRef = useRef(false)
+  const repInitializedRef = useRef(false)
 
   // delivery/devolución form
   const [nd, setNd] = useState({ mode:'entrega', tipoPrestamo:false, persona:'', receptor:'', disciplina:'', fecha:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, estampados:[], lines:[], toUser:'', obs:'' })
@@ -373,6 +375,13 @@ export default function App() {
       setView('inventario')
     }
   }, [db.articles, view, selectedId])
+
+  // Track whether the user has made changes in the rep modal since it was opened
+  useEffect(() => {
+    if (!repModal) return
+    if (!repInitializedRef.current) { repInitializedRef.current = true; return }
+    repDirtyRef.current = true
+  }, [repForm])
 
   // Save to Supabase whenever data changes (debounced 800ms).
   // Skip the first fire right after the initial load to avoid overwriting data that
@@ -1618,6 +1627,8 @@ ${rowsHtml}
     }
     repFormSnapshotRef.current = JSON.stringify(initialForm)
     repSavedRef.current = false
+    repDirtyRef.current = false
+    repInitializedRef.current = false
     setRepForm(initialForm)
     setRepModal(true)
   }
@@ -1656,6 +1667,8 @@ ${rowsHtml}
     }
     repFormSnapshotRef.current = JSON.stringify(editForm)
     repSavedRef.current = false
+    repDirtyRef.current = false
+    repInitializedRef.current = false
     setRepForm(editForm)
     setRepDetail(null)
     setRepModal(true)
@@ -1663,23 +1676,7 @@ ${rowsHtml}
   const closeRepModal = () => {
     if (repSaving) return
     if (repSavedRef.current) { setRepModal(false); return }
-    let changed = false
-    if (repFormSnapshotRef.current) {
-      const snap = JSON.parse(repFormSnapshotRef.current)
-      const rowKey = r => `${r.nombre}|${Number(r.cantCamiseta)||0}|${Number(r.cantShort)||0}|${r.descuentoCamiseta}|${r.descuentoShort}`
-      changed =
-        snap.concepto !== repForm.concepto ||
-        snap.descuento !== repForm.descuento ||
-        snap.torneo !== repForm.torneo ||
-        String(snap.fechaTorneo) !== String(repForm.fechaTorneo) ||
-        (snap.fechaPartido||'') !== (repForm.fechaPartido||'') ||
-        snap.tipoCamisetaJugador !== repForm.tipoCamisetaJugador ||
-        snap.tipoCamisetaGolero !== repForm.tipoCamisetaGolero ||
-        (snap.rows||[]).map(rowKey).join(',') !== (repForm.rows||[]).map(rowKey).join(',') ||
-        (snap.extraRows||[]).map(rowKey).join(',') !== (repForm.extraRows||[]).map(rowKey).join(',') ||
-        (snap.observaciones||'') !== (repForm.observaciones||'')
-    }
-    if (changed && !window.confirm('¿Salir sin guardar? Los cambios se perderán.')) return
+    if (repDirtyRef.current && !window.confirm('¿Salir sin guardar? Los cambios se perderán.')) return
     setRepModal(false)
   }
   const setTodosDescuentos = (val) => setRepForm(p => ({
