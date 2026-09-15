@@ -1692,16 +1692,16 @@ ${rowsHtml}
       }))
     const allJugadores = [...jugadores, ...extraJugadores]
     if (!allJugadores.length) { setRepSaving(false); showToast('Ingresá al menos una cantidad.'); return }
+    const isEdit = !!repForm.editId
     const tieneFecha = TORNEOS_CON_FECHA.includes(repForm.torneo)
     const notifica = currentUser?.role === 'receptor_reposiciones'
     const pushAlerta = (s, tipo, concepto, detalle) => notifica
       ? [{id:Date.now(), tipo, concepto, detalle, por:currentUser?.displayName||session, fecha:today()}, ...(s.repoAlertas||[])]
       : (s.repoAlertas||[])
-    // Cancel any pending auto-save before manual save to prevent race condition
     clearTimeout(saveTimer.current)
     hasPendingSave.current = false
     let newDbState = null
-    if (repForm.editId) {
+    if (isEdit) {
       setDb(s => {
         const oldRep = (s.reposiciones||[]).find(r => r.id === repForm.editId)
         const cambios = []
@@ -1739,13 +1739,13 @@ ${rowsHtml}
         newDbState = r; return r
       })
     }
-    const ok = await saveToSupabase(newDbState || dbRef.current)
-    setRepSaving(false)
+    // Cerrar modal inmediatamente — guardar en Supabase en segundo plano
     repSavedRef.current = true
-    if (!ok) { showToast('Error al guardar. Verificá la conexión e intentá de nuevo.'); return }
-    repFormSnapshotRef.current = JSON.stringify(repForm)
+    setRepSaving(false)
     setRepModal(false)
-    showToast(repForm.editId ? 'Reposición actualizada.' : 'Reposición registrada.')
+    showToast(isEdit ? 'Reposición actualizada.' : 'Reposición registrada.')
+    const ok = await saveToSupabase(newDbState || dbRef.current)
+    if (!ok) showToast('⚠ Error al sincronizar con el servidor. Recargá para verificar.')
   }
   const deleteReposicion = async (id) => {
     if (savesBlocked) { showToast('⚠ Hay cambios de otro usuario — sincronizá antes de continuar.'); return }
