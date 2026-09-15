@@ -282,7 +282,7 @@ export default function App() {
   const [plantelForm, setPlantelForm] = useState({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',cantCamiseta:1,talleShort:'L',cantShort:1})
   const [plantelModal, setPlantelModal] = useState(false)
   const [descExtraModal, setDescExtraModal] = useState(false)
-  const [descExtraForm, setDescExtraForm] = useState({jugadorNombre:'',jugadorNumero:'',articulo:'',precio:0,cantidad:1,fecha:''})
+  const [descExtraForm, setDescExtraForm] = useState({jugadorNombre:'',jugadorNumero:'',articulo:'',precio:0,cantidad:1,fecha:'',observaciones:''})
   const [extrasExpandedKey, setExtrasExpandedKey] = useState(null)
   const [selectedPlantelId, setSelectedPlantelId] = useState(null)
   const [plantelHoverRow, setPlantelHoverRow] = useState(null)
@@ -1260,11 +1260,12 @@ ${rowsHtml}
     const sizes = a.sizes.map(s=>({...s}))
     setEditing({id:a.id, code:a.code, name:a.name, cat:a.cat, ubic:a.ubic||'', precio:a.precio||'', photos, sizes, _origSizes:sizes}); setModal('edit')
   }
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if(!editing.code.trim() || !editing.name.trim()) { showToast('Completá código y nombre.'); return }
     const newCode = editing.code.trim()
     const newPhotos = editing.photos || []
     const newSizes = (editing.sizes || []).filter(s => s.qty > 0 || (editing._origSizes||[]).find(o=>o.talle===s.talle))
+    let newDbState = null
     setDb(s => {
       const origArt = s.articles.find(a => a.id === editing.id)
       const origSizes = origArt?.sizes || []
@@ -1274,7 +1275,7 @@ ${rowsHtml}
         const orig = origSizes.find(o => o.talle === sz.talle)
         return !orig && sz.qty > 0
       }).map(sz => ({id:nextMov++, code:newCode, name:editing.name.trim(), tipo:'entrada', fecha, talle:sz.talle, qty:sz.qty, detalle:'Stock inicial (nuevo talle)', creadoPor:currentUser?.displayName||session}))
-      return {
+      const r = {
         ...s,
         nextMov,
         movimientos: [...newMovs, ...s.movimientos],
@@ -1287,7 +1288,10 @@ ${rowsHtml}
           return a
         })
       }
+      newDbState=r; return r
     })
+    const ok = await saveToSupabase(newDbState || dbRef.current)
+    if (!ok) { showToast('Error al guardar. Verificá la conexión e intentá de nuevo.'); return }
     setModal(null); showToast('Artículo actualizado.')
   }
   const compressImage = (file) => new Promise(resolve => {
@@ -1644,7 +1648,7 @@ ${rowsHtml}
     setRepDetail(null)
     setRepModal(true)
   }
-  const saveReposicion = () => {
+  const saveReposicion = async () => {
     if (savesBlocked) { showToast('⚠ Hay cambios de otro usuario — sincronizá antes de guardar.'); return }
     if (!repForm.concepto.trim()) { showToast('Ingresá el concepto.'); return }
     const jugadores = repForm.rows
@@ -1672,6 +1676,7 @@ ${rowsHtml}
     const pushAlerta = (s, tipo, concepto, detalle) => notifica
       ? [{id:Date.now(), tipo, concepto, detalle, por:currentUser?.displayName||session, fecha:today()}, ...(s.repoAlertas||[])]
       : (s.repoAlertas||[])
+    let newDbState = null
     if (repForm.editId) {
       setDb(s => {
         const oldRep = (s.reposiciones||[]).find(r => r.id === repForm.editId)
@@ -1686,7 +1691,7 @@ ${rowsHtml}
           if (diffCount > 0) cambios.push(`modificó cantidades de ${diffCount} jugador${diffCount !== 1 ? 'es' : ''}`)
         }
         const detalle = cambios.length > 0 ? cambios.join(', ') : null
-        return {
+        const r = {
           ...s,
           reposiciones: (s.reposiciones||[]).map(r => r.id===repForm.editId
             ? {...r, concepto:repForm.concepto.trim(), torneo:repForm.torneo, descuento:repForm.descuento,
@@ -1697,8 +1702,8 @@ ${rowsHtml}
             : r),
           repoAlertas: pushAlerta(s, 'editar', repForm.concepto.trim(), detalle)
         }
+        newDbState = r; return r
       })
-      showToast('Reposición actualizada.')
     } else {
       setDb(s => {
         const rep = { id:s.nextRep, fecha:today(), concepto:repForm.concepto.trim(), creadoPor:currentUser?.displayName||session,
@@ -1706,20 +1711,28 @@ ${rowsHtml}
           fechaPartido: normFecha(repForm.fechaPartido)||null,
           observaciones: repForm.observaciones?.trim()||null,
           tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores:allJugadores }
-        return { ...s, reposiciones:[rep,...(s.reposiciones||[])], nextRep:s.nextRep+1, repoAlertas: pushAlerta(s, 'crear', rep.concepto, null) }
+        const r = { ...s, reposiciones:[rep,...(s.reposiciones||[])], nextRep:s.nextRep+1, repoAlertas: pushAlerta(s, 'crear', rep.concepto, null) }
+        newDbState = r; return r
       })
-      showToast('Reposición registrada.')
     }
+    const ok = await saveToSupabase(newDbState || dbRef.current)
+    if (!ok) { showToast('Error al guardar. Verificá la conexión e intentá de nuevo.'); return }
     setRepModal(false)
+    showToast(repForm.editId ? 'Reposición actualizada.' : 'Reposición registrada.')
   }
-  const deleteReposicion = (id) => {
+  const deleteReposicion = async (id) => {
+    if (savesBlocked) { showToast('⚠ Hay cambios de otro usuario — sincronizá antes de continuar.'); return }
+    let newDbState = null
     setDb(s => {
       const rep = (s.reposiciones||[]).find(r=>r.id===id)
       const repoAlertas = currentUser?.role === 'receptor_reposiciones' && rep
         ? [{id:Date.now(), tipo:'eliminar', concepto:rep.concepto, detalle:null, por:currentUser?.displayName||session, fecha:today()}, ...(s.repoAlertas||[])]
         : (s.repoAlertas||[])
-      return {...s, reposiciones:(s.reposiciones||[]).filter(r=>r.id!==id), repoAlertas}
+      const r = {...s, reposiciones:(s.reposiciones||[]).filter(r=>r.id!==id), repoAlertas}
+      newDbState=r; return r
     })
+    const ok = await saveToSupabase(newDbState || dbRef.current)
+    if (!ok) { showToast('Error al eliminar. Verificá la conexión.'); return }
     setRepDetail(null)
     showToast('Reposición eliminada.')
   }
@@ -1972,7 +1985,7 @@ tfoot td{padding:9px 12px;font-weight:700}
     setDisciplinaEdit(null)
     showToast('Disciplina actualizada.')
   }
-  const saveEditDelivery = () => {
+  const saveEditDelivery = async () => {
     if (!editDelivery?.persona?.trim()) { showToast('El nombre no puede estar vacío.'); return }
     const capturedLines = (editDelivery.lines || []).filter(l => l.qty > 0)
     if (capturedLines.length === 0) { showToast('La entrega debe tener al menos un artículo.'); return }
@@ -2017,62 +2030,86 @@ tfoot td{padding:9px 12px;font-weight:700}
       movimientos: db.movimientos.map(m => m.delId === delId ? {...m, detalle:newDetalle} : m)
     }
     setDb(newDb)
-    saveToSupabase(newDb)
+    const ok = await saveToSupabase(newDb)
+    if (!ok) { showToast('Error al guardar. Verificá la conexión e intentá de nuevo.'); return }
     setEditDelivery(null)
     showToast('Entrega actualizada.')
   }
-  const saveRepConcepto = () => {
+  const saveRepConcepto = async () => {
+    if (savesBlocked) { showToast('⚠ Hay cambios de otro usuario — sincronizá antes de guardar.'); return }
     if (!repConceptoEdit?.trim()) { showToast('El concepto no puede estar vacío.'); return }
     const nuevoConcepto = repConceptoEdit.trim()
+    let newDbState = null
     setDb(s => {
       const oldRep = (s.reposiciones||[]).find(r=>r.id===repDetail.id)
       const repoAlertas = currentUser?.role === 'receptor_reposiciones' && oldRep && oldRep.concepto !== nuevoConcepto
         ? [{id:Date.now(), tipo:'editar', concepto:nuevoConcepto, detalle:`cambió el nombre de «${oldRep.concepto}» a «${nuevoConcepto}»`, por:currentUser?.displayName||session, fecha:today()}, ...(s.repoAlertas||[])]
         : (s.repoAlertas||[])
-      return {...s, reposiciones:(s.reposiciones||[]).map(r=>r.id===repDetail.id?{...r,concepto:nuevoConcepto}:r), repoAlertas}
+      const r = {...s, reposiciones:(s.reposiciones||[]).map(r=>r.id===repDetail.id?{...r,concepto:nuevoConcepto}:r), repoAlertas}
+      newDbState=r; return r
     })
+    const ok = await saveToSupabase(newDbState || dbRef.current)
+    if (!ok) { showToast('Error al guardar. Verificá la conexión e intentá de nuevo.'); return }
     setRepDetail(p => ({...p, concepto:nuevoConcepto}))
     setRepConceptoEdit(null)
     showToast('Concepto actualizado.')
   }
-  const saveRepObs = () => {
+  const saveRepObs = async () => {
+    if (savesBlocked) { showToast('⚠ Hay cambios de otro usuario — sincronizá antes de guardar.'); return }
     const obs = (repObsEdit||'').trim() || null
-    setDb(s => ({...s, reposiciones:(s.reposiciones||[]).map(r=>r.id===repDetail.id?{...r,observaciones:obs}:r)}))
+    let newDbState = null
+    setDb(s => { const r = {...s, reposiciones:(s.reposiciones||[]).map(r=>r.id===repDetail.id?{...r,observaciones:obs}:r)}; newDbState=r; return r })
+    const ok = await saveToSupabase(newDbState || dbRef.current)
+    if (!ok) { showToast('Error al guardar. Verificá la conexión e intentá de nuevo.'); return }
     setRepDetail(p => ({...p, observaciones:obs}))
     setRepObsEdit(null)
     showToast('Observaciones guardadas.')
   }
-  const saveDescExtra = () => {
+  const saveDescExtra = async () => {
+    if (savesBlocked) { showToast('⚠ Hay cambios de otro usuario — sincronizá antes de guardar.'); return }
     if (!descExtraForm.jugadorNombre) { showToast('Seleccioná un jugador.'); return }
     const fecha = descExtraForm.fecha || today()
+    let newDbState = null
     if (descExtraForm.id) {
       if (!descExtraForm.articulo) { showToast('Seleccioná una prenda.'); return }
-      setDb(s => ({...s, descExtras:(s.descExtras||[]).map(e=>e.id===descExtraForm.id?{...descExtraForm,fecha}:e)}))
-      showToast('Descuento actualizado.')
+      setDb(s => { const r = {...s, descExtras:(s.descExtras||[]).map(e=>e.id===descExtraForm.id?{...descExtraForm,fecha}:e)}; newDbState=r; return r })
     } else {
       const validas = (descExtraForm.prendas||[]).filter(p=>p.articulo&&p.precio>0)
       if (!validas.length) { showToast('Seleccioná al menos una prenda.'); return }
       const base = Date.now()
-      const nuevos = validas.map((p,i)=>({id:base+i,fecha,jugadorNombre:descExtraForm.jugadorNombre,jugadorNumero:descExtraForm.jugadorNumero,articulo:p.articulo,precio:p.precio,cantidad:p.cantidad||1}))
-      setDb(s => ({...s, descExtras:[...(s.descExtras||[]), ...nuevos]}))
-      showToast(nuevos.length>1?`${nuevos.length} descuentos registrados.`:'Descuento adicional registrado.')
+      const obs = descExtraForm.observaciones?.trim() || null
+      const nuevos = validas.map((p,i)=>({id:base+i,fecha,jugadorNombre:descExtraForm.jugadorNombre,jugadorNumero:descExtraForm.jugadorNumero,articulo:p.articulo,precio:p.precio,cantidad:p.cantidad||1,observaciones:obs}))
+      setDb(s => { const r = {...s, descExtras:[...(s.descExtras||[]), ...nuevos]}; newDbState=r; return r })
     }
+    const ok = await saveToSupabase(newDbState || dbRef.current)
+    if (!ok) { showToast('Error al guardar. Verificá la conexión e intentá de nuevo.'); return }
     setDescExtraModal(false)
+    showToast(descExtraForm.id ? 'Descuento actualizado.' : 'Descuento registrado.')
   }
-  const deleteDescExtra = (id) => {
-    setDb(s => ({...s, descExtras:(s.descExtras||[]).filter(e=>e.id!==id)}))
-    showToast('Descuento eliminado.')
+  const deleteDescExtra = async (id) => {
+    if (savesBlocked) { showToast('⚠ Hay cambios de otro usuario — sincronizá antes de continuar.'); return }
+    let newDbState = null
+    setDb(s => { const r = {...s, descExtras:(s.descExtras||[]).filter(e=>e.id!==id)}; newDbState=r; return r })
+    const ok = await saveToSupabase(newDbState || dbRef.current)
+    if (!ok) showToast('Error al eliminar. Verificá la conexión.')
+    else showToast('Descuento eliminado.')
   }
-  const savePlantelJugador = () => {
+  const savePlantelJugador = async () => {
     if (!plantelForm.nombre.trim()) { showToast('Ingresá el nombre del jugador.'); return }
+    let newDbState = null
     setDb(s => {
       const list = s.plantel || []
+      let r
       if (plantelForm.id !== null) {
-        return {...s, plantel:list.map(j=>j.id===plantelForm.id?{...plantelForm}:j)}
+        r = {...s, plantel:list.map(j=>j.id===plantelForm.id?{...plantelForm}:j)}
+      } else {
+        const newId = list.length > 0 ? Math.max(...list.map(j=>j.id))+1 : 1
+        r = {...s, plantel:[...list, {...plantelForm, id:newId}]}
       }
-      const newId = list.length > 0 ? Math.max(...list.map(j=>j.id))+1 : 1
-      return {...s, plantel:[...list, {...plantelForm, id:newId}]}
+      newDbState=r; return r
     })
+    const ok = await saveToSupabase(newDbState || dbRef.current)
+    if (!ok) { showToast('Error al guardar. Verificá la conexión e intentá de nuevo.'); return }
     setPlantelModal(false)
     showToast(plantelForm.id!==null ? 'Jugador actualizado.' : 'Jugador agregado al plantel.')
   }
@@ -2097,9 +2134,12 @@ tfoot td{padding:9px 12px;font-weight:700}
     })
     showToast('Registros unificados.')
   }
-  const deletePlantelJugador = (id) => {
-    setDb(s => ({...s, plantel:(s.plantel||[]).filter(j=>j.id!==id)}))
-    showToast('Jugador eliminado.')
+  const deletePlantelJugador = async (id) => {
+    let newDbState = null
+    setDb(s => { const r = {...s, plantel:(s.plantel||[]).filter(j=>j.id!==id)}; newDbState=r; return r })
+    const ok = await saveToSupabase(newDbState || dbRef.current)
+    if (!ok) showToast('Error al eliminar. Verificá la conexión.')
+    else showToast('Jugador eliminado.')
   }
   const utiFiltered = (db.camisetasUtileria || []).filter(c =>
     (!utiFilter      || c.competicion === utiFilter) &&
@@ -2617,10 +2657,13 @@ tfoot td{padding:9px 12px;font-weight:700}
                                     <tr key={e.id} style={{borderBottom:'1px solid #F0F0EC',background:'#F5F5F0'}}>
                                       <td style={{padding:'5px 12px'}}></td>
                                       <td style={{padding:'5px 12px'}}></td>
-                                      <td style={{padding:'5px 12px 5px 24px',fontSize:12}}>{e.articulo} <span style={{color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>×{e.cantidad||1}</span></td>
+                                      <td style={{padding:'5px 12px 5px 24px',fontSize:12}}>
+                                        <div>{e.articulo} <span style={{color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>×{e.cantidad||1}</span></div>
+                                        {e.observaciones && <div style={{fontSize:11,color:'#8a8a82',fontStyle:'italic',marginTop:2}}>{e.observaciones}</div>}
+                                      </td>
                                       <td style={{padding:'5px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:12}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</td>
                                       <td style={{padding:'5px 6px',textAlign:'right',whiteSpace:'nowrap'}}>
-                                        <button onClick={ev=>{ev.stopPropagation();setDescExtraForm({...e});setDescExtraModal(true)}} title="Editar" style={{background:'none',border:'none',cursor:'pointer',color:'#5a5a50',fontSize:14,padding:'2px 6px'}}>✎</button>
+                                        <button onClick={ev=>{ev.stopPropagation();setDescExtraForm({...e,observaciones:e.observaciones||''});setDescExtraModal(true)}} title="Editar" style={{background:'none',border:'none',cursor:'pointer',color:'#5a5a50',fontSize:14,padding:'2px 6px'}}>✎</button>
                                         <button onClick={ev=>{ev.stopPropagation();deleteDescExtra(e.id)}} title="Eliminar" style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:16,padding:'2px 6px',lineHeight:1}}>×</button>
                                       </td>
                                     </tr>
@@ -3194,6 +3237,10 @@ tfoot td{padding:9px 12px;font-weight:700}
                     </div>
                   )}
                 </>)}
+                <div className="form-group" style={{marginTop:8}}>
+                  <label className="field-label">Observaciones</label>
+                  <textarea className="field-input" rows={2} placeholder="Opcional…" value={descExtraForm.observaciones||''} onChange={e=>setDescExtraForm(p=>({...p,observaciones:e.target.value}))} style={{resize:'vertical',fontFamily:'inherit',fontSize:13}} />
+                </div>
               </div>
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={()=>setDescExtraModal(false)}>Cancelar</button>
@@ -4937,10 +4984,13 @@ tfoot td{padding:9px 12px;font-weight:700}
                                           <tr key={e.id} style={{borderBottom:'1px solid #F0F0EC',background:'#F5F5F0'}}>
                                             <td style={{padding:'5px 12px'}}></td>
                                             <td style={{padding:'5px 12px'}}></td>
-                                            <td style={{padding:'5px 12px 5px 24px',fontSize:12}}>{e.articulo} <span style={{color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>×{e.cantidad||1}</span></td>
+                                            <td style={{padding:'5px 12px 5px 24px',fontSize:12}}>
+                                              <div>{e.articulo} <span style={{color:'#8a8a82',fontFamily:'IBM Plex Mono,monospace'}}>×{e.cantidad||1}</span></div>
+                                              {e.observaciones && <div style={{fontSize:11,color:'#8a8a82',fontStyle:'italic',marginTop:2}}>{e.observaciones}</div>}
+                                            </td>
                                             <td style={{padding:'5px 12px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:12}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</td>
                                             <td style={{padding:'5px 6px',textAlign:'right',whiteSpace:'nowrap'}}>
-                                              <button onClick={ev=>{ev.stopPropagation();setDescExtraForm({...e});setDescExtraModal(true)}} title="Editar" style={{background:'none',border:'none',cursor:'pointer',color:'#5a5a50',fontSize:14,padding:'2px 6px'}}>✎</button>
+                                              <button onClick={ev=>{ev.stopPropagation();setDescExtraForm({...e,observaciones:e.observaciones||''});setDescExtraModal(true)}} title="Editar" style={{background:'none',border:'none',cursor:'pointer',color:'#5a5a50',fontSize:14,padding:'2px 6px'}}>✎</button>
                                               <button onClick={ev=>{ev.stopPropagation();deleteDescExtra(e.id)}} title="Eliminar" style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:16,padding:'2px 6px',lineHeight:1}}>×</button>
                                             </td>
                                           </tr>
@@ -6224,6 +6274,10 @@ tfoot td{padding:9px 12px;font-weight:700}
                   </div>
                 )}
               </>)}
+              <div className="form-group" style={{marginTop:8}}>
+                <label className="field-label">Observaciones</label>
+                <textarea className="field-input" rows={2} placeholder="Opcional…" value={descExtraForm.observaciones||''} onChange={e=>setDescExtraForm(p=>({...p,observaciones:e.target.value}))} style={{resize:'vertical',fontFamily:'inherit',fontSize:13}} />
+              </div>
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={()=>setDescExtraModal(false)}>Cancelar</button>
