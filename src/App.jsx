@@ -1550,7 +1550,8 @@ ${rowsHtml}
   const movFilterKind = (movChipDefs.find(c=>c[0]===movFilter)||[])[1]
   const movRows = movimientos.filter(m => !movFilterKind || movKind(m)===movFilterKind)
 
-  const saveUti = () => {
+  const saveUti = async () => {
+    if (savesBlocked) { showToast('⚠ Hay cambios de otro usuario — sincronizá antes de guardar.'); return }
     if(!utiForm.numero.trim()) { showToast('Ingresá el número de camiseta.'); return }
     const ubic = utiForm.utiEstante + utiForm.utiAltura
     const toSave = {...utiForm, ubic, cantidad: Math.max(1, Number(utiForm.cantidad)||1)}
@@ -1567,18 +1568,20 @@ ${rowsHtml}
       const r = {...prev, camisetasUtileria: newList}
       newDbState = r; return r
     })
-    if (newDbState) saveToSupabase(newDbState)
+    const ok = await saveToSupabase(newDbState || dbRef.current)
+    if (!ok) { showToast('Error al guardar. Verificá la conexión e intentá de nuevo.'); return }
     setUtiModal(false)
     showToast(utiForm.id !== null ? 'Camiseta actualizada.' : 'Camiseta agregada.')
   }
-  const deleteUti = (id) => {
+  const deleteUti = async (id) => {
     let newDbState = null
     setDb(prev => {
       const r = {...prev, camisetasUtileria: (prev.camisetasUtileria||[]).filter(c => c.id !== id)}
       newDbState = r; return r
     })
-    if (newDbState) saveToSupabase(newDbState)
-    showToast('Camiseta eliminada.')
+    const ok = await saveToSupabase(newDbState || dbRef.current)
+    if (!ok) showToast('Error al eliminar. Verificá la conexión.')
+    else showToast('Camiseta eliminada.')
   }
 
   const TORNEO_FECHAS = {
