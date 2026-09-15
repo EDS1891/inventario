@@ -1757,8 +1757,8 @@ ${rowsHtml}
     }
     const ok = await saveToSupabase(newDbState || dbRef.current)
     setRepSaving(false)
-    if (!ok) { showToast('Error al guardar. Verificá la conexión e intentá de nuevo.'); return }
     repSavedRef.current = true
+    if (!ok) { showToast('Error al guardar. Verificá la conexión e intentá de nuevo.'); return }
     repFormSnapshotRef.current = JSON.stringify(repForm)
     setRepModal(false)
     showToast(repForm.editId ? 'Reposición actualizada.' : 'Reposición registrada.')
