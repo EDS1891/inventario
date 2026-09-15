@@ -1740,13 +1740,15 @@ ${rowsHtml}
         newDbState = r; return r
       })
     }
-    // Cerrar modal inmediatamente — guardar en Supabase en segundo plano
+    const ok = await saveToSupabase(newDbState || dbRef.current)
     repSavedRef.current = true
     setRepSaving(false)
+    if (!ok) {
+      showToast('⚠ Error al guardar. Intentá de nuevo.')
+      return
+    }
     setRepModal(false)
     showToast(isEdit ? 'Reposición actualizada.' : 'Reposición registrada.')
-    const ok = await saveToSupabase(newDbState || dbRef.current)
-    if (!ok) showToast('⚠ Error al sincronizar con el servidor. Recargá para verificar.')
   }
   const deleteReposicion = async (id) => {
     if (savesBlocked) { showToast('⚠ Hay cambios de otro usuario — sincronizá antes de continuar.'); return }
