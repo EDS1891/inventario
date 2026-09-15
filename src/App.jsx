@@ -305,6 +305,7 @@ export default function App() {
   const initialLoadDone = useRef(false)
   const hasPendingSave = useRef(false)
   const dbRef = useRef(db)
+  const repFormSnapshotRef = useRef(null)
 
   // delivery/devolución form
   const [nd, setNd] = useState({ mode:'entrega', tipoPrestamo:false, persona:'', receptor:'', disciplina:'', fecha:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, estampados:[], lines:[], toUser:'', obs:'' })
@@ -357,7 +358,7 @@ export default function App() {
           }
         }
       } catch {}
-    }, 30000)
+    }, 60000)
     return () => clearInterval(interval)
   }, [])
 
@@ -1598,7 +1599,7 @@ ${rowsHtml}
   }
   const TORNEOS_CON_FECHA = Object.keys(TORNEO_FECHAS)
   const openRepModal = () => {
-    setRepForm({
+    const initialForm = {
       editId:null,
       concepto:'',
       descuento:true,
@@ -1609,7 +1610,9 @@ ${rowsHtml}
       tipoCamisetaGolero: REP_TIPOS_GOLERO[0],
       rows:(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j=>({...j,cantCamiseta:'',cantShort:'',descuentoCamiseta:true,descuentoShort:true})),
       extraRows:[], observaciones:''
-    })
+    }
+    repFormSnapshotRef.current = JSON.stringify(initialForm)
+    setRepForm(initialForm)
     setRepModal(true)
   }
   const openRepEdit = (rep) => {
@@ -1633,7 +1636,7 @@ ${rowsHtml}
         cantCamiseta:String(jj.cantCamiseta||''), cantShort:String(jj.cantShort||''),
         descuentoCamiseta:jj.descuentoCamiseta !== false, descuentoShort:jj.descuentoShort !== false
       }))
-    setRepForm({
+    const editForm = {
       editId: rep.id,
       concepto: rep.concepto,
       descuento: rep.descuento !== false,
@@ -1644,10 +1647,22 @@ ${rowsHtml}
       tipoCamisetaGolero: rep.tipoCamisetaGolero || REP_TIPOS_GOLERO[0],
       rows: plantelRows,
       extraRows, observaciones: rep.observaciones || ''
-    })
+    }
+    repFormSnapshotRef.current = JSON.stringify(editForm)
+    setRepForm(editForm)
     setRepDetail(null)
     setRepModal(true)
   }
+  const closeRepModal = () => {
+    const changed = repFormSnapshotRef.current !== JSON.stringify(repForm)
+    if (changed && !window.confirm('¿Salir sin guardar? Los cambios se perderán.')) return
+    setRepModal(false)
+  }
+  const setTodosDescuentos = (val) => setRepForm(p => ({
+    ...p,
+    rows: p.rows.map(r => ({...r, descuentoCamiseta: val, descuentoShort: val})),
+    extraRows: (p.extraRows||[]).map(r => ({...r, descuentoCamiseta: val, descuentoShort: val}))
+  }))
   const saveReposicion = async () => {
     if (savesBlocked) { showToast('⚠ Hay cambios de otro usuario — sincronizá antes de guardar.'); return }
     if (!repForm.concepto.trim()) { showToast('Ingresá el concepto.'); return }
@@ -2793,11 +2808,11 @@ tfoot td{padding:9px 12px;font-weight:700}
 
         {/* Modal: Nueva/Editar reposición (rol Receptor + Reposiciones) */}
         {repModal && (
-          <div className="modal-backdrop" onClick={() => setRepModal(false)}>
+          <div className="modal-backdrop" onClick={closeRepModal}>
             <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:600,width:'96%'}}>
               <div className="modal-header">
                 <div className="modal-title">{repForm.editId ? 'Editar reposición' : 'Nueva reposición'}</div>
-                <button className="modal-close" onClick={() => setRepModal(false)}>×</button>
+                <button className="modal-close" onClick={closeRepModal}>×</button>
               </div>
               <div className="modal-body" style={{maxHeight:'70vh',overflowY:'auto'}}>
                 <div className="form-group">
@@ -2865,6 +2880,11 @@ tfoot td{padding:9px 12px;font-weight:700}
                 </div>
 
                 <div style={{marginTop:16}}>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:6,marginBottom:4}}>
+                    <span style={{fontSize:11,fontWeight:700,color:'#5a5a50'}}>Descuentos:</span>
+                    <button type="button" onClick={()=>setTodosDescuentos(true)} style={{padding:'3px 12px',borderRadius:5,border:'2px solid #2d6a4f',background:'#d8f3dc',color:'#1b4332',fontWeight:700,fontSize:11,cursor:'pointer'}}>SÍ</button>
+                    <button type="button" onClick={()=>setTodosDescuentos(false)} style={{padding:'3px 12px',borderRadius:5,border:'2px solid #ccc',background:'#f5f5f5',color:'#999',fontWeight:700,fontSize:11,cursor:'pointer'}}>NO</button>
+                  </div>
                   <div style={{display:'grid',gridTemplateColumns:'40px 1fr 62px 38px 62px 38px',gap:4,marginBottom:4,fontSize:10,fontWeight:700,color:'#8a8a82',padding:'4px 6px',background:'#F5F5F0',borderRadius:6}}>
                     <div>Nº</div><div>NOMBRE</div><div style={{textAlign:'center'}}>CAM.</div><div style={{textAlign:'center'}}>DC</div><div style={{textAlign:'center'}}>SHT.</div><div style={{textAlign:'center'}}>DS</div>
                   </div>
@@ -2963,7 +2983,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 </div>
               </div>
               <div className="modal-footer">
-                <button className="btn btn-ghost" onClick={() => setRepModal(false)}>Cancelar</button>
+                <button className="btn btn-ghost" onClick={closeRepModal}>Cancelar</button>
                 <button className="btn btn-dark" onClick={saveReposicion}>{repForm.editId ? 'Guardar cambios' : 'Guardar reposición'}</button>
               </div>
             </div>
@@ -5643,11 +5663,11 @@ tfoot td{padding:9px 12px;font-weight:700}
 
       {/* Modal: Nueva Reposición Camisetas */}
       {repModal && (
-        <div className="modal-backdrop" onClick={() => setRepModal(false)}>
+        <div className="modal-backdrop" onClick={closeRepModal}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{maxWidth:600,width:'96%'}}>
             <div className="modal-header">
               <div className="modal-title">{repForm.editId ? 'Editar reposición' : 'Nueva reposición'}</div>
-              <button className="modal-close" onClick={() => setRepModal(false)}>×</button>
+              <button className="modal-close" onClick={closeRepModal}>×</button>
             </div>
             <div className="modal-body" style={{maxHeight:'70vh',overflowY:'auto'}}>
               <div className="form-group">
@@ -5715,6 +5735,11 @@ tfoot td{padding:9px 12px;font-weight:700}
               </div>
 
               <div style={{marginTop:16}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:6,marginBottom:4}}>
+                  <span style={{fontSize:11,fontWeight:700,color:'#5a5a50'}}>Descuentos:</span>
+                  <button type="button" onClick={()=>setTodosDescuentos(true)} style={{padding:'3px 12px',borderRadius:5,border:'2px solid #2d6a4f',background:'#d8f3dc',color:'#1b4332',fontWeight:700,fontSize:11,cursor:'pointer'}}>SÍ</button>
+                  <button type="button" onClick={()=>setTodosDescuentos(false)} style={{padding:'3px 12px',borderRadius:5,border:'2px solid #ccc',background:'#f5f5f5',color:'#999',fontWeight:700,fontSize:11,cursor:'pointer'}}>NO</button>
+                </div>
                 <div style={{display:'grid',gridTemplateColumns:'40px 1fr 62px 38px 62px 38px',gap:4,marginBottom:4,fontSize:10,fontWeight:700,color:'#8a8a82',padding:'4px 6px',background:'#F5F5F0',borderRadius:6}}>
                   <div>Nº</div><div>NOMBRE</div><div style={{textAlign:'center'}}>CAM.</div><div style={{textAlign:'center'}}>DC</div><div style={{textAlign:'center'}}>SHT.</div><div style={{textAlign:'center'}}>DS</div>
                 </div>
@@ -5813,7 +5838,7 @@ tfoot td{padding:9px 12px;font-weight:700}
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-ghost" onClick={() => setRepModal(false)}>Cancelar</button>
+              <button className="btn btn-ghost" onClick={closeRepModal}>Cancelar</button>
               <button className="btn btn-dark" onClick={saveReposicion}>{repForm.editId ? 'Guardar cambios' : 'Guardar reposición'}</button>
             </div>
           </div>
