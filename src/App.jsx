@@ -1642,6 +1642,7 @@ ${rowsHtml}
     setRepModal(true)
   }
   const saveReposicion = () => {
+    if (savesBlocked) { showToast('⚠ Hay cambios de otro usuario — sincronizá antes de guardar.'); return }
     if (!repForm.concepto.trim()) { showToast('Ingresá el concepto.'); return }
     const jugadores = repForm.rows
       .filter(r => Number(r.cantCamiseta)>0 || Number(r.cantShort)>0)
