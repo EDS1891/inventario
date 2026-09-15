@@ -307,6 +307,7 @@ export default function App() {
   const hasPendingSave = useRef(false)
   const dbRef = useRef(db)
   const repFormSnapshotRef = useRef(null)
+  const repSavedRef = useRef(false)
 
   // delivery/devolución form
   const [nd, setNd] = useState({ mode:'entrega', tipoPrestamo:false, persona:'', receptor:'', disciplina:'', fecha:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, estampados:[], lines:[], toUser:'', obs:'' })
@@ -1613,6 +1614,7 @@ ${rowsHtml}
       extraRows:[], observaciones:''
     }
     repFormSnapshotRef.current = JSON.stringify(initialForm)
+    repSavedRef.current = false
     setRepForm(initialForm)
     setRepModal(true)
   }
@@ -1650,12 +1652,14 @@ ${rowsHtml}
       extraRows, observaciones: rep.observaciones || ''
     }
     repFormSnapshotRef.current = JSON.stringify(editForm)
+    repSavedRef.current = false
     setRepForm(editForm)
     setRepDetail(null)
     setRepModal(true)
   }
   const closeRepModal = () => {
     if (repSaving) return
+    if (repSavedRef.current) { setRepModal(false); return }
     let changed = false
     if (repFormSnapshotRef.current) {
       const snap = JSON.parse(repFormSnapshotRef.current)
@@ -1754,6 +1758,7 @@ ${rowsHtml}
     const ok = await saveToSupabase(newDbState || dbRef.current)
     setRepSaving(false)
     if (!ok) { showToast('Error al guardar. Verificá la conexión e intentá de nuevo.'); return }
+    repSavedRef.current = true
     repFormSnapshotRef.current = JSON.stringify(repForm)
     setRepModal(false)
     showToast(repForm.editId ? 'Reposición actualizada.' : 'Reposición registrada.')
