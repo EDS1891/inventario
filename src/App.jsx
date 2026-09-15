@@ -1688,7 +1688,7 @@ ${rowsHtml}
         cantCamiseta:Number(r.cantCamiseta)||0, cantShort:Number(r.cantShort)||0
       }))
     const allJugadores = [...jugadores, ...extraJugadores]
-    if (!allJugadores.length) { showToast('Ingresá al menos una cantidad.'); return }
+    if (!allJugadores.length) { setRepSaving(false); showToast('Ingresá al menos una cantidad.'); return }
     const tieneFecha = TORNEOS_CON_FECHA.includes(repForm.torneo)
     const notifica = currentUser?.role === 'receptor_reposiciones'
     const pushAlerta = (s, tipo, concepto, detalle) => notifica
