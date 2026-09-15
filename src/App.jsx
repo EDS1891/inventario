@@ -298,6 +298,7 @@ export default function App() {
   const repSavedRef = useRef(false)
   const repDirtyRef = useRef(false)
   const repInitializedRef = useRef(false)
+  const manualSavingRef = useRef(false)
 
   // delivery/devolución form
   const [nd, setNd] = useState({ mode:'entrega', tipoPrestamo:false, persona:'', receptor:'', disciplina:'', fecha:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, estampados:[], lines:[], toUser:'', obs:'' })
@@ -378,6 +379,7 @@ export default function App() {
     hasPendingSave.current = true
     saveTimer.current = setTimeout(async () => {
       hasPendingSave.current = false
+      if (manualSavingRef.current) return
       const ok = await saveToSupabase(db)
       if (!ok) showToast('Error al guardar. Verificá la conexión.')
     }, 800)
@@ -1701,6 +1703,7 @@ ${rowsHtml}
       : (s.repoAlertas||[])
     clearTimeout(saveTimer.current)
     hasPendingSave.current = false
+    manualSavingRef.current = true
     let newDbState = null
     if (isEdit) {
       setDb(s => {
@@ -1741,6 +1744,7 @@ ${rowsHtml}
       })
     }
     const ok = await saveToSupabase(newDbState || dbRef.current)
+    manualSavingRef.current = false
     repSavedRef.current = true
     setRepSaving(false)
     if (!ok) {
