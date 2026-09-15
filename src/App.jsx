@@ -135,15 +135,19 @@ async function saveToSupabase(db) {
     { id: 3, articles: db.camisetasUtileria || [], deliveries: db.reposiciones || [], movimientos: db.plantel || [], next_id: 0, next_del: db.nextRep || 1, next_mov: 0, updated_at: now },
     { id: 4, deliveries: db.repoAlertas || [], articles: db.descExtras || [], updated_at: now },
   ]
-  // Retry up to 3 times with delay to handle transient statement timeouts
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    if (attempt > 1) await new Promise(r => setTimeout(r, 1500 * (attempt - 1)))
-    const [r1, r3, r4] = await Promise.all(rows.map(row => supabase.from('deposito_state').upsert(row)))
+  // Save rows sequentially (not parallel) to avoid lock contention on Supabase free tier.
+  // Row 3 (reposiciones) is saved last and retried up to 5 times with backoff.
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    if (attempt > 1) await new Promise(r => setTimeout(r, 2000 * (attempt - 1)))
+    const save = row => supabase.from('deposito_state').update(row).eq('id', row.id)
+    const r1 = await save(rows[0])
+    const r4 = await save(rows[2])
+    const r3 = await save(rows[1])
     if (!r1.error && !r3.error && !r4.error) return true
     if (r1.error) console.error(`[Save] Error fila 1 (intento ${attempt}):`, r1.error.message, r1.error.code)
     if (r3.error) console.error(`[Save] Error fila 3 (intento ${attempt}):`, r3.error.message, r3.error.code)
     if (r4.error) console.error(`[Save] Error fila 4 (intento ${attempt}):`, r4.error.message, r4.error.code)
-    if (attempt < 3) console.warn(`[Save] Reintentando... (${attempt}/3)`)
+    if (attempt < 5) console.warn(`[Save] Reintentando... (${attempt}/5)`)
   }
   return false
 }
