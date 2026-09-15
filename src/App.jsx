@@ -260,6 +260,7 @@ export default function App() {
   const [repForm, setRepForm] = useState({ editId:null, concepto:'', descuento:true, rows:[], extraRows:[], fechaPartido:'', observaciones:'' })
   const [repObsEdit, setRepObsEdit] = useState(null)
   const [repModal, setRepModal] = useState(false)
+  const [repSaving, setRepSaving] = useState(false)
   const [repDetail, setRepDetail] = useState(null)
   const [repResumen, setRepResumen] = useState(null)
   const [repDesglose, setRepDesglose] = useState(null)
@@ -1654,6 +1655,7 @@ ${rowsHtml}
     setRepModal(true)
   }
   const closeRepModal = () => {
+    if (repSaving) return
     const changed = repFormSnapshotRef.current !== JSON.stringify(repForm)
     if (changed && !window.confirm('¿Salir sin guardar? Los cambios se perderán.')) return
     setRepModal(false)
@@ -1666,6 +1668,7 @@ ${rowsHtml}
   const saveReposicion = async () => {
     if (savesBlocked) { showToast('⚠ Hay cambios de otro usuario — sincronizá antes de guardar.'); return }
     if (!repForm.concepto.trim()) { showToast('Ingresá el concepto.'); return }
+    setRepSaving(true)
     const jugadores = repForm.rows
       .filter(r => Number(r.cantCamiseta)>0 || Number(r.cantShort)>0)
       .map(r => {
@@ -1731,7 +1734,9 @@ ${rowsHtml}
       })
     }
     const ok = await saveToSupabase(newDbState || dbRef.current)
+    setRepSaving(false)
     if (!ok) { showToast('Error al guardar. Verificá la conexión e intentá de nuevo.'); return }
+    repFormSnapshotRef.current = JSON.stringify(repForm)
     setRepModal(false)
     showToast(repForm.editId ? 'Reposición actualizada.' : 'Reposición registrada.')
   }
@@ -2983,8 +2988,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                 </div>
               </div>
               <div className="modal-footer">
-                <button className="btn btn-ghost" onClick={closeRepModal}>Cancelar</button>
-                <button className="btn btn-dark" onClick={saveReposicion}>{repForm.editId ? 'Guardar cambios' : 'Guardar reposición'}</button>
+                <button className="btn btn-ghost" onClick={closeRepModal} disabled={repSaving}>Cancelar</button>
+                <button className="btn btn-dark" onClick={saveReposicion} disabled={repSaving}>{repSaving ? 'Guardando…' : (repForm.editId ? 'Guardar cambios' : 'Guardar reposición')}</button>
               </div>
             </div>
           </div>
@@ -5838,8 +5843,8 @@ tfoot td{padding:9px 12px;font-weight:700}
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-ghost" onClick={closeRepModal}>Cancelar</button>
-              <button className="btn btn-dark" onClick={saveReposicion}>{repForm.editId ? 'Guardar cambios' : 'Guardar reposición'}</button>
+              <button className="btn btn-ghost" onClick={closeRepModal} disabled={repSaving}>Cancelar</button>
+              <button className="btn btn-dark" onClick={saveReposicion} disabled={repSaving}>{repSaving ? 'Guardando…' : (repForm.editId ? 'Guardar cambios' : 'Guardar reposición')}</button>
             </div>
           </div>
         </div>
