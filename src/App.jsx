@@ -129,39 +129,23 @@ async function saveToSupabase(db) {
     return false
   }
   ownSaveTimestamp = Date.now()
-  // Row id=2 (users) is managed exclusively by saveUsers() to avoid session-collision overwrites
-  const [r1, r3, r4] = await Promise.all([
-    supabase.from('deposito_state').upsert({
-      id: 1,
-      articles: db.articles,
-      deliveries: db.deliveries,
-      movimientos: db.movimientos,
-      next_id: db.nextId,
-      next_del: db.nextDel,
-      next_mov: db.nextMov,
-      updated_at: new Date().toISOString(),
-    }),
-    supabase.from('deposito_state').upsert({
-      id: 3,
-      articles: db.camisetasUtileria || [],
-      deliveries: db.reposiciones || [],
-      movimientos: db.plantel || [],
-      next_id: 0,
-      next_del: db.nextRep || 1,
-      next_mov: 0,
-      updated_at: new Date().toISOString(),
-    }),
-    supabase.from('deposito_state').upsert({
-      id: 4,
-      deliveries: db.repoAlertas || [],
-      articles: db.descExtras || [],
-      updated_at: new Date().toISOString(),
-    }),
-  ])
-  if (r1.error) console.error('[Save] Error fila 1:', r1.error.message, r1.error.code, r1.error.details)
-  if (r3.error) console.error('[Save] Error fila 3:', r3.error.message, r3.error.code, r3.error.details)
-  if (r4.error) console.error('[Save] Error fila 4:', r4.error.message, r4.error.code, r4.error.details)
-  return !r1.error && !r3.error && !r4.error
+  const now = new Date().toISOString()
+  const rows = [
+    { id: 1, articles: db.articles, deliveries: db.deliveries, movimientos: db.movimientos, next_id: db.nextId, next_del: db.nextDel, next_mov: db.nextMov, updated_at: now },
+    { id: 3, articles: db.camisetasUtileria || [], deliveries: db.reposiciones || [], movimientos: db.plantel || [], next_id: 0, next_del: db.nextRep || 1, next_mov: 0, updated_at: now },
+    { id: 4, deliveries: db.repoAlertas || [], articles: db.descExtras || [], updated_at: now },
+  ]
+  // Retry up to 3 times with delay to handle transient statement timeouts
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    if (attempt > 1) await new Promise(r => setTimeout(r, 1500 * (attempt - 1)))
+    const [r1, r3, r4] = await Promise.all(rows.map(row => supabase.from('deposito_state').upsert(row)))
+    if (!r1.error && !r3.error && !r4.error) return true
+    if (r1.error) console.error(`[Save] Error fila 1 (intento ${attempt}):`, r1.error.message, r1.error.code)
+    if (r3.error) console.error(`[Save] Error fila 3 (intento ${attempt}):`, r3.error.message, r3.error.code)
+    if (r4.error) console.error(`[Save] Error fila 4 (intento ${attempt}):`, r4.error.message, r4.error.code)
+    if (attempt < 3) console.warn(`[Save] Reintentando... (${attempt}/3)`)
+  }
+  return false
 }
 
 function fmt(n) { return Number(n).toLocaleString('es-UY') }
