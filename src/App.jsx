@@ -3366,7 +3366,7 @@ tfoot td{padding:9px 12px;font-weight:700}
             const getCam = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const dc=j.descuentoCamiseta!==undefined?j.descuentoCamiseta!==false:j.descuento!==false;return acc+(dc?Number(j.cantCamiseta)||0:0)},0)
             const getSht = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const ds=j.descuentoShort!==undefined?j.descuentoShort!==false:j.descuento!==false;return acc+(ds?Number(j.cantShort)||0:0)},0)
             const getExtras = nombre => extrasDelMes.filter(e=>e.jugadorNombre===nombre).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
-            const filas = jugsMes.map(j=>({...j,cam:getCam(j.nombre),sht:getSht(j.nombre),extras:getExtras(j.nombre)})).map(f=>({...f,desc:f.cam*PRECIO_DESC_CAMISETA+f.sht*PRECIO_DESC_SHORT+f.extras}))
+            const filas = jugsMes.map(j=>({...j,cam:getCam(j.nombre),sht:getSht(j.nombre),extras:getExtras(j.nombre)})).map(f=>({...f,desc:f.cam*PRECIO_DESC_CAMISETA+f.sht*PRECIO_DESC_SHORT+f.extras})).filter(f=>f.desc>0)
             const totCam = filas.reduce((s,f)=>s+f.cam,0)
             const totSht = filas.reduce((s,f)=>s+f.sht,0)
             const totExtras = filas.reduce((s,f)=>s+f.extras,0)
