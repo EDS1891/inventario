@@ -158,7 +158,10 @@ async function saveToSupabase(db, isManualSave = false) {
       p_movimientos: rows[1].movimientos,
       p_next_del: rows[1].next_del
     })
-    if (!r1.error && !r3.error && !r4.error) return true
+    if (!r1.error && !r3.error && !r4.error) {
+      ownSaveTimestamp = Date.now()
+      return true
+    }
     if (r1.error) console.error(`[Save] Error fila 1 (intento ${attempt}):`, r1.error.message, r1.error.code)
     if (r3.error) console.error(`[Save] Error fila 3 (intento ${attempt}):`, r3.error.message, r3.error.code)
     if (r4.error) console.error(`[Save] Error fila 4 (intento ${attempt}):`, r4.error.message, r4.error.code)
