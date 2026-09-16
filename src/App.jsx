@@ -142,6 +142,8 @@ async function saveToSupabase(db, isManualSave = false) {
     { id: 3, articles: db.camisetasUtileria || [], deliveries: db.reposiciones || [], movimientos: db.plantel || [], next_id: 0, next_del: db.nextRep || 1, next_mov: 0, updated_at: now },
     { id: 4, deliveries: db.repoAlertas || [], articles: db.descExtras || [], updated_at: now },
   ]
+  const rep0 = (db.reposiciones || [])[0]
+  console.log(`[Save] Iniciando save (${isManualSave?'manual':'auto'}), reposiciones.length=${(db.reposiciones||[]).length}, primera.concepto="${rep0?.concepto}"`)
   for (let attempt = 1; attempt <= 5; attempt++) {
     // Abort auto-save if manual save has taken over
     if (!isManualSave && manualSaveInProgress) {
@@ -158,8 +160,10 @@ async function saveToSupabase(db, isManualSave = false) {
       p_movimientos: rows[1].movimientos,
       p_next_del: rows[1].next_del
     })
+    console.log(`[Save] intento ${attempt}: r1.error=${JSON.stringify(r1.error)}, r3.error=${JSON.stringify(r3.error)}, r3.data=${JSON.stringify(r3.data)}, r4.error=${JSON.stringify(r4.error)}`)
     if (!r1.error && !r3.error && !r4.error) {
       ownSaveTimestamp = Date.now()
+      console.log('[Save] OK — todos guardados correctamente')
       return true
     }
     if (r1.error) console.error(`[Save] Error fila 1 (intento ${attempt}):`, r1.error.message, r1.error.code)
