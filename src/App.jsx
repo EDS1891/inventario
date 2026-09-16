@@ -151,13 +151,12 @@ async function saveToSupabase(db, isManualSave = false) {
     if (attempt > 1) await new Promise(r => setTimeout(r, 2000 * (attempt - 1)))
     const r1 = await supabase.from('deposito_state').upsert(rows[0])
     const r4 = await supabase.from('deposito_state').upsert(rows[2])
-    // Row 3 uses an RPC that sets SET LOCAL statement_timeout = '120s' to override Supabase's default
+    // Row 3 uses an RPC with SET LOCAL statement_timeout = '120s'; updated_at set by NOW() server-side
     const r3 = await supabase.rpc('save_deposito_row3', {
       p_articles: rows[1].articles,
       p_deliveries: rows[1].deliveries,
       p_movimientos: rows[1].movimientos,
-      p_next_del: rows[1].next_del,
-      p_updated_at: now
+      p_next_del: rows[1].next_del
     })
     if (!r1.error && !r3.error && !r4.error) return true
     if (r1.error) console.error(`[Save] Error fila 1 (intento ${attempt}):`, r1.error.message, r1.error.code)
