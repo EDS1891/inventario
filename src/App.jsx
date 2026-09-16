@@ -152,7 +152,7 @@ async function saveToSupabase(db, isManualSave = false) {
     const r1 = await supabase.from('deposito_state').upsert(rows[0])
     const r4 = await supabase.from('deposito_state').upsert(rows[2])
     // Row 3 uses an RPC with SET LOCAL statement_timeout = '120s'; updated_at set by NOW() server-side
-    const r3 = await supabase.rpc('save_deposito_row3', {
+    const r3 = await supabase.rpc('upsert_row3', {
       p_articles: rows[1].articles,
       p_deliveries: rows[1].deliveries,
       p_movimientos: rows[1].movimientos,
