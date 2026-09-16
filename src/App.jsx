@@ -1731,44 +1731,41 @@ ${rowsHtml}
     hasPendingSave.current = false
     manualSavingRef.current = true
     manualSaveInProgress = true
-    let newDbState = null
+    const s = dbRef.current
+    let newDbState
     if (isEdit) {
-      setDb(s => {
-        const oldRep = (s.reposiciones||[]).find(r => r.id === repForm.editId)
-        const cambios = []
-        if (oldRep && oldRep.concepto !== repForm.concepto.trim()) cambios.push('cambió el nombre')
-        if (oldRep && oldRep.torneo !== repForm.torneo) cambios.push(`cambió el torneo a ${repForm.torneo}`)
-        if (oldRep) {
-          const diffCount = allJugadores.filter(j => {
-            const old = (oldRep.jugadores||[]).find(x => x.nombre === j.nombre)
-            return !old || old.cantCamiseta !== j.cantCamiseta || old.cantShort !== j.cantShort
-          }).length + (oldRep.jugadores||[]).filter(j => !allJugadores.find(x => x.nombre === j.nombre)).length
-          if (diffCount > 0) cambios.push(`modificó cantidades de ${diffCount} jugador${diffCount !== 1 ? 'es' : ''}`)
-        }
-        const detalle = cambios.length > 0 ? cambios.join(', ') : null
-        const r = {
-          ...s,
-          reposiciones: (s.reposiciones||[]).map(r => r.id===repForm.editId
-            ? {...r, concepto:repForm.concepto.trim(), torneo:repForm.torneo, descuento:repForm.descuento,
-                fechaTorneo: tieneFecha ? (repForm.fechaTorneo === 'Final' ? 'Final' : Number(repForm.fechaTorneo)) : null,
-                fechaPartido: normFecha(repForm.fechaPartido)||null,
-                observaciones: repForm.observaciones?.trim()||null,
-                tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores:allJugadores}
-            : r),
-          repoAlertas: pushAlerta(s, 'editar', repForm.concepto.trim(), detalle)
-        }
-        newDbState = r; return r
-      })
+      const oldRep = (s.reposiciones||[]).find(r => r.id === repForm.editId)
+      const cambios = []
+      if (oldRep && oldRep.concepto !== repForm.concepto.trim()) cambios.push('cambió el nombre')
+      if (oldRep && oldRep.torneo !== repForm.torneo) cambios.push(`cambió el torneo a ${repForm.torneo}`)
+      if (oldRep) {
+        const diffCount = allJugadores.filter(j => {
+          const old = (oldRep.jugadores||[]).find(x => x.nombre === j.nombre)
+          return !old || old.cantCamiseta !== j.cantCamiseta || old.cantShort !== j.cantShort
+        }).length + (oldRep.jugadores||[]).filter(j => !allJugadores.find(x => x.nombre === j.nombre)).length
+        if (diffCount > 0) cambios.push(`modificó cantidades de ${diffCount} jugador${diffCount !== 1 ? 'es' : ''}`)
+      }
+      const detalle = cambios.length > 0 ? cambios.join(', ') : null
+      newDbState = {
+        ...s,
+        reposiciones: (s.reposiciones||[]).map(r => r.id===repForm.editId
+          ? {...r, concepto:repForm.concepto.trim(), torneo:repForm.torneo, descuento:repForm.descuento,
+              fechaTorneo: tieneFecha ? (repForm.fechaTorneo === 'Final' ? 'Final' : Number(repForm.fechaTorneo)) : null,
+              fechaPartido: normFecha(repForm.fechaPartido)||null,
+              observaciones: repForm.observaciones?.trim()||null,
+              tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores:allJugadores}
+          : r),
+        repoAlertas: pushAlerta(s, 'editar', repForm.concepto.trim(), detalle)
+      }
+      setDb(newDbState)
     } else {
-      setDb(s => {
-        const rep = { id:s.nextRep, fecha:today(), concepto:repForm.concepto.trim(), creadoPor:currentUser?.displayName||session,
-          torneo:repForm.torneo, fechaTorneo: tieneFecha ? (repForm.fechaTorneo === 'Final' ? 'Final' : Number(repForm.fechaTorneo)) : null, descuento:repForm.descuento,
-          fechaPartido: normFecha(repForm.fechaPartido)||null,
-          observaciones: repForm.observaciones?.trim()||null,
-          tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores:allJugadores }
-        const r = { ...s, reposiciones:[rep,...(s.reposiciones||[])], nextRep:s.nextRep+1, repoAlertas: pushAlerta(s, 'crear', rep.concepto, null) }
-        newDbState = r; return r
-      })
+      const rep = { id:s.nextRep, fecha:today(), concepto:repForm.concepto.trim(), creadoPor:currentUser?.displayName||session,
+        torneo:repForm.torneo, fechaTorneo: tieneFecha ? (repForm.fechaTorneo === 'Final' ? 'Final' : Number(repForm.fechaTorneo)) : null, descuento:repForm.descuento,
+        fechaPartido: normFecha(repForm.fechaPartido)||null,
+        observaciones: repForm.observaciones?.trim()||null,
+        tipoCamisetaJugador:repForm.tipoCamisetaJugador, tipoCamisetaGolero:repForm.tipoCamisetaGolero, jugadores:allJugadores }
+      newDbState = { ...s, reposiciones:[rep,...(s.reposiciones||[])], nextRep:s.nextRep+1, repoAlertas: pushAlerta(s, 'crear', rep.concepto, null) }
+      setDb(newDbState)
     }
     const ok = await saveToSupabase(newDbState || dbRef.current, true)
     manualSaveInProgress = false
