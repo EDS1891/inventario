@@ -139,7 +139,7 @@ async function saveToSupabase(db) {
   // Row 3 (reposiciones) is saved last and retried up to 5 times with backoff.
   for (let attempt = 1; attempt <= 5; attempt++) {
     if (attempt > 1) await new Promise(r => setTimeout(r, 2000 * (attempt - 1)))
-    const save = row => supabase.from('deposito_state').update(row).eq('id', row.id)
+    const save = row => supabase.from('deposito_state').upsert(row)
     const r1 = await save(rows[0])
     const r4 = await save(rows[2])
     const r3 = await save(rows[1])
