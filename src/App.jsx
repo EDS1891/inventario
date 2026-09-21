@@ -4299,7 +4299,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   ))}
                 </div>
               )}
-              {delFilterReceptor==='Protocolo' && (() => {
+              {delFilterReceptor==='Protocolo' && currentUser?.role !== 'admin-palacio' && (() => {
                 const totalRec = deliveryRows.filter(d => d.receptor==='Protocolo' && d.paga==='si' && (!delFilterPersona || d.persona.toLowerCase().includes(delFilterPersona.toLowerCase()))).reduce((s,d) => s+(d.monto||0), 0)
                 return (
                   <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center',marginBottom:12}}>
@@ -4413,7 +4413,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                           <div style={{fontSize:11.5,color:'#8a8a82'}}>
                             {d.receptor}
                             {d.tipo==='prestamo' && <span style={{marginLeft:6,fontWeight:700,color:d.status==='devuelto'?'#6a6a62':'#7a4f00',background:d.status==='devuelto'?'#EBEBEB':'#FFF3CD',borderRadius:4,padding:'1px 6px',fontSize:11}}>Préstamo{d.status==='devuelto'?' · Devuelto':' · Activo'}</span>}
-                            {d.paga !== null && d.paga !== undefined && <span style={{marginLeft:6,fontWeight:600,color:d.paga==='si'?'#2e9b5e':'#C2473D'}}>· Paga: {d.paga==='si'?'Sí':'No'}{d.paga==='si'&&d.monto>0?' — $ '+d.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}):''}</span>}
+                            {d.paga !== null && d.paga !== undefined && currentUser?.role !== 'admin-palacio' && <span style={{marginLeft:6,fontWeight:600,color:d.paga==='si'?'#2e9b5e':'#C2473D'}}>· Paga: {d.paga==='si'?'Sí':'No'}{d.paga==='si'&&d.monto>0?' — $ '+d.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}):''}</span>}
                           </div>
                         </div>
                       </div>
