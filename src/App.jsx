@@ -1399,6 +1399,7 @@ ${rowsHtml}
   const isReceptorReposiciones = currentUser?.role === 'receptor_reposiciones'
   const isSoloVista = currentUser?.role === 'solo-vista'
   const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'admin-palacio'
+  const hideMoney = currentUser?.role === 'admin-palacio'
 
   // Marcar como vistos los cambios de Reposiciones (rol Receptor + Reposiciones) apenas el admin entra a esa sección
   useEffect(() => {
@@ -3035,7 +3036,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                           {e.observaciones && <div style={{fontSize:11,color:'#8a8a82',fontStyle:'italic',marginTop:2}}>{e.observaciones}</div>}
                         </td>
                         <td style={{padding:'9px 8px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace'}}>{e.cantidad||1}</td>
-                        <td style={{padding:'9px 8px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</td>
+                        {!hideMoney && <td style={{padding:'9px 8px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</td>}
                         <td style={{padding:'9px 4px',textAlign:'right',whiteSpace:'nowrap'}}>
                           <button onClick={() => { setDescExtraForm({...e,observaciones:e.observaciones||''}); setDescExtraModal(true) }} title="Editar" style={{background:'none',border:'none',cursor:'pointer',color:'#5a5a50',fontSize:14,padding:'2px 5px'}}>✎</button>
                           <button onClick={() => { deleteDescExtra(e.id); setDescExtraDetail(p => p.items.length===1 ? null : {...p, items: p.items.filter(x=>x.id!==e.id)}) }} title="Eliminar" style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:16,padding:'2px 5px',lineHeight:1}}>×</button>
@@ -4742,16 +4743,16 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <div className="kpi-value">{(TOTAL_CONTRATO - totalUsado).toLocaleString('es-UY')}</div>
                     <div className="kpi-sub">{(100 - pctTotal).toFixed(1)}% restante</div>
                   </div>
-                  <div className="kpi-card" style={{minWidth:180}}>
+                  {!hideMoney && <div className="kpi-card" style={{minWidth:180}}>
                     <div className="kpi-label">MONTO TOTAL ENTREGADO</div>
                     <div className="kpi-value" style={{fontSize:20}}>$ {data.reduce((s,r)=>s+(r.monto||0),0).toLocaleString('es-UY',{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
                     <div className="kpi-sub">según precios del inventario</div>
-                  </div>
+                  </div>}
                 </div>
 
                 {/* Gráfica de barras verticales */}
                 {(() => {
-                  const isMonto = pumaMetric === 'monto'
+                  const isMonto = pumaMetric === 'monto' && !hideMoney
                   const maxVal = Math.max(...data.map(r => isMonto ? (r.monto||0) : r.unidades), 1)
                   const fmtVal = v => isMonto
                     ? '$ '+v.toLocaleString('es-UY',{minimumFractionDigits:0,maximumFractionDigits:0})
@@ -4764,7 +4765,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                           {isMonto ? 'Monto entregado por receptor' : 'Artículos por receptor · % sobre '+TOTAL_CONTRATO.toLocaleString('es-UY')+' totales'}
                         </div>
                         <div style={{display:'flex',gap:4,background:'#F0F0EC',borderRadius:8,padding:3}}>
-                          {[['unidades','Artículos'],['monto','Monto $']].map(([key,label]) => (
+                          {[['unidades','Artículos'],...(!hideMoney?[['monto','Monto $']]:[])] .map(([key,label]) => (
                             <button key={key} onClick={() => setPumaMetric(key)}
                               style={{padding:'4px 14px',borderRadius:6,border:'none',cursor:'pointer',fontSize:12,fontWeight:600,
                                 background: pumaMetric===key ? '#121212' : 'transparent',
@@ -4893,11 +4894,11 @@ tfoot td{padding:9px 12px;font-weight:700}
                           <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/><div><div className="kpi-value">{totalExtrasCountMesAdmin}</div><div className="kpi-sub">extras →</div></div>
                         </div>
                       </div>
-                      <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#f2cb12'}} onClick={()=>{ setResumenMesSel(mesActualKeyAdmin); setRepResumen('ambos') }}>
+                      {!hideMoney && <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#f2cb12'}} onClick={()=>{ setResumenMesSel(mesActualKeyAdmin); setRepResumen('ambos') }}>
                         <div className="kpi-label" style={{color:'#f2cb12'}}>DESCUENTOS {mesNombreAdmin.toUpperCase()}</div>
                         <div className="kpi-value" style={{color:'#f2cb12'}}>$ {totalDineroMesAdmin.toLocaleString('es-UY')}</div>
                         <div className="kpi-sub" style={{color:'#f2cb12'}}>ver detalle →</div>
-                      </div>
+                      </div>}
                       <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepTab('plantel')}>
                         <div className="kpi-label">PLANTEL</div>
                         <div className="kpi-value">{(db.plantel||[]).filter(j=>j.nombre.trim().toLowerCase()!=='libre').length}</div>
@@ -4932,8 +4933,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                           </div>
                         )}
                         <div className="card" style={{padding:0,overflow:'hidden'}}>
-                          <div className="table-header" style={{gridTemplateColumns:'110px 1fr 32px 70px 70px 120px 36px'}}>
-                            <div>FECHA</div><div>CONCEPTO</div><div style={{textAlign:'center'}}>OBS.</div><div style={{textAlign:'right'}}>CAM.</div><div style={{textAlign:'right'}}>SHT.</div><div style={{textAlign:'right'}}>DESCUENTOS</div><div/>
+                          <div className="table-header" style={{gridTemplateColumns:hideMoney?'110px 1fr 32px 70px 70px 36px':'110px 1fr 32px 70px 70px 120px 36px'}}>
+                            <div>FECHA</div><div>CONCEPTO</div><div style={{textAlign:'center'}}>OBS.</div><div style={{textAlign:'right'}}>CAM.</div><div style={{textAlign:'right'}}>SHT.</div>{!hideMoney && <div style={{textAlign:'right'}}>DESCUENTOS</div>}<div/>
                           </div>
                           {filtered.length === 0
                             ? <div style={{color:'#8a8a82',fontSize:13,textAlign:'center',padding:'24px 0'}}>Sin reposiciones para este torneo.</div>
@@ -4949,7 +4950,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                               const _isFinal = r.fechaTorneo!=null&&r.fechaTorneo!==''&&(r.fechaTorneo==='Final'||r.fechaTorneo==='NaN'||Number.isNaN(r.fechaTorneo))
                           const torneoStr = [_isFinal?'Final':null, r.torneo, !_isFinal&&r.fechaTorneo!=null&&r.fechaTorneo!==''?'F.'+r.fechaTorneo:null].filter(Boolean).join(' ')
                               return (
-                              <div key={r.id} className="table-row" style={{gridTemplateColumns:'110px 1fr 32px 70px 70px 120px 36px',cursor:'pointer',padding:'10px 20px'}} onClick={() => setRepDetail(r)}>
+                              <div key={r.id} className="table-row" style={{gridTemplateColumns:hideMoney?'110px 1fr 32px 70px 70px 36px':'110px 1fr 32px 70px 70px 120px 36px',cursor:'pointer',padding:'10px 20px'}} onClick={() => setRepDetail(r)}>
                                 <div>
                                   <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:'#1a1a1a',fontWeight:700}}>{r.fecha}</div>
                                   {r.fechaPartido && <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#1a1a1a',marginTop:2}}>P: {r.fechaPartido}</div>}
@@ -4963,7 +4964,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                                 <div style={{textAlign:'center'}}>{r.observaciones ? <span title={r.observaciones} style={{fontSize:15,color:'#8a8a82',cursor:'help'}}>ℹ</span> : null}</div>
                                 <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totCam>0?'#1a1a1a':'#ccc'}}>{totCam>0?totCam:'—'}</div>
                                 <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',color:totSht>0?'#1a1a1a':'#ccc'}}>{totSht>0?totSht:'—'}</div>
-                                <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:totalDesc>0?'#1a1a1a':'#ccc'}}>{totalDesc>0?'$'+totalDesc.toLocaleString('es-UY'):'—'}</div>
+                                {!hideMoney && <div style={{textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontSize:12,color:totalDesc>0?'#1a1a1a':'#ccc'}}>{totalDesc>0?'$'+totalDesc.toLocaleString('es-UY'):'—'}</div>}
                                 <div style={{textAlign:'right',color:'#8a8a82',fontSize:18,lineHeight:1}}>›</div>
                               </div>
                               )
@@ -5015,11 +5016,11 @@ tfoot td{padding:9px 12px;font-weight:700}
                         <div style={{width:1,background:'#B8B8B2',alignSelf:'stretch',marginBottom:4}}/><div><div className="kpi-value">{totalExtrasCountMesAdmin}</div><div className="kpi-sub">extras →</div></div>
                       </div>
                     </div>
-                    <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#f2cb12'}} onClick={()=>{ setResumenMesSel(mesActualKeyAdmin); setRepResumen('ambos') }}>
+                    {!hideMoney && <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer',background:'#121212',color:'#f2cb12'}} onClick={()=>{ setResumenMesSel(mesActualKeyAdmin); setRepResumen('ambos') }}>
                       <div className="kpi-label" style={{color:'#f2cb12'}}>DESCUENTOS {mesNombreAdmin.toUpperCase()}</div>
                       <div className="kpi-value" style={{color:'#f2cb12'}}>$ {totalDineroMesAdmin.toLocaleString('es-UY')}</div>
                       <div className="kpi-sub" style={{color:'#f2cb12'}}>ver detalle →</div>
-                    </div>
+                    </div>}
                     <div className="kpi-card" style={{alignSelf:'flex-start',minWidth:150,cursor:'pointer'}} onClick={()=>setRepTab('plantel')}>
                       <div className="kpi-label">PLANTEL</div>
                       <div className="kpi-value">{(db.plantel||[]).filter(j=>j.nombre.trim().toLowerCase()!=='libre').length}</div>
@@ -5353,7 +5354,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   <span style={{fontSize:13,color:'#6a6a62',fontWeight:600}}>Total unidades</span>
                   <span style={{fontWeight:800,fontSize:16,fontFamily:'IBM Plex Mono,monospace'}}>{d.totalUd}</span>
                 </div>
-                {d.paga === 'si' && d.monto > 0 && (
+                {!hideMoney && d.paga === 'si' && d.monto > 0 && (
                   <div style={{padding:'10px 20px',background:'#F0FAF4',borderTop:'1px solid #b6e4c8',fontSize:13,color:'#1a5c33'}}>
                     {d.estampados?.length > 0 && (d.estampadoCosto||0) > 0 && (
                       <>
@@ -5910,7 +5911,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                         {e.observaciones && <div style={{fontSize:11,color:'#8a8a82',fontStyle:'italic',marginTop:2}}>{e.observaciones}</div>}
                       </td>
                       <td style={{padding:'9px 8px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace'}}>{e.cantidad||1}</td>
-                      <td style={{padding:'9px 8px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</td>
+                      {!hideMoney && <td style={{padding:'9px 8px',textAlign:'right',fontFamily:'IBM Plex Mono,monospace',fontWeight:700}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</td>}
                       <td style={{padding:'9px 4px',textAlign:'right',whiteSpace:'nowrap'}}>
                         <button onClick={() => { setDescExtraForm({...e,observaciones:e.observaciones||''}); setDescExtraModal(true) }} title="Editar" style={{background:'none',border:'none',cursor:'pointer',color:'#5a5a50',fontSize:14,padding:'2px 5px'}}>✎</button>
                         <button onClick={() => { deleteDescExtra(e.id); setDescExtraDetail(p => p.items.length===1 ? null : {...p, items: p.items.filter(x=>x.id!==e.id)}) }} title="Eliminar" style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:16,padding:'2px 5px',lineHeight:1}}>×</button>
@@ -5919,9 +5920,9 @@ tfoot td{padding:9px 12px;font-weight:700}
                   ))}
                 </tbody>
               </table>
-              <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',fontSize:14,padding:'10px 8px 0',borderTop:'2px solid #E0E0D8',marginTop:4}}>
+              {!hideMoney && <div style={{textAlign:'right',fontWeight:700,fontFamily:'IBM Plex Mono,monospace',fontSize:14,padding:'10px 8px 0',borderTop:'2px solid #E0E0D8',marginTop:4}}>
                 Total: $ {descExtraDetail.items.reduce((s,e)=>s+e.precio*(e.cantidad||1),0).toLocaleString('es-UY')}
-              </div>
+              </div>}
             </div>
             <div className="modal-footer">
               <button className="btn btn-ghost" onClick={() => setDescExtraDetail(null)}>Cerrar</button>
@@ -6079,19 +6080,19 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <col style={{width:'auto'}}/>
                     <col style={{width:52}}/>
                     <col style={{width:52}}/>
-                    <col style={{width:80}}/>
+                    {!hideMoney && <col style={{width:80}}/>}
                   </colgroup>
                   <thead>
                     <tr style={{borderBottom:'2px solid #ECECE8'}}>
                       <th style={{padding:'0 0 6px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',textAlign:'left'}}>REPOSICIÓN</th>
                       <th style={{padding:'0 0 6px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',textAlign:'center'}}>CAM</th>
                       <th style={{padding:'0 0 6px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',textAlign:'center'}}>SHO</th>
-                      <th style={{padding:'0 0 6px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',textAlign:'right'}}>MONTO</th>
+                      {!hideMoney && <th style={{padding:'0 0 6px',fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',textAlign:'right'}}>MONTO</th>}
                     </tr>
                   </thead>
                   <tbody>
                     {filas.length === 0
-                      ? <tr><td colSpan={4} style={{color:'#999',fontSize:13,padding:'20px 0',textAlign:'center'}}>Sin registros</td></tr>
+                      ? <tr><td colSpan={hideMoney?3:4} style={{color:'#999',fontSize:13,padding:'20px 0',textAlign:'center'}}>Sin registros</td></tr>
                       : filas.map((f,i) => (
                         <tr key={i} style={{borderBottom:'1px solid #ECECE8'}}>
                           <td style={{padding:'7px 8px 7px 0',verticalAlign:'middle'}}>
@@ -6100,7 +6101,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                           </td>
                           <td style={{padding:'7px 4px',textAlign:'center',fontWeight:700,fontSize:13,verticalAlign:'middle'}}>{f.cam}</td>
                           <td style={{padding:'7px 4px',textAlign:'center',fontWeight:700,fontSize:13,verticalAlign:'middle'}}>{f.sht}</td>
-                          <td style={{padding:'7px 0 7px 4px',fontFamily:'IBM Plex Mono,monospace',fontSize:12,fontWeight:600,textAlign:'right',whiteSpace:'nowrap',verticalAlign:'middle'}}>$ {f.monto.toLocaleString('es-UY')}</td>
+                          {!hideMoney && <td style={{padding:'7px 0 7px 4px',fontFamily:'IBM Plex Mono,monospace',fontSize:12,fontWeight:600,textAlign:'right',whiteSpace:'nowrap',verticalAlign:'middle'}}>$ {f.monto.toLocaleString('es-UY')}</td>}
                         </tr>
                       ))
                     }
@@ -6110,7 +6111,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                       <td style={{padding:'8px 8px 0 0',fontWeight:700,fontSize:12}}>TOTAL</td>
                       <td style={{padding:'8px 4px 0',textAlign:'center'}}><span style={{fontWeight:700,fontSize:14,background:'#f2cb12',borderRadius:20,padding:'2px 6px'}}>{totCam}</span></td>
                       <td style={{padding:'8px 4px 0',textAlign:'center'}}><span style={{fontWeight:700,fontSize:14,background:'#f2cb12',borderRadius:20,padding:'2px 6px'}}>{totSht}</span></td>
-                      <td style={{padding:'8px 0 0 4px',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,textAlign:'right',whiteSpace:'nowrap'}}>$ {totMonto.toLocaleString('es-UY')}</td>
+                      {!hideMoney && <td style={{padding:'8px 0 0 4px',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,textAlign:'right',whiteSpace:'nowrap'}}>$ {totMonto.toLocaleString('es-UY')}</td>}
                     </tr>
                   </tfoot>
                 </table>
@@ -6119,19 +6120,19 @@ tfoot td{padding:9px 12px;font-weight:700}
                 <div style={{fontSize:10,fontWeight:700,color:'#999',letterSpacing:'.04em',paddingTop:12,paddingBottom:4,borderBottom:'2px solid #ECECE8',marginTop:8}}>DESCUENTOS EXTRA</div>
                 <div style={{overflowY:'auto',maxHeight:160}}>
                   {extrasJug.map((e,i) => (
-                    <div key={i} style={{display:'grid',gridTemplateColumns:'1fr auto',gap:'0 10px',alignItems:'center',padding:'6px 0',borderBottom:'1px solid #ECECE8'}}>
+                    <div key={i} style={{display:'grid',gridTemplateColumns:hideMoney?'1fr':'1fr auto',gap:'0 10px',alignItems:'center',padding:'6px 0',borderBottom:'1px solid #ECECE8'}}>
                       <div>
                         {e.fecha && <div style={{fontSize:11,fontWeight:700,color:'#121212',marginBottom:1}}>{e.fecha}</div>}
                         <div style={{fontWeight:500,fontSize:12,color:'#555',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{e.articulo}{(e.cantidad||1)>1?` × ${e.cantidad}`:''}</div>
                       </div>
-                      <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,fontWeight:600,textAlign:'right',whiteSpace:'nowrap'}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</span>
+                      {!hideMoney && <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:12,fontWeight:600,textAlign:'right',whiteSpace:'nowrap'}}>$ {(e.precio*(e.cantidad||1)).toLocaleString('es-UY')}</span>}
                     </div>
                   ))}
                 </div>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0 0',borderTop:'2px solid #121212',marginTop:4}}>
+                {!hideMoney && <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0 0',borderTop:'2px solid #121212',marginTop:4}}>
                   <span style={{fontWeight:700,fontSize:12}}>TOTAL EXTRAS</span>
                   <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,fontSize:13,whiteSpace:'nowrap'}}>$ {totExtrasItems.toLocaleString('es-UY')}</span>
-                </div>
+                </div>}
               </>)}
               <button onClick={()=>setRankingDetalle(null)} style={{marginTop:16,width:'100%',padding:'9px 0',border:'1px solid #D0D0CC',borderRadius:8,background:'#fff',cursor:'pointer',fontSize:13,color:'#666'}}>Cerrar</button>
             </div>
@@ -6348,7 +6349,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <input className="field-input mono" type="number" min="1" value={descExtraForm.cantidad} onChange={e=>setDescExtraForm(p=>({...p,cantidad:Math.max(1,parseInt(e.target.value)||1)}))} style={{textAlign:'center'}} />
                   </div>
                 </div>
-                {descExtraForm.precio>0 && (
+                {!hideMoney && descExtraForm.precio>0 && (
                   <div style={{textAlign:'right',fontWeight:700,fontSize:14,fontFamily:'IBM Plex Mono,monospace',color:'#121212'}}>
                     Total: $ {(descExtraForm.precio*(descExtraForm.cantidad||1)).toLocaleString('es-UY')}
                   </div>
@@ -6378,7 +6379,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                     + Agregar prenda
                   </button>
                 </div>
-                {(descExtraForm.prendas||[]).some(p=>p.precio>0) && (
+                {!hideMoney && (descExtraForm.prendas||[]).some(p=>p.precio>0) && (
                   <div style={{textAlign:'right',fontWeight:700,fontSize:14,fontFamily:'IBM Plex Mono,monospace',color:'#121212',marginTop:10}}>
                     Total: $ {(descExtraForm.prendas||[]).reduce((s,p)=>s+p.precio*(p.cantidad||1),0).toLocaleString('es-UY')}
                   </div>
@@ -6580,13 +6581,13 @@ tfoot td{padding:9px 12px;font-weight:700}
                             <th style={{padding:'6px 12px',textAlign:'left',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>JUGADOR</th>
                             <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>CAMISETAS</th>
                             <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>SHORTS</th>
-                            <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>EXTRAS</th>
-                            <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>DESCUENTO</th>
+                            {!hideMoney && <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>EXTRAS</th>}
+                            {!hideMoney && <th style={{padding:'6px 14px',textAlign:'center',fontWeight:600,fontSize:11,letterSpacing:'.04em'}}>DESCUENTO</th>}
                           </tr>
                         </thead>
                         <tbody>
                           {filasAdmin.length === 0
-                            ? <tr><td colSpan={5} style={{padding:'28px 0',textAlign:'center',color:'#8a8a82',fontSize:13}}>Sin descuentos este mes.</td></tr>
+                            ? <tr><td colSpan={hideMoney?3:5} style={{padding:'28px 0',textAlign:'center',color:'#8a8a82',fontSize:13}}>Sin descuentos este mes.</td></tr>
                             : filasAdmin.map((f,i)=>(
                               <tr key={i} style={{borderBottom:'1px solid #F0F0EC',background:i%2===0?'#fff':'#FAFAF8'}}>
                                 <td style={{padding:'7px 12px',fontWeight:500,whiteSpace:'nowrap',cursor:'pointer'}} onClick={()=>setRankingDetalle(f.nombre)}>
@@ -6595,8 +6596,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                                 </td>
                                 <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.cam}</td>
                                 <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.sht}</td>
-                                <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.extras>0?`$ ${f.extras.toLocaleString('es-UY')}`:'-'}</td>
-                                <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,background:'#FFF8D6'}}>$ {f.desc.toLocaleString('es-UY')}</td>
+                                {!hideMoney && <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#121212'}}>{f.extras>0?`$ ${f.extras.toLocaleString('es-UY')}`:'-'}</td>}
+                                {!hideMoney && <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,background:'#FFF8D6'}}>$ {f.desc.toLocaleString('es-UY')}</td>}
                               </tr>
                             ))
                           }
@@ -6604,8 +6605,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                             <td style={{padding:'7px 12px',fontSize:11,fontWeight:700,letterSpacing:'.04em',color:'#f2cb12'}}>TOTAL</td>
                             <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>{totCamAdmin}</td>
                             <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>{totShtAdmin}</td>
-                            <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>{totExtrasAdmin>0?`$ ${totExtrasAdmin.toLocaleString('es-UY')}`:'-'}</td>
-                            <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>$ {totDescAdmin.toLocaleString('es-UY')}</td>
+                            {!hideMoney && <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>{totExtrasAdmin>0?`$ ${totExtrasAdmin.toLocaleString('es-UY')}`:'-'}</td>}
+                            {!hideMoney && <td style={{padding:'7px 14px',textAlign:'center',fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#f2cb12'}}>$ {totDescAdmin.toLocaleString('es-UY')}</td>}
                           </tr>
                         </tbody>
                       </table>
