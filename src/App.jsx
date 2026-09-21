@@ -24,8 +24,8 @@ const SHORT_TIPOS = ['Titular','Alternativa']
 const REP_TIPOS_JUGADOR = ['TRADICIONAL','AMARILLA','VERDE']
 const REP_TIPOS_GOLERO  = ['NEGRO','NARANJA','CREMA']
 const getRepTipos = (posicion) => posicion === 'Golero' ? REP_TIPOS_GOLERO : REP_TIPOS_JUGADOR
-const ROLE_LABELS = { admin:'Admin', 'solo-vista':'Solo Vista', receptor:'Receptor', receptor_reposiciones:'Receptor + Repos.' }
-const ROLE_OPTIONS = [['admin','Administrador'],['solo-vista','Solo Vista'],['receptor','Receptor'],['receptor_reposiciones','Receptor + Reposiciones']]
+const ROLE_LABELS = { admin:'Admin', 'admin-palacio':'Admin. Palacio', 'solo-vista':'Solo Vista', receptor:'Receptor', receptor_reposiciones:'Receptor + Repos.' }
+const ROLE_OPTIONS = [['admin','Administrador'],['admin-palacio','Admin. Palacio'],['solo-vista','Solo Vista'],['receptor','Receptor'],['receptor_reposiciones','Receptor + Reposiciones']]
 const PRECIO_DESC_CAMISETA = 1945
 const PRECIO_DESC_SHORT = 1145
 const EXTRAS_PRENDAS = [
@@ -1398,10 +1398,11 @@ ${rowsHtml}
   const isReceptor  = currentUser?.role === 'receptor' || currentUser?.role === 'receptor_reposiciones'
   const isReceptorReposiciones = currentUser?.role === 'receptor_reposiciones'
   const isSoloVista = currentUser?.role === 'solo-vista'
+  const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'admin-palacio'
 
   // Marcar como vistos los cambios de Reposiciones (rol Receptor + Reposiciones) apenas el admin entra a esa sección
   useEffect(() => {
-    if (view === 'reposiciones' && currentUser?.role === 'admin' && (db.repoAlertas||[]).length > 0) {
+    if (view === 'reposiciones' && isAdmin && (db.repoAlertas||[]).length > 0) {
       setDb(s => ({...s, repoAlertas:[]}))
     }
   }, [view, currentUser?.role])
@@ -3952,7 +3953,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                     ))}
                   </div>
                 )}
-                {currentUser?.role === 'admin' && (db.repoAlertas||[]).length > 0 && (
+                {isAdmin && (db.repoAlertas||[]).length > 0 && (
                   <div className="card" style={{border:'2px solid #F59E0B',marginBottom:16}}>
                     <div className="card-header">
                       <div className="card-title" style={{color:'#B45309'}}>⚠ Cambios en Reposiciones</div>
@@ -7457,9 +7458,9 @@ tfoot td{padding:9px 12px;font-weight:700}
                       </div>
                       <span style={{background:u.role==='admin'?'#121212':u.role==='solo-vista'?'#FFF4E6':'#EDF7F2',color:u.role==='admin'?'#f2cb12':u.role==='solo-vista'?'#c2560a':'#2e9b5e',border:'1px solid '+(u.role==='admin'?'#3a3a3a':u.role==='solo-vista'?'#e8834a':'#2e9b5e'),borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700,flexShrink:0}}>{ROLE_LABELS[u.role]||'Receptor'}</span>
                       {u.username === session && <span className="badge gray">Vos</span>}
-                      {currentUser?.role === 'admin' && u.username !== session && <button className="btn-del" onClick={()=>deleteUser(u.username)}>✕</button>}
+                      {isAdmin && u.username !== session && <button className="btn-del" onClick={()=>deleteUser(u.username)}>✕</button>}
                     </div>
-                    {currentUser?.role === 'admin' && u.username !== session && (
+                    {isAdmin && u.username !== session && (
                       <div style={{display:'flex',gap:6,marginTop:8,paddingLeft:42,flexWrap:'wrap'}}>
                         {ROLE_OPTIONS.map(([v,label]) => (
                           <button key={v} onClick={()=>{
@@ -7492,7 +7493,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <label className="field-label">Nombre completo</label>
                     <input className="field-input" value={userMgmt.newDisplayName||''} onChange={e=>setUserMgmt(p=>({...p,newDisplayName:e.target.value,err:''}))} placeholder="Ej. Juan Pérez" />
                   </div>
-                  {currentUser?.role === 'admin' && (
+                  {isAdmin && (
                   <div className="form-group">
                     <label className="field-label">Rol</label>
                     <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
