@@ -5438,20 +5438,6 @@ tfoot td{padding:9px 12px;font-weight:700}
                   {RECEPTORES.map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
-              {editDelivery.receptor === 'Protocolo' && (
-                <div className="form-group">
-                  <label className="field-label">Paga</label>
-                  <div style={{display:'flex',gap:8}}>
-                    {[['si','SÍ'],['no','NO']].map(([v,l]) => (
-                      <button key={v} className={`talle-btn${editDelivery.paga===v?' active':''}`}
-                        style={{flex:1,padding:'9px 0',fontSize:13,fontWeight:700}}
-                        onClick={() => setEditDelivery(p => ({...p, paga:v}))}>
-                        {l}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
               <div className="form-group">
                 <label className="field-label">Observaciones <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional)</span></label>
                 <textarea className="field-input" value={editDelivery.obs||''} onChange={e => setEditDelivery(p => ({...p, obs:e.target.value}))}
@@ -6831,84 +6817,6 @@ tfoot td{padding:9px 12px;font-weight:700}
                   </select>
                   {receptorUsers.length === 0 && <div style={{marginTop:6,fontSize:12,color:'#8a8a82'}}>No hay usuarios receptores registrados aún.</div>}
                   {nd.toUser && <div style={{marginTop:6,fontSize:12,color:'#7a5800',background:'#FFF8D6',border:'1px solid #f2cb12',borderRadius:6,padding:'6px 10px'}}>La entrega quedará pendiente de confirmación por el receptor.</div>}
-                </div>
-              )}
-              {nd.receptor === 'Protocolo' && !ndIsDev && (
-                <div className="form-group">
-                  <label className="field-label">¿Paga?</label>
-                  <div style={{display:'flex',gap:8}}>
-                    {[['si','SÍ'],['no','NO']].map(([v,label]) => (
-                      <button key={v} style={{flex:1,padding:'7px 0',borderRadius:6,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:13,
-                        background:nd.paga===v?'#f2cb12':'#F5F5F0',
-                        borderColor:nd.paga===v?'#e6be00':'#E0E0DA',
-                        color:nd.paga===v?'#121212':'#8a8a82'}}
-                        onClick={() => setNd(p=>({...p,paga:v,estampados:v==='si'?p.estampados:[]}))}>
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                  {nd.paga === 'si' && nd.lines.length > 0 && (
-                    <div style={{marginTop:10,padding:'8px 12px',background:'#F0FAF4',border:'1px solid #b6e4c8',borderRadius:6,fontSize:13,color:'#1a5c33'}}>
-                      {ndEstampado > 0 ? (
-                        <>
-                          <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
-                            <span>Indumentaria (50%)</span>
-                            <span>$ {(ndMonto-ndEstampado).toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
-                          </div>
-                          <div style={{display:'flex',justifyContent:'space-between',marginBottom:5}}>
-                            <span>Estampado</span>
-                            <span>$ {ndEstampado.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
-                          </div>
-                          <div style={{borderTop:'1px solid #b6e4c8',paddingTop:5,display:'flex',justifyContent:'space-between',fontWeight:700}}>
-                            <span>Total a cobrar</span>
-                            <b style={{fontSize:15}}>$ {ndMonto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</b>
-                          </div>
-                        </>
-                      ) : (
-                        <span>Total a cobrar: <b style={{fontSize:15}}>$ {ndMonto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</b></span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-              {nd.receptor === 'Protocolo' && !ndIsDev && nd.paga === 'si' && (
-                <div className="form-group">
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-                    <label className="field-label" style={{marginBottom:0}}>Estampados</label>
-                    <button style={{padding:'4px 12px',borderRadius:5,border:'1px solid #E0E0DA',background:'#F5F5F0',cursor:'pointer',fontWeight:700,fontSize:12.5,color:'#4a4a42'}}
-                      onClick={() => setNd(p=>({...p,estampados:[...p.estampados,{id:Date.now(),numero:'',nombre:false}]}))}>
-                      + Agregar prenda
-                    </button>
-                  </div>
-                  {nd.estampados.length === 0 && (
-                    <div style={{fontSize:12.5,color:'#8a8a82',fontStyle:'italic'}}>Sin estampados — hacé clic en "+ Agregar prenda" para cada prenda que lleve estampado.</div>
-                  )}
-                  {nd.estampados.map((e,i) => {
-                    const digits = String(e.numero||'').replace(/\D/g,'').length
-                    const cost = digits*180+(e.nombre?200:0)
-                    return (
-                      <div key={e.id} style={{display:'flex',gap:6,alignItems:'center',marginBottom:6,padding:'8px 10px',background:'#F5F5F0',borderRadius:6,border:'1px solid #E0E0DA'}}>
-                        <span style={{fontSize:11,color:'#8a8a82',fontWeight:700,minWidth:18}}>#{i+1}</span>
-                        <input type="text" placeholder="Número (ej: 10)" className="field-input"
-                          value={e.numero} style={{flex:1,minWidth:0}}
-                          onChange={ev => setNd(p=>({...p,estampados:p.estampados.map(x=>x.id===e.id?{...x,numero:ev.target.value}:x)}))} />
-                        <button style={{padding:'5px 10px',borderRadius:5,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:12,whiteSpace:'nowrap',
-                          background:e.nombre?'#121212':'#F5F5F0',borderColor:e.nombre?'#121212':'#E0E0DA',color:e.nombre?'#f2cb12':'#8a8a82'}}
-                          onClick={() => setNd(p=>({...p,estampados:p.estampados.map(x=>x.id===e.id?{...x,nombre:!x.nombre}:x)}))}>
-                          Nombre
-                        </button>
-                        <span style={{fontSize:12,color:'#1a5c33',fontWeight:700,minWidth:52,textAlign:'right'}}>{cost>0?`$${cost.toLocaleString('es-UY')}`:'—'}</span>
-                        <button style={{background:'none',border:'none',cursor:'pointer',color:'#C2473D',fontSize:18,lineHeight:1,padding:'0 2px',fontWeight:700}}
-                          onClick={() => setNd(p=>({...p,estampados:p.estampados.filter(x=>x.id!==e.id)}))}>×</button>
-                      </div>
-                    )
-                  })}
-                  {nd.estampados.length > 0 && ndEstampado > 0 && (
-                    <div style={{marginTop:2,padding:'6px 10px',background:'#F0FAF4',border:'1px solid #b6e4c8',borderRadius:6,fontSize:12.5,color:'#1a5c33',fontWeight:600,display:'flex',justifyContent:'space-between'}}>
-                      <span>Total estampado</span>
-                      <span>$ {ndEstampado.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>
-                    </div>
-                  )}
                 </div>
               )}
               <div style={{background:'#FAFAF8',border:'1px solid #ECECE8',borderRadius:8,padding:16}}>
