@@ -1850,6 +1850,116 @@ ${rowsHtml}
     const a = document.createElement('a'); a.href=url; a.download=`${rep.concepto.replace(/[\\/:*?"<>|]/g,'-')}.xlsx`; a.click()
     URL.revokeObjectURL(url)
   }
+  const buildEntregasPorArticuloPdfHtml = () => {
+    const showMoney = !hideMoney
+    const estadoLabel = st => st==='aceptado'?'Confirmada':st==='pendiente'?'Pendiente conf.':st==='pendiente_separar'?'Pend. separar':st==='devuelto'?'Devuelta':st||''
+    const artMap = {}
+    ;(db.deliveries||[]).forEach(d => {
+      ;(d.lines||[]).forEach(l => {
+        if (!artMap[l.code]) {
+          const arts = db.articles.filter(a => a.code === l.code)
+          const artWithPhoto = arts.find(a => a.photos?.length || a.photo)
+          const photo = artWithPhoto ? (artWithPhoto.photos?.length ? artWithPhoto.photos[0] : artWithPhoto.photo) : null
+          artMap[l.code] = { name: codeName[l.code]||l.code, code: l.code, photo, rows: [] }
+        }
+        artMap[l.code].rows.push({
+          talle:   l.talle,
+          qty:     l.qty,
+          receptor: d.receptor + (d.disciplina ? ' · ' + d.disciplina : ''),
+          persona: d.persona,
+          fecha:   d.fecha,
+          estado:  estadoLabel(d.status),
+          paga:    showMoney ? (d.receptor==='Protocolo' ? (d.paga==='si'?'Sí':d.paga==='no'?'No':'—') : '—') : null,
+          monto:   showMoney ? (d.paga==='si' && d.monto>0 ? d.monto : null) : null,
+        })
+      })
+    })
+    const artGroups = Object.values(artMap).sort((a,b) => a.name.localeCompare(b.name,'es'))
+    const moneyTh = showMoney ? '<th>PAGA</th><th>MONTO</th>' : ''
+    const totalEntregas = artGroups.reduce((s,a)=>s+a.rows.reduce((ss,r)=>ss+r.qty,0),0)
+    const blocksHtml = artGroups.map(art => {
+      const photoHtml = art.photo
+        ? `<img src="${art.photo}" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid #ddd;flex-shrink:0;">`
+        : `<div style="width:72px;height:72px;border-radius:6px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:10px;text-align:center;flex-shrink:0;">Sin foto</div>`
+      const sorted = art.rows.slice().sort((a,b) => a.fecha.localeCompare(b.fecha))
+      const subtotal = sorted.reduce((s,r)=>s+r.qty,0)
+      const rowsHtml = sorted.map((r,i) => {
+        const bg = i%2===0?'#fff':'#f8f8f6'
+        const moneyTd = showMoney
+          ? `<td style="text-align:center;">${r.paga||'—'}</td><td style="text-align:right;font-family:monospace;">${r.monto?'$'+r.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</td>`
+          : ''
+        return `<tr style="background:${bg};">
+          <td style="text-align:center;font-weight:700;">${r.talle}</td>
+          <td style="text-align:center;font-weight:800;">${r.qty}</td>
+          <td>${r.receptor}</td>
+          <td>${r.persona}</td>
+          <td style="white-space:nowrap;">${r.fecha}</td>
+          <td>${r.estado}</td>
+          ${moneyTd}
+        </tr>`
+      }).join('')
+      const moneyTotTd = showMoney ? '<td></td><td></td>' : ''
+      return `<div style="border:1px solid #E4E4DE;border-radius:8px;margin-bottom:16px;break-inside:avoid;page-break-inside:avoid;overflow:hidden;">
+        <div style="display:flex;gap:14px;align-items:center;padding:12px 16px;background:#1a1a1a;">
+          ${photoHtml}
+          <div>
+            <div style="font-size:15px;font-weight:700;color:#f2cb12;">${art.name}</div>
+            <div style="font-size:11px;color:#999;margin-top:2px;">${art.code}</div>
+          </div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead>
+            <tr style="background:#f0f0ec;color:#5a5a52;">
+              <th style="padding:5px 10px;text-align:center;">TALLE</th>
+              <th style="padding:5px 10px;text-align:center;">CANT.</th>
+              <th style="padding:5px 10px;text-align:left;">RECEPTOR</th>
+              <th style="padding:5px 10px;text-align:left;">PERSONA</th>
+              <th style="padding:5px 10px;text-align:left;">FECHA</th>
+              <th style="padding:5px 10px;text-align:left;">ESTADO</th>
+              ${moneyTh}
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+          <tfoot>
+            <tr style="background:#1a1a1a;color:#f2cb12;font-weight:700;">
+              <td style="padding:6px 10px;text-align:center;" colspan="1">SUBTOTAL</td>
+              <td style="padding:6px 10px;text-align:center;font-size:14px;">${subtotal}</td>
+              <td colspan="${showMoney?4:4}" style="padding:6px 10px;"></td>
+              ${moneyTotTd}
+            </tr>
+          </tfoot>
+        </table>
+      </div>`
+    }).join('')
+    const fecha = new Date().toLocaleDateString('es-UY')
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reporte de Entregas por Artículo</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;padding-bottom:80px;font-size:12px;}
+table td,table th{padding:5px 10px;border-bottom:1px solid #eee;}
+.no-print{text-align:right;margin-bottom:16px;}
+.no-print button{background:#121212;color:#f2cb12;border:none;padding:9px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
+@media print{.no-print{display:none;}body{padding:12px;padding-bottom:80px;}}</style>
+</head><body>
+<div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;margin-bottom:20px;border-bottom:2px solid #111;">
+  <div style="display:flex;align-items:center;gap:14px;">
+    <img src="${window.location.origin}/escudo_blanco.png" style="height:64px;width:auto;" alt="CAP">
+    <div>
+      <div style="font-family:'Oswald',Arial,sans-serif;font-size:20px;font-weight:700;letter-spacing:.06em;color:#111;text-transform:uppercase;line-height:1.1;-webkit-text-stroke:.4px #111;">CLUB ATLÉTICO PEÑAROL</div>
+      <div style="font-family:'Oswald',Arial,sans-serif;font-size:11px;font-weight:400;letter-spacing:.14em;color:#555;text-transform:uppercase;margin-top:5px;">Entregas de indumentaria</div>
+    </div>
+  </div>
+  <div style="text-align:right;">
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:18px;font-weight:600;letter-spacing:.04em;color:#111;">Reporte por Artículo</div>
+    <div style="font-size:11px;color:#888;margin-top:4px;">Generado: ${fecha} · Total: ${totalEntregas} unidades en ${artGroups.length} artículos</div>
+  </div>
+</div>
+${blocksHtml}
+<div style="position:fixed;bottom:0;left:0;right:0;padding:14px 24px;border-top:1px solid #ddd;display:flex;justify-content:center;background:#fff;">
+  <img src="${window.location.origin}/logo_horizontal.png" style="height:36px;width:auto;" alt="Club Atlético Peñarol">
+</div>
+</body></html>`
+  }
   const exportEntregasPorArticuloExcel = async () => {
     const DARK   = {type:'pattern',pattern:'solid',fgColor:{argb:'FF1A1A1A'}}
     const GRAY   = {type:'pattern',pattern:'solid',fgColor:{argb:'FFF0F0EC'}}
@@ -4391,6 +4501,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   ))}
                 </div>
                 {isAdmin && <button className="btn btn-ghost" style={{fontSize:12,padding:'5px 11px',whiteSpace:'nowrap'}} onClick={exportEntregasPorArticuloExcel}>↓ Excel por artículo</button>}
+                {isAdmin && <button className="btn btn-ghost" style={{fontSize:12,padding:'5px 11px',whiteSpace:'nowrap'}} onClick={() => openPrintWindow(buildEntregasPorArticuloPdfHtml())}>↓ PDF por artículo</button>}
               </div>
               <div style={{marginBottom:12,position:'relative'}}>
                 <input
