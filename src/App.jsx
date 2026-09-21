@@ -4387,7 +4387,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                         <div style={{fontSize:11.5,color:'#8a8a82',marginTop:4}}>unidades totales</div>
                         {detail.precio > 0 && <div style={{marginTop:8,fontSize:13,fontWeight:700,color:'#1a1a1a'}}>$ {detail.precio.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>}
                         <button onClick={exportProductoExcel} style={{marginTop:10,padding:'5px 12px',borderRadius:6,border:'1px solid #2d6a4f',background:'#fff',color:'#2d6a4f',fontSize:12,fontWeight:700,cursor:'pointer'}}>↓ Excel</button>
-                        {isAdmin && <button onClick={() => openPrintWindow(buildEntregasPorArticuloPdfHtml(detail.code))} style={{marginTop:6,padding:'5px 12px',borderRadius:6,border:'1px solid #7a3800',background:'#fff',color:'#7a3800',fontSize:12,fontWeight:700,cursor:'pointer'}}>↓ PDF entregas</button>}
+                        {isAdmin && <button onClick={() => openPrintWindow(buildEntregasPorArticuloPdfHtml(selectedCode))} style={{marginTop:6,padding:'5px 12px',borderRadius:6,border:'1px solid #7a3800',background:'#fff',color:'#7a3800',fontSize:12,fontWeight:700,cursor:'pointer'}}>↓ PDF entregas</button>}
                       </div>
                     </div>
                   </div>
