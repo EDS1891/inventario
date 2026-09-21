@@ -1850,6 +1850,86 @@ ${rowsHtml}
     const a = document.createElement('a'); a.href=url; a.download=`${rep.concepto.replace(/[\\/:*?"<>|]/g,'-')}.xlsx`; a.click()
     URL.revokeObjectURL(url)
   }
+  const exportEntregasPorArticuloExcel = async () => {
+    const YELLOW = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
+    const DARK   = {type:'pattern',pattern:'solid',fgColor:{argb:'FF1A1A1A'}}
+    const GRAY   = {type:'pattern',pattern:'solid',fgColor:{argb:'FFF0F0EC'}}
+    const F_BOLD = {name:'Calibri',size:11,bold:true}
+    const F_NORM = {name:'Calibri',size:11}
+    const F_YWHI = {name:'Calibri',size:11,bold:true,color:{argb:'FFFFF2CB'}}
+    const BORDER = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
+    const s = (cell, fill, font) => { cell.fill=fill; cell.font=font||F_NORM; cell.border=BORDER; cell.alignment={vertical:'middle'} }
+
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('Entregas por Artículo')
+
+    const cols = [
+      {header:'ARTÍCULO',       key:'articulo', width:36},
+      {header:'CÓDIGO',         key:'codigo',   width:14},
+      {header:'TALLE',          key:'talle',    width:10},
+      {header:'CANTIDAD',       key:'cantidad', width:12},
+      {header:'RECEPTOR',       key:'receptor', width:22},
+      {header:'PERSONA',        key:'persona',  width:28},
+      {header:'FECHA',          key:'fecha',    width:14},
+      {header:'ESTADO',         key:'estado',   width:18},
+    ]
+    ws.columns = cols.map(c => ({key:c.key, width:c.width}))
+
+    const hRow = ws.getRow(1)
+    cols.forEach((c,i) => {
+      const cell = hRow.getCell(i+1)
+      cell.value = c.header
+      s(cell, DARK, F_YWHI)
+      cell.alignment = {horizontal:'center',vertical:'middle'}
+    })
+    hRow.height = 18
+
+    const estadoLabel = st => st==='aceptado'?'Confirmada':st==='pendiente'?'Pendiente conf.':st==='pendiente_separar'?'Pendiente separar':st==='devuelto'?'Devuelta':st||''
+
+    const rows = []
+    ;(db.deliveries||[]).forEach(d => {
+      ;(d.lines||[]).forEach(l => {
+        rows.push({
+          articulo: codeName[l.code] || l.code,
+          codigo:   l.code,
+          talle:    l.talle,
+          cantidad: l.qty,
+          receptor: d.receptor + (d.disciplina ? ' — '+d.disciplina : ''),
+          persona:  d.persona,
+          fecha:    d.fecha,
+          estado:   estadoLabel(d.status),
+        })
+      })
+    })
+
+    rows.sort((a,b) => a.articulo.localeCompare(b.articulo,'es') || a.fecha.localeCompare(b.fecha))
+
+    rows.forEach((r,i) => {
+      const row = ws.getRow(i+2)
+      const fill = i%2===0 ? {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFFFF'}} : GRAY
+      cols.forEach((c,ci) => {
+        const cell = row.getCell(ci+1)
+        cell.value = r[c.key]
+        s(cell, fill)
+        if(c.key==='cantidad') { cell.alignment={horizontal:'center',vertical:'middle'}; cell.font={...F_BOLD} }
+        else cell.alignment={vertical:'middle'}
+      })
+      row.height = 15
+    })
+
+    const totRow = ws.getRow(rows.length+2)
+    ws.mergeCells(rows.length+2, 1, rows.length+2, 3)
+    const tc = totRow.getCell(1); tc.value='TOTAL ARTÍCULOS'; s(tc, DARK, F_YWHI); tc.alignment={horizontal:'left',vertical:'middle'}
+    const qc = totRow.getCell(4); qc.value=rows.reduce((s,r)=>s+r.cantidad,0); s(qc, DARK, F_YWHI); qc.alignment={horizontal:'center',vertical:'middle'}
+    for(let i=5;i<=cols.length;i++){ const c=totRow.getCell(i); s(c, DARK, F_YWHI) }
+    totRow.height=17
+
+    const buf = await wb.xlsx.writeBuffer()
+    const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href=url; a.download='entregas-por-articulo.xlsx'; a.click()
+    URL.revokeObjectURL(url)
+  }
   const exportDescuentosPivot = async () => {
     const reposiciones = (db.reposiciones||[]).slice().sort((a,b)=>{
       const fa=a.fechaPartido||a.fecha||''; const fb=b.fechaPartido||b.fecha||''
@@ -4280,6 +4360,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <button key={r} className={`chip${delFilterReceptor===r?' active':''}`} onClick={() => { setDelFilterReceptor(r); setDelFilterDisciplina(''); setDelFilterPaga('') }}>{r}</button>
                   ))}
                 </div>
+                {isAdmin && <button className="btn btn-ghost" style={{fontSize:12,padding:'5px 11px',whiteSpace:'nowrap'}} onClick={exportEntregasPorArticuloExcel}>↓ Excel por artículo</button>}
               </div>
               <div style={{marginBottom:12,position:'relative'}}>
                 <input
