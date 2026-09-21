@@ -3898,14 +3898,14 @@ tfoot td{padding:9px 12px;font-weight:700}
           {/* PANEL */}
           {view === 'panel' && (
             <>
-              <div className="kpi-grid">
+              {currentUser?.role !== 'admin-palacio' && <div className="kpi-grid">
                 <div className="kpi-card"><div className="kpi-label">ARTÍCULOS</div><div className="kpi-value">{kpis.articulos}</div><div className="kpi-sub">referencias activas</div></div>
 
                 <div className="kpi-card" style={{cursor:'pointer'}} onClick={()=>setShowUnidadesDesglose(true)}><div className="kpi-label">UNIDADES EN STOCK</div><div className="kpi-value">{kpis.unidades}</div><div className="kpi-sub">suma de todos los talles →</div></div>
 
                 <div className="kpi-card"><div className="kpi-label">MONTO TOTAL EN ARTÍCULOS</div><div className="kpi-value" style={{fontSize:24}}>$ {kpis.valorStock.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</div></div>
 
-              </div>
+              </div>}
               <div className="panel-grid">
                 <div className="card">
                   <div className="card-header">
