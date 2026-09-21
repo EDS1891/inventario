@@ -1850,7 +1850,7 @@ ${rowsHtml}
     const a = document.createElement('a'); a.href=url; a.download=`${rep.concepto.replace(/[\\/:*?"<>|]/g,'-')}.xlsx`; a.click()
     URL.revokeObjectURL(url)
   }
-  const buildEntregasPorArticuloPdfHtml = () => {
+  const buildEntregasPorArticuloPdfHtml = (filterCode = null) => {
     const showMoney = !hideMoney
     const estadoLabel = st => st==='aceptado'?'Confirmada':st==='pendiente'?'Pendiente conf.':st==='pendiente_separar'?'Pend. separar':st==='devuelto'?'Devuelta':st||''
     const artMap = {}
@@ -1874,7 +1874,7 @@ ${rowsHtml}
         })
       })
     })
-    const artGroups = Object.values(artMap).sort((a,b) => a.name.localeCompare(b.name,'es'))
+    const artGroups = Object.values(artMap).filter(a => !filterCode || a.code === filterCode).sort((a,b) => a.name.localeCompare(b.name,'es'))
     const moneyTh = showMoney ? '<th>PAGA</th><th>MONTO</th>' : ''
     const totalEntregas = artGroups.reduce((s,a)=>s+a.rows.reduce((ss,r)=>ss+r.qty,0),0)
     const blocksHtml = artGroups.map(art => {
@@ -4387,6 +4387,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                         <div style={{fontSize:11.5,color:'#8a8a82',marginTop:4}}>unidades totales</div>
                         {detail.precio > 0 && <div style={{marginTop:8,fontSize:13,fontWeight:700,color:'#1a1a1a'}}>$ {detail.precio.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>}
                         <button onClick={exportProductoExcel} style={{marginTop:10,padding:'5px 12px',borderRadius:6,border:'1px solid #2d6a4f',background:'#fff',color:'#2d6a4f',fontSize:12,fontWeight:700,cursor:'pointer'}}>↓ Excel</button>
+                        {isAdmin && <button onClick={() => openPrintWindow(buildEntregasPorArticuloPdfHtml(detail.code))} style={{marginTop:6,padding:'5px 12px',borderRadius:6,border:'1px solid #7a3800',background:'#fff',color:'#7a3800',fontSize:12,fontWeight:700,cursor:'pointer'}}>↓ PDF entregas</button>}
                       </div>
                     </div>
                   </div>
