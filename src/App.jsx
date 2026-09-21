@@ -1874,7 +1874,7 @@ ${rowsHtml}
         })
       })
     })
-    const artGroups = Object.values(artMap).filter(a => !filterCode || a.code === filterCode).sort((a,b) => a.name.localeCompare(b.name,'es'))
+    const artGroups = Object.values(artMap).filter(a => !filterCode || String(a.code) === String(filterCode)).sort((a,b) => a.name.localeCompare(b.name,'es'))
     const moneyTh = showMoney ? '<th>PAGA</th><th>MONTO</th>' : ''
     const totalEntregas = artGroups.reduce((s,a)=>s+a.rows.reduce((ss,r)=>ss+r.qty,0),0)
     const blocksHtml = artGroups.map(art => {
