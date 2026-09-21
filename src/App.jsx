@@ -1851,78 +1851,108 @@ ${rowsHtml}
     URL.revokeObjectURL(url)
   }
   const exportEntregasPorArticuloExcel = async () => {
-    const YELLOW = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
     const DARK   = {type:'pattern',pattern:'solid',fgColor:{argb:'FF1A1A1A'}}
     const GRAY   = {type:'pattern',pattern:'solid',fgColor:{argb:'FFF0F0EC'}}
-    const F_BOLD = {name:'Calibri',size:11,bold:true}
+    const WHITE  = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFFFF'}}
     const F_NORM = {name:'Calibri',size:11}
+    const F_BOLD = {name:'Calibri',size:11,bold:true}
     const F_YWHI = {name:'Calibri',size:11,bold:true,color:{argb:'FFFFF2CB'}}
+    const F_GRAY = {name:'Calibri',size:10,bold:true,color:{argb:'FF5A5A52'}}
     const BORDER = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
-    const s = (cell, fill, font) => { cell.fill=fill; cell.font=font||F_NORM; cell.border=BORDER; cell.alignment={vertical:'middle'} }
+    const sc = (cell, fill, font, align) => { cell.fill=fill; cell.font=font||F_NORM; cell.border=BORDER; cell.alignment={vertical:'middle',...(align||{})} }
+
+    const showMoney = !hideMoney
+    const baseCols = [
+      {header:'TALLE',    key:'talle',    width:10},
+      {header:'CANTIDAD', key:'cantidad', width:12},
+      {header:'RECEPTOR', key:'receptor', width:26},
+      {header:'PERSONA',  key:'persona',  width:28},
+      {header:'FECHA',    key:'fecha',    width:14},
+      {header:'ESTADO',   key:'estado',   width:20},
+    ]
+    const moneyCols = showMoney ? [
+      {header:'PAGA',  key:'paga',  width:10},
+      {header:'MONTO', key:'monto', width:14},
+    ] : []
+    const cols = [...baseCols, ...moneyCols]
+    const nCols = cols.length
 
     const wb = new ExcelJS.Workbook()
     const ws = wb.addWorksheet('Entregas por Artículo')
-
-    const cols = [
-      {header:'ARTÍCULO',       key:'articulo', width:36},
-      {header:'CÓDIGO',         key:'codigo',   width:14},
-      {header:'TALLE',          key:'talle',    width:10},
-      {header:'CANTIDAD',       key:'cantidad', width:12},
-      {header:'RECEPTOR',       key:'receptor', width:22},
-      {header:'PERSONA',        key:'persona',  width:28},
-      {header:'FECHA',          key:'fecha',    width:14},
-      {header:'ESTADO',         key:'estado',   width:18},
-    ]
     ws.columns = cols.map(c => ({key:c.key, width:c.width}))
-
-    const hRow = ws.getRow(1)
-    cols.forEach((c,i) => {
-      const cell = hRow.getCell(i+1)
-      cell.value = c.header
-      s(cell, DARK, F_YWHI)
-      cell.alignment = {horizontal:'center',vertical:'middle'}
-    })
-    hRow.height = 18
 
     const estadoLabel = st => st==='aceptado'?'Confirmada':st==='pendiente'?'Pendiente conf.':st==='pendiente_separar'?'Pendiente separar':st==='devuelto'?'Devuelta':st||''
 
-    const rows = []
+    const artMap = {}
     ;(db.deliveries||[]).forEach(d => {
       ;(d.lines||[]).forEach(l => {
-        rows.push({
-          articulo: codeName[l.code] || l.code,
-          codigo:   l.code,
+        if (!artMap[l.code]) artMap[l.code] = { name: codeName[l.code]||l.code, code: l.code, rows: [] }
+        artMap[l.code].rows.push({
           talle:    l.talle,
           cantidad: l.qty,
           receptor: d.receptor + (d.disciplina ? ' — '+d.disciplina : ''),
           persona:  d.persona,
           fecha:    d.fecha,
           estado:   estadoLabel(d.status),
+          paga:     showMoney ? (d.receptor==='Protocolo' ? (d.paga==='si'?'Sí':d.paga==='no'?'No':'—') : '—') : undefined,
+          monto:    showMoney ? (d.paga==='si' && d.monto>0 ? d.monto : null) : undefined,
         })
       })
     })
 
-    rows.sort((a,b) => a.articulo.localeCompare(b.articulo,'es') || a.fecha.localeCompare(b.fecha))
+    const artGroups = Object.values(artMap).sort((a,b) => a.name.localeCompare(b.name,'es'))
 
-    rows.forEach((r,i) => {
-      const row = ws.getRow(i+2)
-      const fill = i%2===0 ? {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFFFF'}} : GRAY
-      cols.forEach((c,ci) => {
-        const cell = row.getCell(ci+1)
-        cell.value = r[c.key]
-        s(cell, fill)
-        if(c.key==='cantidad') { cell.alignment={horizontal:'center',vertical:'middle'}; cell.font={...F_BOLD} }
-        else cell.alignment={vertical:'middle'}
+    let rowIdx = 1
+    artGroups.forEach((art, gi) => {
+      // Encabezado combinado del artículo
+      ws.mergeCells(rowIdx, 1, rowIdx, nCols)
+      const hCell = ws.getRow(rowIdx).getCell(1)
+      hCell.value = `ENTREGAS DE: ${art.name} (${art.code})`
+      hCell.fill = DARK
+      hCell.font = {name:'Calibri',size:12,bold:true,color:{argb:'FFFFF2CB'}}
+      hCell.border = BORDER
+      hCell.alignment = {horizontal:'center',vertical:'middle'}
+      ws.getRow(rowIdx).height = 22
+      rowIdx++
+
+      // Cabeceras de columna
+      const colHRow = ws.getRow(rowIdx)
+      cols.forEach((c,i) => {
+        const cell = colHRow.getCell(i+1)
+        cell.value = c.header
+        sc(cell, GRAY, F_GRAY, {horizontal:'center'})
       })
-      row.height = 15
-    })
+      colHRow.height = 16
+      rowIdx++
 
-    const totRow = ws.getRow(rows.length+2)
-    ws.mergeCells(rows.length+2, 1, rows.length+2, 3)
-    const tc = totRow.getCell(1); tc.value='TOTAL ARTÍCULOS'; s(tc, DARK, F_YWHI); tc.alignment={horizontal:'left',vertical:'middle'}
-    const qc = totRow.getCell(4); qc.value=rows.reduce((s,r)=>s+r.cantidad,0); s(qc, DARK, F_YWHI); qc.alignment={horizontal:'center',vertical:'middle'}
-    for(let i=5;i<=cols.length;i++){ const c=totRow.getCell(i); s(c, DARK, F_YWHI) }
-    totRow.height=17
+      // Filas de datos ordenadas por fecha
+      const sorted = art.rows.slice().sort((a,b) => a.fecha.localeCompare(b.fecha))
+      sorted.forEach((r,i) => {
+        const row = ws.getRow(rowIdx)
+        const fill = i%2===0 ? WHITE : GRAY
+        cols.forEach((c,ci) => {
+          const cell = row.getCell(ci+1)
+          if (c.key==='monto') { cell.value=r.monto||null; if(r.monto) cell.numFmt='#,##0' }
+          else cell.value = r[c.key]
+          sc(cell, fill, c.key==='cantidad'?F_BOLD:F_NORM, c.key==='cantidad'?{horizontal:'center'}:{})
+        })
+        row.height = 15
+        rowIdx++
+      })
+
+      // Fila de subtotal
+      ws.mergeCells(rowIdx, 1, rowIdx, 1)
+      const subRow = ws.getRow(rowIdx)
+      sc(subRow.getCell(1), DARK, F_YWHI, {horizontal:'left'})
+      subRow.getCell(1).value = 'SUBTOTAL'
+      sc(subRow.getCell(2), DARK, F_YWHI, {horizontal:'center'})
+      subRow.getCell(2).value = sorted.reduce((s,r)=>s+r.cantidad,0)
+      for(let i=3;i<=nCols;i++) sc(subRow.getCell(i), DARK, F_YWHI)
+      subRow.height = 16
+      rowIdx++
+
+      if (gi < artGroups.length-1) rowIdx++ // fila vacía separadora
+    })
 
     const buf = await wb.xlsx.writeBuffer()
     const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
