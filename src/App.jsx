@@ -4973,16 +4973,18 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <div className="kpi-value">{(TOTAL_CONTRATO - totalUsado).toLocaleString('es-UY')}</div>
                     <div className="kpi-sub">{(100 - pctTotal).toFixed(1)}% restante</div>
                   </div>
-                  <div className="kpi-card" style={{minWidth:180}}>
-                    <div className="kpi-label">MONTO TOTAL ENTREGADO</div>
-                    <div className="kpi-value" style={{fontSize:20}}>$ {data.reduce((s,r)=>s+(r.monto||0),0).toLocaleString('es-UY',{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
-                    <div className="kpi-sub">según precios del inventario</div>
-                  </div>
+                  {currentUser?.role !== 'admin-palacio' && (
+                    <div className="kpi-card" style={{minWidth:180}}>
+                      <div className="kpi-label">MONTO TOTAL ENTREGADO</div>
+                      <div className="kpi-value" style={{fontSize:20}}>$ {data.reduce((s,r)=>s+(r.monto||0),0).toLocaleString('es-UY',{minimumFractionDigits:0,maximumFractionDigits:0})}</div>
+                      <div className="kpi-sub">según precios del inventario</div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Gráfica de barras verticales */}
                 {(() => {
-                  const isMonto = pumaMetric === 'monto'
+                  const isMonto = currentUser?.role !== 'admin-palacio' && pumaMetric === 'monto'
                   const maxVal = Math.max(...data.map(r => isMonto ? (r.monto||0) : r.unidades), 1)
                   const fmtVal = v => isMonto
                     ? '$ '+v.toLocaleString('es-UY',{minimumFractionDigits:0,maximumFractionDigits:0})
@@ -4995,7 +4997,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                           {isMonto ? 'Monto entregado por receptor' : 'Artículos por receptor · % sobre '+TOTAL_CONTRATO.toLocaleString('es-UY')+' totales'}
                         </div>
                         <div style={{display:'flex',gap:4,background:'#F0F0EC',borderRadius:8,padding:3}}>
-                          {[['unidades','Artículos'],['monto','Monto $']].map(([key,label]) => (
+                          {(currentUser?.role==='admin-palacio' ? [['unidades','Artículos']] : [['unidades','Artículos'],['monto','Monto $']]).map(([key,label]) => (
                             <button key={key} onClick={() => setPumaMetric(key)}
                               style={{padding:'4px 14px',borderRadius:6,border:'none',cursor:'pointer',fontSize:12,fontWeight:600,
                                 background: pumaMetric===key ? '#121212' : 'transparent',
