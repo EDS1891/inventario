@@ -810,6 +810,234 @@ ${rowsHtml}
     setTimeout(() => { w.focus(); w.print() }, 500)
   }
 
+  const buildReporteArticuloHtml = (filterCode = null) => {
+    const canVerMonto = currentUser?.role !== 'admin-palacio'
+    const statusLabel = st => st==='aceptado'?'Confirmada':st==='pendiente'?'Pendiente conf.':st==='pendiente_separar'?'Pendiente separar':st==='devuelto'?'Devuelta':st||''
+    const byCode = {}
+    ;(db.deliveries||[]).forEach(d => {
+      ;(d.lines||[]).forEach(l => {
+        if (!byCode[l.code]) {
+          const arts = db.articles.filter(a => a.code === l.code)
+          const artWithPhoto = arts.find(a => a.photos?.length || a.photo)
+          const photo = artWithPhoto ? (artWithPhoto.photos?.length ? artWithPhoto.photos[0] : artWithPhoto.photo) : null
+          byCode[l.code] = { name: arts[0]?.name || l.code, code: l.code, photo, rows: [] }
+        }
+        byCode[l.code].rows.push({
+          deliveryId: d.id, talle: l.talle, qty: l.qty,
+          receptor: d.receptor + (d.disciplina ? ' · '+d.disciplina : ''),
+          persona: d.persona, fecha: d.fecha, estado: statusLabel(d.status),
+          monto: canVerMonto && d.paga==='si' && d.monto>0 ? d.monto : null,
+        })
+      })
+    })
+    const articles = Object.values(byCode)
+      .filter(a => !filterCode || String(a.code) === String(filterCode))
+      .sort((a,b) => a.name.localeCompare(b.name,'es'))
+    const totalUnidadesGlobal = articles.reduce((s,a)=>s+a.rows.reduce((x,r)=>x+r.qty,0),0)
+    const talleTotals = {}
+    articles.forEach(a => a.rows.forEach(r => { talleTotals[r.talle] = (talleTotals[r.talle]||0) + r.qty }))
+    const talleRowsGlobal = TALLE_ORDER.filter(t => talleTotals[t]).map(t => ({talle:t, qty: talleTotals[t]}))
+      .concat(Object.keys(talleTotals).filter(t => !TALLE_ORDER.includes(t)).map(t => ({talle:t, qty:talleTotals[t]})))
+
+    const articlesHtml = articles.map(a => {
+      const photoHtml = a.photo
+        ? `<img src="${a.photo}" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid #ddd;flex-shrink:0;">`
+        : `<div style="width:72px;height:72px;border-radius:6px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:10px;text-align:center;flex-shrink:0;">Sin foto</div>`
+      const groups = {}
+      a.rows.forEach(r => {
+        const key = `${r.persona}||${r.fecha}||${r.receptor}`
+        if (!groups[key]) groups[key] = { persona:r.persona, fecha:r.fecha, receptor:r.receptor, talles:{}, monto:0, _seen:new Set() }
+        groups[key].talles[r.talle] = (groups[key].talles[r.talle]||0) + r.qty
+        if (!groups[key]._seen.has(r.deliveryId)) { groups[key].monto += r.monto||0; groups[key]._seen.add(r.deliveryId) }
+      })
+      const groupList = Object.values(groups).sort((x,y)=> x.fecha.localeCompare(y.fecha) || x.persona.localeCompare(y.persona,'es'))
+        .map(g => ({...g, lines: TALLE_ORDER.filter(t=>g.talles[t]).map(t=>({talle:t,qty:g.talles[t]})).concat(Object.keys(g.talles).filter(t=>!TALLE_ORDER.includes(t)).map(t=>({talle:t,qty:g.talles[t]})))}))
+      const totalArticulo = groupList.reduce((s,g)=>s+g.lines.reduce((x,l)=>x+l.qty,0),0)
+      // Cada grupo (persona+fecha+receptor) se renderiza como un <div> propio (no filas de <table> con rowspan):
+      // Chrome no respeta page-break-inside:avoid sobre grupos de filas con rowspan y termina cortando la
+      // última línea de datos de la página para poder ubicar el logo del pie. Con divs sí lo respeta.
+      const rowsHtml = groupList.map((g,i) => {
+        const bg = i%2===0 ? '#ffffff' : '#f2f2f2'
+        const talleLinesHtml = g.lines.map(l =>
+          `<div style="display:flex;justify-content:space-between;gap:8px;padding:1px 0;"><span style="font-weight:700;letter-spacing:.03em;">${l.talle}</span><span>${l.qty}</span></div>`
+        ).join('')
+        const montoCell = canVerMonto
+          ? `<div style="width:110px;flex-shrink:0;text-align:right;font-family:'Courier New',monospace;font-size:12px;padding:6px 12px;">${g.monto>0?'$ '+g.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</div>`
+          : ''
+        return `<div style="display:flex;background:${bg};border-top:1px solid #ebe9d8;break-inside:avoid;page-break-inside:avoid;">
+          <div style="width:90px;flex-shrink:0;padding:6px 12px;white-space:nowrap;color:#555;font-size:11px;">${g.fecha}</div>
+          <div style="flex:1;padding:6px 12px;font-weight:700;color:#111;">${g.persona}</div>
+          <div style="width:130px;flex-shrink:0;padding:6px 12px;color:#444;">${g.receptor}</div>
+          <div style="width:110px;flex-shrink:0;padding:6px 8px;">${talleLinesHtml}</div>
+          <div style="width:62px;flex-shrink:0;text-align:center;font-family:'Oswald',Arial,sans-serif;font-weight:700;font-size:16px;color:#1a1a1a;padding:6px 8px;">${g.lines.reduce((s,l)=>s+l.qty,0)}</div>
+          ${montoCell}
+        </div>`
+      }).join('')
+      return `<div style="border:1px solid #ddd;border-top:3px solid #f2cb12;border-radius:8px;margin-bottom:20px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);">
+        <div style="display:flex;gap:14px;align-items:center;justify-content:space-between;padding:12px 16px;background:#1a1a1a;">
+          <div style="display:flex;gap:14px;align-items:center;">
+            ${photoHtml}
+            <div>
+              <div style="font-family:'Oswald',Arial,sans-serif;font-size:16px;font-weight:700;color:#f2cb12;letter-spacing:.04em;">${a.name}</div>
+              <div style="font-size:11px;color:#888;margin-top:3px;letter-spacing:.06em;">${a.code}</div>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-family:'Oswald',Arial,sans-serif;font-size:28px;font-weight:700;color:#f2cb12;line-height:1;">${totalArticulo}</div>
+            <div style="font-size:10px;color:#888;letter-spacing:.08em;text-transform:uppercase;margin-top:2px;">unidades</div>
+          </div>
+        </div>
+        <div style="display:flex;background:#f5f5f0;border-bottom:2px solid #e0e0d8;">
+          <div style="width:90px;flex-shrink:0;font-family:'Oswald',Arial,sans-serif;font-weight:600;font-size:11px;letter-spacing:.08em;color:#888;padding:7px 12px;">FECHA</div>
+          <div style="flex:1;font-family:'Oswald',Arial,sans-serif;font-weight:600;font-size:11px;letter-spacing:.08em;color:#888;padding:7px 12px;">PERSONA</div>
+          <div style="width:130px;flex-shrink:0;font-family:'Oswald',Arial,sans-serif;font-weight:600;font-size:11px;letter-spacing:.08em;color:#888;padding:7px 12px;">GRUPO</div>
+          <div style="width:110px;flex-shrink:0;font-family:'Oswald',Arial,sans-serif;font-weight:600;font-size:11px;letter-spacing:.08em;color:#888;padding:7px 8px;">TALLE / CANT.</div>
+          <div style="width:62px;flex-shrink:0;text-align:center;font-family:'Oswald',Arial,sans-serif;font-weight:600;font-size:11px;letter-spacing:.08em;color:#888;padding:7px 8px;">TOTAL</div>
+          ${canVerMonto ? `<div style="width:110px;flex-shrink:0;text-align:right;font-family:'Oswald',Arial,sans-serif;font-weight:600;font-size:11px;letter-spacing:.08em;color:#888;padding:7px 12px;">MONTO</div>` : ''}
+        </div>
+        ${rowsHtml}
+      </div>`
+    }).join('')
+
+    const fechaHoy = new Date().toLocaleDateString('es-UY')
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reporte de Entregas por Artículo</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+body{font-family:Arial,sans-serif;color:#111;background:#f7f7f5;padding:28px 32px 90px;font-size:12px;}
+.no-print{text-align:right;margin-bottom:20px;}
+.no-print button{background:#1a1a1a;color:#f2cb12;border:none;padding:10px 24px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.04em;}
+.no-print button:hover{background:#333;}
+@media print{
+  .no-print{display:none;}
+  .footer-fixed{display:none;}
+  body{background:#f7f7f5;padding:14px 18px 20px;}
+}
+</style>
+</head><body>
+<div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
+<div style="background:#1a1a1a;border-radius:10px;padding:18px 22px;margin-bottom:24px;display:flex;align-items:center;justify-content:center;gap:16px;">
+  <img src="${window.location.origin}/escudo_blanco.png" style="height:56px;width:auto;" alt="CAP">
+  <div style="text-align:center;">
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:18px;font-weight:700;letter-spacing:.07em;color:#fff;text-transform:uppercase;line-height:1.1;">CLUB ATLÉTICO PEÑAROL</div>
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:11px;font-weight:400;letter-spacing:.16em;color:#999;text-transform:uppercase;margin-top:5px;">Reporte de Entregas por Artículo</div>
+    <div style="font-size:10px;color:#666;margin-top:6px;">${fechaHoy} · ${articles.length} artículos</div>
+  </div>
+</div>
+${articlesHtml}
+<div style="border:1px solid #ddd;border-top:3px solid #f2cb12;border-radius:8px;margin-bottom:20px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);break-inside:avoid;page-break-inside:avoid;">
+  <div style="background:#1a1a1a;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;">
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:15px;font-weight:700;color:#f2cb12;letter-spacing:.06em;text-transform:uppercase;">Total de Entregas</div>
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:22px;font-weight:700;color:#f2cb12;">${totalUnidadesGlobal} <span style="font-size:11px;font-weight:400;color:#888;letter-spacing:.08em;text-transform:uppercase;">unidades</span></div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <thead>
+      <tr style="background:#f5f5f0;">
+        <th style="font-family:'Oswald',Arial,sans-serif;font-size:11px;font-weight:600;letter-spacing:.08em;color:#888;padding:7px 20px;text-align:left;border-bottom:2px solid #e0e0d8;">TALLE</th>
+        <th style="font-family:'Oswald',Arial,sans-serif;font-size:11px;font-weight:600;letter-spacing:.08em;color:#888;padding:7px 20px;text-align:right;border-bottom:2px solid #e0e0d8;">CANTIDAD</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${talleRowsGlobal.map((r,i) => `<tr style="background:${i%2===0?'#fff':'#f2f2f2'};">
+        <td style="font-weight:700;padding:7px 20px;letter-spacing:.05em;">${r.talle}</td>
+        <td style="font-family:'Oswald',Arial,sans-serif;font-size:15px;font-weight:700;padding:7px 20px;text-align:right;">${r.qty}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+</div>
+<div class="footer-fixed" style="position:fixed;bottom:0;left:0;right:0;padding:12px 24px;border-top:1px solid #ddd;display:flex;justify-content:center;background:#fff;">
+  <img src="${window.location.origin}/logo_horizontal.png" style="height:32px;width:auto;" alt="Club Atlético Peñarol">
+</div>
+<div style="margin-top:24px;padding-top:14px;border-top:1px solid #ddd;display:flex;justify-content:center;">
+  <img src="${window.location.origin}/logo_horizontal.png" style="height:32px;width:auto;" alt="Club Atlético Peñarol">
+</div>
+</body></html>`
+  }
+
+  const exportEntregasPorArticuloExcel = async () => {
+    const canVerMonto = currentUser?.role !== 'admin-palacio'
+    const DARK = {type:'pattern',pattern:'solid',fgColor:{argb:'FF1A1A1A'}}
+    const GRAY = {type:'pattern',pattern:'solid',fgColor:{argb:'FFF0F0EC'}}
+    const WHITE = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFFFF'}}
+    const F_NORM = {name:'Calibri',size:11}
+    const F_BOLD = {name:'Calibri',size:11,bold:true}
+    const F_YWHI = {name:'Calibri',size:11,bold:true,color:{argb:'FFFFF2CB'}}
+    const F_GRAYHEAD = {name:'Calibri',size:10,bold:true,color:{argb:'FF5A5A52'}}
+    const BORDER = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
+    const s = (cell, fill, font, align) => { cell.fill=fill; cell.font=font||F_NORM; cell.border=BORDER; cell.alignment={vertical:'middle',...(align||{})} }
+    const baseCols = [
+      {header:'TALLE',key:'talle',width:10},
+      {header:'CANTIDAD',key:'cantidad',width:12},
+      {header:'RECEPTOR',key:'receptor',width:26},
+      {header:'PERSONA',key:'persona',width:28},
+      {header:'FECHA',key:'fecha',width:14},
+      {header:'ESTADO',key:'estado',width:20},
+    ]
+    const montoCols = canVerMonto ? [{header:'PAGA',key:'paga',width:10},{header:'MONTO',key:'monto',width:14}] : []
+    const cols = [...baseCols, ...montoCols]
+    const numCols = cols.length
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('Entregas por Artículo')
+    ws.columns = cols.map(c => ({key:c.key, width:c.width}))
+    const statusLabel = st => st==='aceptado'?'Confirmada':st==='pendiente'?'Pendiente conf.':st==='pendiente_separar'?'Pendiente separar':st==='devuelto'?'Devuelta':st||''
+    const byCode = {}
+    ;(db.deliveries||[]).forEach(d => {
+      ;(d.lines||[]).forEach(l => {
+        if (!byCode[l.code]) byCode[l.code] = { name: db.articles.find(a=>a.code===l.code)?.name || l.code, code: l.code, rows: [] }
+        byCode[l.code].rows.push({
+          talle: l.talle, cantidad: l.qty,
+          receptor: d.receptor + (d.disciplina ? ' — '+d.disciplina : ''),
+          persona: d.persona, fecha: d.fecha, estado: statusLabel(d.status),
+          paga: canVerMonto ? (d.receptor==='Protocolo' ? (d.paga==='si'?'Sí':d.paga==='no'?'No':'—') : '—') : undefined,
+          monto: canVerMonto ? (d.paga==='si' && d.monto>0 ? d.monto : null) : undefined,
+        })
+      })
+    })
+    const articles = Object.values(byCode).sort((a,b)=>a.name.localeCompare(b.name,'es'))
+    let row = 1
+    articles.forEach((a, ai) => {
+      ws.mergeCells(row,1,row,numCols)
+      const title = ws.getRow(row).getCell(1)
+      title.value = `ENTREGAS DE: ${a.name} (${a.code})`
+      title.fill = DARK; title.font = {name:'Calibri',size:12,bold:true,color:{argb:'FFFFF2CB'}}; title.border = BORDER
+      title.alignment = {horizontal:'center',vertical:'middle'}
+      ws.getRow(row).height = 22
+      row++
+      const headerRow = ws.getRow(row)
+      cols.forEach((c, i) => { s(headerRow.getCell(i+1), GRAY, F_GRAYHEAD, {horizontal:'center'}); headerRow.getCell(i+1).value = c.header })
+      headerRow.height = 16
+      row++
+      const rows = a.rows.slice().sort((x,y) => x.fecha.localeCompare(y.fecha))
+      rows.forEach((r, i) => {
+        const excelRow = ws.getRow(row)
+        const fill = i%2===0 ? WHITE : GRAY
+        cols.forEach((c, ci) => {
+          const cell = excelRow.getCell(ci+1)
+          if (c.key === 'monto') { cell.value = r.monto || null; if (r.monto) cell.numFmt = '#,##0' }
+          else cell.value = r[c.key]
+          s(cell, fill, c.key==='cantidad' ? F_BOLD : F_NORM, c.key==='cantidad' ? {horizontal:'center'} : {})
+        })
+        excelRow.height = 15
+        row++
+      })
+      ws.mergeCells(row,1,row,1)
+      const subtotalRow = ws.getRow(row)
+      s(subtotalRow.getCell(1), DARK, F_YWHI, {horizontal:'left'})
+      subtotalRow.getCell(1).value = 'SUBTOTAL'
+      s(subtotalRow.getCell(2), DARK, F_YWHI, {horizontal:'center'})
+      subtotalRow.getCell(2).value = rows.reduce((s2,r)=>s2+r.cantidad,0)
+      for (let c=3; c<=numCols; c++) s(subtotalRow.getCell(c), DARK, F_YWHI)
+      subtotalRow.height = 16
+      row++
+      if (ai < articles.length-1) row++
+    })
+    const buf = await wb.xlsx.writeBuffer()
+    const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href=url; a.download='entregas-por-articulo.xlsx'; a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const printPedido = () => {
     if (!nd.persona.trim()) { showToast('Ingresá el nombre del integrante.'); return }
     if (!nd.receptor) { showToast('Elegí un grupo / plantel.'); return }
@@ -4166,6 +4394,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                         <div style={{fontSize:11.5,color:'#8a8a82',marginTop:4}}>unidades totales</div>
                         {detail.precio > 0 && <div style={{marginTop:8,fontSize:13,fontWeight:700,color:'#1a1a1a'}}>$ {detail.precio.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>}
                         <button onClick={exportProductoExcel} style={{marginTop:10,padding:'5px 12px',borderRadius:6,border:'1px solid #2d6a4f',background:'#fff',color:'#2d6a4f',fontSize:12,fontWeight:700,cursor:'pointer'}}>↓ Excel</button>
+                        {(currentUser?.role==='admin'||currentUser?.role==='admin-palacio') && <button onClick={() => openPrintWindow(buildReporteArticuloHtml(detail.code))} style={{marginTop:6,padding:'5px 12px',borderRadius:6,border:'1px solid #7a3800',background:'#fff',color:'#7a3800',fontSize:12,fontWeight:700,cursor:'pointer'}}>↓ PDF entregas</button>}
                       </div>
                     </div>
                   </div>
@@ -4279,6 +4508,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <button key={r} className={`chip${delFilterReceptor===r?' active':''}`} onClick={() => { setDelFilterReceptor(r); setDelFilterDisciplina(''); setDelFilterPaga('') }}>{r}</button>
                   ))}
                 </div>
+                {(currentUser?.role==='admin'||currentUser?.role==='admin-palacio') && <button className="btn btn-ghost" style={{fontSize:12,padding:'5px 11px',whiteSpace:'nowrap'}} onClick={exportEntregasPorArticuloExcel}>↓ Excel por artículo</button>}
+                {(currentUser?.role==='admin'||currentUser?.role==='admin-palacio') && <button className="btn btn-ghost" style={{fontSize:12,padding:'5px 11px',whiteSpace:'nowrap'}} onClick={() => openPrintWindow(buildReporteArticuloHtml())}>↓ PDF por artículo</button>}
               </div>
               <div style={{marginBottom:12,position:'relative'}}>
                 <input
