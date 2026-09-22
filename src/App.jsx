@@ -1863,6 +1863,7 @@ ${rowsHtml}
           artMap[l.code] = { name: codeName[l.code]||l.code, code: l.code, photo, rows: [] }
         }
         artMap[l.code].rows.push({
+          deliveryId: d.id,
           talle:   l.talle,
           qty:     l.qty,
           receptor: d.receptor + (d.disciplina ? ' · ' + d.disciplina : ''),
@@ -1875,88 +1876,159 @@ ${rowsHtml}
       })
     })
     const artGroups = Object.values(artMap).filter(a => !filterCode || String(a.code) === String(filterCode)).sort((a,b) => a.name.localeCompare(b.name,'es'))
-    const moneyTh = showMoney ? '<th>PAGA</th><th>MONTO</th>' : ''
+    const moneyTh = showMoney ? '<th>MONTO</th>' : ''
     const totalEntregas = artGroups.reduce((s,a)=>s+a.rows.reduce((ss,r)=>ss+r.qty,0),0)
+    // Totales por talle para el resumen final
+    const talleTotals = {}
+    artGroups.forEach(art => art.rows.forEach(r => { talleTotals[r.talle] = (talleTotals[r.talle]||0) + r.qty }))
+    const talleSummary = TALLE_ORDER.filter(t => talleTotals[t]).map(t => ({talle:t, qty:talleTotals[t]}))
+      .concat(Object.keys(talleTotals).filter(t => !TALLE_ORDER.includes(t)).map(t => ({talle:t, qty:talleTotals[t]})))
     const blocksHtml = artGroups.map(art => {
       const photoHtml = art.photo
         ? `<img src="${art.photo}" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid #ddd;flex-shrink:0;">`
         : `<div style="width:72px;height:72px;border-radius:6px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:10px;text-align:center;flex-shrink:0;">Sin foto</div>`
-      const sorted = art.rows.slice().sort((a,b) => a.fecha.localeCompare(b.fecha))
-      const subtotal = sorted.reduce((s,r)=>s+r.qty,0)
-      const rowsHtml = sorted.map((r,i) => {
-        const bg = i%2===0?'#fff':'#f8f8f6'
-        const moneyTd = showMoney
-          ? `<td style="text-align:center;">${r.paga||'—'}</td><td style="text-align:right;font-family:monospace;">${r.monto?'$'+r.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</td>`
-          : ''
-        return `<tr style="background:${bg};">
-          <td style="text-align:center;font-weight:700;">${r.talle}</td>
-          <td style="text-align:center;font-weight:800;">${r.qty}</td>
-          <td>${r.receptor}</td>
-          <td>${r.persona}</td>
-          <td style="white-space:nowrap;">${r.fecha}</td>
-          <td>${r.estado}</td>
-          ${moneyTd}
-        </tr>`
+      // Unificar entregas del mismo persona+fecha+receptor sumando talles y monto
+      const mergeMap = {}
+      art.rows.forEach(r => {
+        const key = `${r.persona}||${r.receptor}`
+        if (!mergeMap[key]) mergeMap[key] = { persona:r.persona, receptor:r.receptor, fechas:new Set(), talles:{}, monto:0, _seen:new Set() }
+        mergeMap[key].fechas.add(r.fecha)
+        mergeMap[key].talles[r.talle] = (mergeMap[key].talles[r.talle]||0) + r.qty
+        if (!mergeMap[key]._seen.has(r.deliveryId)) {
+          mergeMap[key].monto += (r.monto||0)
+          mergeMap[key]._seen.add(r.deliveryId)
+        }
+      })
+      const groups = Object.values(mergeMap)
+        .map(g => ({ ...g, fecha: [...g.fechas].sort().join(' / ') }))
+        .sort((a,b) => a.fecha.localeCompare(b.fecha) || a.persona.localeCompare(b.persona,'es'))
+        .map(g => ({
+          ...g,
+          lines: TALLE_ORDER.filter(t => g.talles[t]).map(t => ({talle:t, qty:g.talles[t]}))
+            .concat(Object.keys(g.talles).filter(t => !TALLE_ORDER.includes(t)).map(t => ({talle:t, qty:g.talles[t]})))
+        }))
+      const subtotal = groups.reduce((s,g) => s + g.lines.reduce((ss,l)=>ss+l.qty,0), 0)
+      const rowsHtml = groups.map((g, gi) => {
+        const span = g.lines.length
+        const bg = gi%2===0?'#ffffff':'#f2f2f2'
+        const sharedStyle = `background:${bg};border-top:1px solid #ebe9d8;vertical-align:middle;`
+        const groupTotal = g.lines.reduce((s,l)=>s+l.qty,0)
+        const borderTop = `border-top:2px solid ${gi%2===0?'#d8d8d8':'#c8c8c0'};`
+        const trs = g.lines.map((l,i) => {
+          const bt = i===0 ? borderTop : `border-top:1px solid #ebe9d8;`
+          if (i===0) return `<tr style="background:${bg};">
+            <td style="background:${bg};${bt}padding:6px 12px;white-space:nowrap;color:#555;font-size:11px;vertical-align:middle;">${g.fecha}</td>
+            <td style="background:${bg};${bt}padding:6px 12px;font-weight:700;color:#111;vertical-align:middle;">${g.persona}</td>
+            <td style="background:${bg};${bt}padding:6px 12px;color:#444;vertical-align:middle;">${g.receptor}</td>
+            <td style="background:${bg};${bt}text-align:center;font-weight:700;padding:6px 8px;letter-spacing:.05em;vertical-align:middle;">${l.talle}</td>
+            <td style="background:${bg};${bt}text-align:center;padding:6px 8px;vertical-align:middle;">${l.qty}</td>
+            <td style="background:${bg};${bt}text-align:center;font-family:'Oswald',Arial,sans-serif;font-weight:700;font-size:16px;color:#1a1a1a;padding:6px 8px;vertical-align:middle;">${groupTotal}</td>
+            ${showMoney?`<td style="background:${bg};${bt}text-align:right;font-family:'Courier New',monospace;padding:6px 12px;font-size:12px;vertical-align:middle;">${g.monto>0?'$ '+g.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'}</td>`:''}
+          </tr>`
+          return `<tr style="background:${bg};">
+            <td style="background:${bg};${bt}padding:6px 12px;color:#bbb;font-size:10px;vertical-align:middle;"></td>
+            <td style="background:${bg};${bt}padding:6px 12px;vertical-align:middle;"></td>
+            <td style="background:${bg};${bt}padding:6px 12px;vertical-align:middle;"></td>
+            <td style="background:${bg};${bt}text-align:center;font-weight:700;padding:6px 8px;letter-spacing:.05em;vertical-align:middle;">${l.talle}</td>
+            <td style="background:${bg};${bt}text-align:center;padding:6px 8px;vertical-align:middle;">${l.qty}</td>
+            <td style="background:${bg};${bt}padding:6px 8px;vertical-align:middle;"></td>
+            ${showMoney?`<td style="background:${bg};${bt}padding:6px 12px;vertical-align:middle;"></td>`:''}
+          </tr>`
+        }).join('')
+        return trs
       }).join('')
-      const moneyTotTd = showMoney ? '<td></td><td></td>' : ''
-      return `<div style="border:1px solid #E4E4DE;border-radius:8px;margin-bottom:16px;break-inside:avoid;page-break-inside:avoid;overflow:hidden;">
-        <div style="display:flex;gap:14px;align-items:center;padding:12px 16px;background:#1a1a1a;">
-          ${photoHtml}
-          <div>
-            <div style="font-size:15px;font-weight:700;color:#f2cb12;">${art.name}</div>
-            <div style="font-size:11px;color:#999;margin-top:2px;">${art.code}</div>
+      const colMoney = showMoney ? '<col style="width:110px;">' : ''
+      return `<div style="border:1px solid #ddd;border-top:3px solid #f2cb12;border-radius:8px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.08);">
+        <div style="display:flex;gap:14px;align-items:center;justify-content:space-between;padding:12px 16px;background:#1a1a1a;border-radius:5px 5px 0 0;">
+          <div style="display:flex;gap:14px;align-items:center;">
+            ${photoHtml}
+            <div>
+              <div style="font-family:'Oswald',Arial,sans-serif;font-size:16px;font-weight:700;color:#f2cb12;letter-spacing:.04em;">${art.name}</div>
+              <div style="font-size:11px;color:#888;margin-top:3px;letter-spacing:.06em;">${art.code}</div>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div style="font-family:'Oswald',Arial,sans-serif;font-size:28px;font-weight:700;color:#f2cb12;line-height:1;">${subtotal}</div>
+            <div style="font-size:10px;color:#888;letter-spacing:.08em;text-transform:uppercase;margin-top:2px;">unidades</div>
           </div>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <colgroup>
+            <col style="width:90px;">
+            <col>
+            <col style="width:130px;">
+            <col style="width:58px;">
+            <col style="width:72px;">
+            <col style="width:62px;">
+            ${colMoney}
+          </colgroup>
           <thead>
-            <tr style="background:#f0f0ec;color:#5a5a52;">
-              <th style="padding:5px 10px;text-align:center;">TALLE</th>
-              <th style="padding:5px 10px;text-align:center;">CANT.</th>
-              <th style="padding:5px 10px;text-align:left;">RECEPTOR</th>
-              <th style="padding:5px 10px;text-align:left;">PERSONA</th>
-              <th style="padding:5px 10px;text-align:left;">FECHA</th>
-              <th style="padding:5px 10px;text-align:left;">ESTADO</th>
-              ${moneyTh}
+            <tr style="background:#f5f5f0;">
+              <th style="font-family:'Oswald',Arial,sans-serif;font-weight:600;font-size:11px;letter-spacing:.08em;color:#888;padding:7px 12px;text-align:left;border-bottom:2px solid #e0e0d8;">FECHA</th>
+              <th style="font-family:'Oswald',Arial,sans-serif;font-weight:600;font-size:11px;letter-spacing:.08em;color:#888;padding:7px 12px;text-align:left;border-bottom:2px solid #e0e0d8;">PERSONA</th>
+              <th style="font-family:'Oswald',Arial,sans-serif;font-weight:600;font-size:11px;letter-spacing:.08em;color:#888;padding:7px 12px;text-align:left;border-bottom:2px solid #e0e0d8;">GRUPO</th>
+              <th style="font-family:'Oswald',Arial,sans-serif;font-weight:600;font-size:11px;letter-spacing:.08em;color:#888;padding:7px 8px;text-align:center;border-bottom:2px solid #e0e0d8;">TALLE</th>
+              <th style="font-family:'Oswald',Arial,sans-serif;font-weight:600;font-size:11px;letter-spacing:.08em;color:#888;padding:7px 8px;text-align:center;border-bottom:2px solid #e0e0d8;">CANT.</th>
+              <th style="font-family:'Oswald',Arial,sans-serif;font-weight:600;font-size:11px;letter-spacing:.08em;color:#888;padding:7px 8px;text-align:center;border-bottom:2px solid #e0e0d8;">TOTAL</th>
+              ${showMoney?'<th style="font-family:\'Oswald\',Arial,sans-serif;font-weight:600;font-size:11px;letter-spacing:.08em;color:#888;padding:7px 12px;text-align:right;border-bottom:2px solid #e0e0d8;">MONTO</th>':''}
             </tr>
           </thead>
           <tbody>${rowsHtml}</tbody>
-          <tfoot>
-            <tr style="background:#1a1a1a;color:#f2cb12;font-weight:700;">
-              <td style="padding:6px 10px;text-align:center;" colspan="1">SUBTOTAL</td>
-              <td style="padding:6px 10px;text-align:center;font-size:14px;">${subtotal}</td>
-              <td colspan="${showMoney?4:4}" style="padding:6px 10px;"></td>
-              ${moneyTotTd}
-            </tr>
-          </tfoot>
         </table>
       </div>`
     }).join('')
     const fecha = new Date().toLocaleDateString('es-UY')
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reporte de Entregas por Artículo</title>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
-<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;color:#111;padding:24px;padding-bottom:80px;font-size:12px;}
-table td,table th{padding:5px 10px;border-bottom:1px solid #eee;}
-.no-print{text-align:right;margin-bottom:16px;}
-.no-print button{background:#121212;color:#f2cb12;border:none;padding:9px 22px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;}
-@media print{.no-print{display:none;}body{padding:12px;padding-bottom:80px;}}</style>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+body{font-family:Arial,sans-serif;color:#111;background:#f7f7f5;padding:28px 32px 90px;font-size:12px;}
+table td,table th{vertical-align:middle;}
+.no-print{text-align:right;margin-bottom:20px;}
+.no-print button{background:#1a1a1a;color:#f2cb12;border:none;padding:10px 24px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.04em;}
+.no-print button:hover{background:#333;}
+@media print{
+  .no-print{display:none;}
+  .footer-fixed{display:none;}
+  body{background:#f7f7f5;padding:14px 18px 20px;}
+}
+</style>
 </head><body>
 <div class="no-print"><button onclick="window.print()">Imprimir / Guardar PDF</button></div>
-<div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;margin-bottom:20px;border-bottom:2px solid #111;">
-  <div style="display:flex;align-items:center;gap:14px;">
-    <img src="${window.location.origin}/escudo_blanco.png" style="height:64px;width:auto;" alt="CAP">
-    <div>
-      <div style="font-family:'Oswald',Arial,sans-serif;font-size:20px;font-weight:700;letter-spacing:.06em;color:#111;text-transform:uppercase;line-height:1.1;-webkit-text-stroke:.4px #111;">CLUB ATLÉTICO PEÑAROL</div>
-      <div style="font-family:'Oswald',Arial,sans-serif;font-size:11px;font-weight:400;letter-spacing:.14em;color:#555;text-transform:uppercase;margin-top:5px;">Entregas de indumentaria</div>
-    </div>
-  </div>
-  <div style="text-align:right;">
-    <div style="font-family:'Oswald',Arial,sans-serif;font-size:18px;font-weight:600;letter-spacing:.04em;color:#111;">Reporte por Artículo</div>
-    <div style="font-size:11px;color:#888;margin-top:4px;">Generado: ${fecha} · Total: ${totalEntregas} unidades en ${artGroups.length} artículos</div>
+<div style="background:#1a1a1a;border-radius:10px;padding:18px 22px;margin-bottom:24px;display:flex;align-items:center;justify-content:center;gap:16px;">
+  <img src="${window.location.origin}/escudo_blanco.png" style="height:56px;width:auto;display:block;align-self:center;" alt="CAP">
+  <div style="text-align:center;">
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:18px;font-weight:700;letter-spacing:.07em;color:#fff;text-transform:uppercase;line-height:1.1;">CLUB ATLÉTICO PEÑAROL</div>
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:11px;font-weight:400;letter-spacing:.16em;color:#999;text-transform:uppercase;margin-top:5px;">Reporte de Entregas por Artículo</div>
+    <div style="font-size:10px;color:#666;margin-top:6px;">${fecha} · ${artGroups.length} artículos</div>
   </div>
 </div>
 ${blocksHtml}
-<div style="position:fixed;bottom:0;left:0;right:0;padding:14px 24px;border-top:1px solid #ddd;display:flex;justify-content:center;background:#fff;">
-  <img src="${window.location.origin}/logo_horizontal.png" style="height:36px;width:auto;" alt="Club Atlético Peñarol">
+<div style="border:1px solid #ddd;border-top:3px solid #f2cb12;border-radius:8px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.08);break-inside:avoid;page-break-inside:avoid;">
+  <div style="background:#1a1a1a;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;">
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:15px;font-weight:700;color:#f2cb12;letter-spacing:.06em;text-transform:uppercase;">Total de Entregas</div>
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:22px;font-weight:700;color:#f2cb12;">${totalEntregas} <span style="font-size:11px;font-weight:400;color:#888;letter-spacing:.08em;text-transform:uppercase;">unidades</span></div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <thead>
+      <tr style="background:#f5f5f0;">
+        <th style="font-family:'Oswald',Arial,sans-serif;font-size:11px;font-weight:600;letter-spacing:.08em;color:#888;padding:7px 20px;text-align:left;border-bottom:2px solid #e0e0d8;">TALLE</th>
+        <th style="font-family:'Oswald',Arial,sans-serif;font-size:11px;font-weight:600;letter-spacing:.08em;color:#888;padding:7px 20px;text-align:right;border-bottom:2px solid #e0e0d8;">CANTIDAD</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${talleSummary.map((r,i) => `<tr style="background:${i%2===0?'#fff':'#f2f2f2'};">
+        <td style="font-weight:700;padding:7px 20px;letter-spacing:.05em;">${r.talle}</td>
+        <td style="font-family:'Oswald',Arial,sans-serif;font-size:15px;font-weight:700;padding:7px 20px;text-align:right;">${r.qty}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>
+</div>
+<div class="footer-fixed" style="position:fixed;bottom:0;left:0;right:0;padding:12px 24px;border-top:1px solid #ddd;display:flex;justify-content:center;background:#fff;">
+  <img src="${window.location.origin}/logo_horizontal.png" style="height:32px;width:auto;" alt="Club Atlético Peñarol">
+</div>
+<div style="margin-top:24px;padding-top:14px;border-top:1px solid #ddd;display:flex;justify-content:center;">
+  <img src="${window.location.origin}/logo_horizontal.png" style="height:32px;width:auto;" alt="Club Atlético Peñarol">
 </div>
 </body></html>`
   }
@@ -4029,7 +4101,7 @@ tfoot td{padding:9px 12px;font-weight:700}
               <span style={{marginLeft:'auto',fontSize:10,opacity:0.6}}>{depositosOpen ? '▾' : '▸'}</span>
             </button>
           )})()}
-          {depositosOpen && [['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES'],['utileria','CAMISETAS UTILERÍA']].map(([key,label]) => {
+          {depositosOpen && [['inventario','INVENTARIO'],['entregas','ENTREGAS'],['movimientos','MOVIMIENTOS'],['receptores','RECEPTORES'],...(!hideMoney?[['utileria','CAMISETAS UTILERÍA']]:[])] .map(([key,label]) => {
             const isActive = view===key||(key==='inventario'&&view==='detalle')
             return (
               <button key={key} className={`nav-item nav-item-sub${isActive?' active':''}`} onClick={() => goView(key)}>
@@ -4502,7 +4574,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   ))}
                 </div>
                 {isAdmin && <button className="btn btn-ghost" style={{fontSize:12,padding:'5px 11px',whiteSpace:'nowrap'}} onClick={exportEntregasPorArticuloExcel}>↓ Excel por artículo</button>}
-                {isAdmin && <button className="btn btn-ghost" style={{fontSize:12,padding:'5px 11px',whiteSpace:'nowrap'}} onClick={() => openPrintWindow(buildEntregasPorArticuloPdfHtml())}>↓ PDF por artículo</button>}
+                {isAdmin && !hideMoney && <button className="btn btn-ghost" style={{fontSize:12,padding:'5px 11px',whiteSpace:'nowrap'}} onClick={() => openPrintWindow(buildEntregasPorArticuloPdfHtml())}>↓ PDF por artículo</button>}
               </div>
               <div style={{marginBottom:12,position:'relative'}}>
                 <input
