@@ -1935,7 +1935,7 @@ ${rowsHtml}
             ${showMoney?`<td style="background:${bg};${bt}padding:6px 12px;vertical-align:middle;"></td>`:''}
           </tr>`
         }).join('')
-        return trs
+        return `<tbody style="break-inside:avoid;page-break-inside:avoid;">${trs}</tbody>`
       }).join('')
       const colMoney = showMoney ? '<col style="width:110px;">' : ''
       return `<div style="border:1px solid #ddd;border-top:3px solid #f2cb12;border-radius:8px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.08);">
@@ -1973,7 +1973,7 @@ ${rowsHtml}
               ${showMoney?'<th style="font-family:\'Oswald\',Arial,sans-serif;font-weight:600;font-size:11px;letter-spacing:.08em;color:#888;padding:7px 12px;text-align:right;border-bottom:2px solid #e0e0d8;">MONTO</th>':''}
             </tr>
           </thead>
-          <tbody>${rowsHtml}</tbody>
+          ${rowsHtml}
         </table>
       </div>`
     }).join('')
