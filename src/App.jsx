@@ -5,17 +5,18 @@ import ExcelJS from 'exceljs'
 const TALLE_ORDER = ['2','4','6','8','10','12','14','Único','S','M','L','XL','XXL','XXXL']
 const TALLES_ADULTO = ['S','M','L','XL','XXL','XXXL','Único']
 const TALLES_NINO   = ['2','4','6','8','10','12','14']
-const RECEPTORES = ['1° División','3° División','Juveniles','Captación','Femenino','Juveniles Femenino','Fútbol Sala Masculino','Fútbol Sala Femenino','Basket','Deportes Anexos','Funcionarios','Marketing','Protocolo','Sponsors','Canjes']
-const DISCIPLINAS_DEPORTES_ANEXOS = ['Atletismo','Bowling','Esports','Fisicoculturismo','Fútbol Inclusivo','Fútbol Playa Masculino','Fútbol Sala Femenino','Handball','Volley','Teqball','Cricket','Footgolf','Ciclismo','Paracaidismo','Maxi Basket','Automovilismo','Motociclismo','Hockey Patín','Esgrima']
+const RECEPTORES = ['1° División','3° División','Juveniles','Captación','Femenino','Juveniles Femenino','Basket','Deportes Anexos','Funcionarios','Marketing','Protocolo','Sponsors','Canjes','Reposición Camisetas']
+const DISCIPLINAS_DEPORTES_ANEXOS = ['Atletismo','Bowling','Esports','Fisicoculturismo','Fútbol Inclusivo','Fútbol Playa Masculino','Fútbol Playa Femenino','Fútbol Sala Masculino','Fútbol Sala Femenino','Handball','Volley','Teqball','Cricket','Footgolf','Ciclismo','Paracaidismo','Maxi Basket','Automovilismo','Motociclismo','Hockey Patín','Esgrima']
 const PRECIO_CAMISETA = 1945
 const PRECIO_SHORT = 1145
 const CATEGORIAS = ['Entrenamiento','Juego','Casual']
-const OCUPACIONES = ['3° División','Juveniles','Juveniles Femenino','Captacion']
+const OCUPACIONES = ['1° División','3° División','Juveniles','Juveniles Femenino','Captacion']
 const DIVISIONES            = ['Sub 19','Sub 17','Sub 16','Sub 15','Sub 14']
 const DIVISIONES_FEM        = ['Sub 19','Sub 16','Sub 14']
-const CARGOS_REG = ['Administración Palacio','Atención al Socio','Coordinación','Director Técnico','Ayudante Técnico','Videoanalista','Preparador Físico','Entrenador de Arqueros','Doctor/a','Kinesiólogo/a','Utilero','Utilería 1° División']
+const CARGOS_REG = ['Administración Palacio','Atención al Socio','Coordinación','Director Técnico','Ayudante Técnico','Videoanalista','Preparador Físico','Entrenador de Arqueros','Doctor/a','Kinesiólogo/a','Nutricionista','Utilero','Utilería 1° División']
 const CARGOS_SIN_SECTOR = ['Administración Palacio','Atención al Socio','Utilería 1° División']
-const ESTANTES = [...Array.from({length:28},(_,i)=>String(i+1)),'TRANSITO']
+const ESTANTES = [...Array.from({length:28},(_,i)=>String(i+1)),'TRANSITO','OFICINA']
+const SIN_ALTURA = ['TRANSITO','OFICINA']
 const ALTURAS = ['A','B','C','D','E','O']
 const UT_ESTANTES = Array.from({length:28},(_,i)=>String(i+1))
 const UT_ALTURAS = ['A','B','C','D','E']
@@ -231,6 +232,7 @@ export default function App() {
   const [search, setSearch] = useState('')
   const [cat, setCat] = useState('Todas')
   const [filterUbic, setFilterUbic] = useState('')
+  const [filterShelf, setFilterShelf] = useState('')
   const [modal, setModal] = useState(null)
   const [confirm, setConfirm] = useState(null)
   const [editing, setEditing] = useState(null)
@@ -281,8 +283,9 @@ export default function App() {
   const [repTab, setRepTab] = useState('reposiciones')
   const [plantelForm, setPlantelForm] = useState({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',cantCamiseta:1,talleShort:'L',cantShort:1})
   const [plantelModal, setPlantelModal] = useState(false)
+  const [plantelModalSection, setPlantelModalSection] = useState(null)
   const [descExtraModal, setDescExtraModal] = useState(false)
-  const [descExtraForm, setDescExtraForm] = useState({jugadorNombre:'',jugadorNumero:'',articulo:'',precio:0,cantidad:1,fecha:'',observaciones:''})
+  const [descExtraForm, setDescExtraForm] = useState({jugadorNombre:'',jugadorNumero:'',jugadorLibre:false,articulo:'',precio:0,cantidad:1,estampado:0,fecha:'',observaciones:''})
   const [extrasExpandedKey, setExtrasExpandedKey] = useState(null)
   const [descExtraDetail, setDescExtraDetail] = useState(null)
   const [selectedPlantelId, setSelectedPlantelId] = useState(null)
@@ -394,7 +397,7 @@ export default function App() {
       if (manualSavingRef.current) return
       const ok = await saveToSupabase(db)
       if (!ok) showToast('Error al guardar. Verificá la conexión.')
-    }, 800)
+    }, 5000)
   }, [db, loading])
 
   // Flush any pending save immediately when tab is hidden (mobile: switch app / close tab).
@@ -418,18 +421,32 @@ export default function App() {
     }
   }, [db.articles, view, selectedCode])
 
-  const saveUsers = (list) => {
-    const merged = [...list]
+  const saveUsers = async (list) => {
+    // Fetch latest from Supabase first to avoid overwriting users registered from another session
+    const { data: latest } = await supabase.from('deposito_state').select('deliveries').eq('id', 2).single()
+    const remoteUsers = (latest?.deliveries?.length > 0 && latest.deliveries[0]?.username) ? latest.deliveries : []
+    // Merge: start with remote list, then apply all local changes on top
+    const merged = [...remoteUsers]
+    list.forEach(u => {
+      const idx = merged.findIndex(r => r.username === u.username)
+      if (idx >= 0) merged[idx] = u
+      else merged.push(u)
+    })
     DEFAULT_USERS.forEach(du => { if (!merged.find(u => u.username === du.username)) merged.push(du) })
     setDb(prev => ({ ...prev, users: merged }))
     supabase.from('deposito_state').upsert({ id: 2, deliveries: merged })
-      .then(({ error }) => { if (error) console.error('Error guardando usuarios:', error.message) })
+      .then(({ error }) => { if (error) { console.error('Error guardando usuarios:', error.message); showToast('⚠ Error al guardar usuarios. Verificá la conexión.') } })
   }
   const doLogin = () => {
     const found = db.users.find(u => u.username.toLowerCase() === loginForm.user.toLowerCase() && u.password === loginForm.pass)
     if(!found) { setLoginForm(p => ({...p, err:'Usuario o contraseña incorrectos.'})); return }
     if(found.status === 'pendiente') { setLoginForm(p => ({...p, err:'Tu cuenta está pendiente de aprobación por el administrador.'})); return }
     localStorage.setItem(SESSION_KEY, found.username); setSession(found.username); setLoginForm({user:'',pass:'',err:''})
+    // Si el usuario no está en Supabase (solo en localStorage), lo agrega para que sea visible en el panel
+    supabase.from('deposito_state').select('deliveries').eq('id', 2).single().then(({ data }) => {
+      const remote = data?.deliveries || []
+      if (!remote.find(u => u.username === found.username)) saveUsers(db.users)
+    })
   }
   const doRegister = () => {
     const { displayName, email, telefono, cargo, categoria, division, pass, pass2 } = regForm
@@ -443,8 +460,11 @@ export default function App() {
     if(pass !== pass2) { setRegForm(p=>({...p,err:'Las contraseñas no coinciden.'})); return }
     const username = email.trim().toLowerCase()
     if(db.users.find(u => u.username.toLowerCase() === username)) { setRegForm(p=>({...p,err:'Ya existe una cuenta con ese correo.'})); return }
-    const newUser = { username, password:pass, role:'receptor', displayName:displayName.trim(), email:username, telefono:telefono.trim(), cargo, categoria, division, status:'pendiente' }
+    const newUser = { username, password:pass, role:'receptor', displayName:displayName.trim(), email:username, telefono:telefono.trim(), cargo, categoria, division, status:'aprobado' }
     saveUsers([...db.users, newUser])
+    fetch('/api/notify-registro', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ displayName:displayName.trim(), email:username, telefono:telefono.trim(), cargo, categoria, division })
+    }).catch(() => {})
     setLoginView('registered')
     setRegForm({ displayName:'', email:'', telefono:'', cargo:'', categoria:'', division:'', pass:'', pass2:'', err:'' })
   }
@@ -498,6 +518,8 @@ export default function App() {
     showToast('Usuario aprobado.')
   }
   const rejectUser = (username) => {
+    const u = db.users.find(x => x.username === username)
+    if (!window.confirm(`¿Rechazar y eliminar a ${u?.displayName || username}? Esta acción no se puede deshacer.`)) return
     const list = db.users.filter(u => u.username !== username)
     saveUsers(list)
     setUserMgmt(x=>({...x, list}))
@@ -553,8 +575,8 @@ export default function App() {
     const avail = sizeMap[cartPickerTalle] || 0
     const already = cartLines.filter(l => l.code === cartPickerCode && l.talle === cartPickerTalle && l.ubic === (needsUbic ? cartPickerUbic : l.ubic)).reduce((s, l) => s + l.qty, 0)
     if (avail === 0 || qty + already > avail) { showToast(`Stock insuficiente (${avail - already} disp.).`); return }
-    const line = { code: cartPickerCode, talle: cartPickerTalle, qty, name: artName }
-    if (needsUbic) line.ubic = cartPickerUbic
+    const ubicLine = needsUbic ? cartPickerUbic : (relevantArts[0]?.ubic || '')
+    const line = { code: cartPickerCode, talle: cartPickerTalle, qty, name: artName, ubic: ubicLine }
     setCartLines(p => [...p, line])
     setCartPickerCode(null); setCartPickerUbic(''); setCartPickerTalle(''); setCartPickerQty('')
   }
@@ -838,7 +860,7 @@ ${rowsHtml}
         paga: nd.receptor==='Protocolo' ? nd.paga : null, monto: null,
         estampados: nd.receptor==='Protocolo' && nd.paga==='si' ? nd.estampados : [],
         obs: nd.obs?.trim()||undefined, lines, toUser: nd.toUser||null,
-        status: 'pendiente_separar', confirmedAt: null, creadoPor: currentUser?.displayName||session
+        status: 'pendiente_separar', confirmedAt: null, creadoPor: currentUser?.displayName||session, creadoPorEmail: session
       }, ...s.deliveries]
       const r = {...s, articles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid}
       newDbState = r; return r
@@ -993,7 +1015,7 @@ ${rowsHtml}
       const toUser = nd.toUser || null
       const status = toUser ? 'pendiente' : 'aceptado'
       const confirmedAt = toUser ? null : fecha
-      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, disciplina:nd.receptor==='Deportes Anexos'?nd.disciplina.trim():undefined, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, estampados:nd.receptor==='Protocolo'&&nd.paga==='si'?nd.estampados:[], estampadoCosto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndEstampado:0, obs:nd.obs?.trim()||undefined, tipo:nd.tipoPrestamo?'prestamo':'entrega', lines:[...nd.lines], toUser, status, confirmedAt, creadoPor:currentUser?.displayName||session}, ...s.deliveries]
+      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, disciplina:nd.receptor==='Deportes Anexos'?nd.disciplina.trim():undefined, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, estampados:nd.receptor==='Protocolo'&&nd.paga==='si'?nd.estampados:[], estampadoCosto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndEstampado:0, obs:nd.obs?.trim()||undefined, tipo:nd.tipoPrestamo?'prestamo':'entrega', lines:[...nd.lines], toUser, status, confirmedAt, creadoPor:currentUser?.displayName||session, creadoPorEmail:session}, ...s.deliveries]
       const r = { ...s, articles:activeArticles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid }
       newDbState = r; return r
     })
@@ -1044,7 +1066,7 @@ ${rowsHtml}
     const { code, name, cat:ncat, tallesArr, tallesMins, tallesQty, estante, altura, precio } = na
     if(!code || !name) { showToast('Completá código y nombre.'); return }
     if(tallesArr.length === 0) { showToast('Seleccioná al menos un talle.'); return }
-    const ubic = estante === 'TRANSITO' ? 'TRANSITO' : (estante||'1') + (altura||'A')
+    const ubic = SIN_ALTURA.includes(estante) ? estante : (estante||'1') + (altura||'A')
     const sizes = tallesArr.map(t => ({talle:t, qty:tallesQty[t]||0, min:tallesMins[t]||0}))
     const precioNum = parseFloat(precio)||0
     const fecha = today()
@@ -1140,14 +1162,7 @@ ${rowsHtml}
     ws.columns = headers.map((h,i) => ({header:h, width: i===2?32 : i===4?10 : i<5?14 : 7}))
     ws.getRow(1).eachCell(cell => { cell.fill=YELLOW; cell.font=F_BOLD; cell.border=BORDER; cell.alignment={horizontal:'center',vertical:'middle'} })
     ws.getRow(1).height = 20
-    const sorted = [...articles]
-      .filter(a => !filterUbic || (a.ubic||'') === filterUbic)
-      .sort((a, b) => {
-        const pu = u => { if(!u||u==='—') return {n:Infinity,l:''}; const m=u.match(/^(\d+)(.*)/); return m?{n:parseInt(m[1],10),l:m[2]}:{n:Infinity,l:u} }
-        const ua=pu(a.ubic), ub=pu(b.ubic)
-        return ua.n!==ub.n ? ua.n-ub.n : ua.l.localeCompare(ub.l)
-      })
-    sorted.forEach(a => {
+    filtered.forEach(a => {
       const vals = [a.ubic||'—', a.code, a.name, a.cat, a.precio||0]
       TALLE_ORDER.forEach(t => { const sz=a.sizes.find(s=>s.talle===t); vals.push(sz?sz.qty:'') })
       vals.push(a.sizes.reduce((s,z)=>s+z.qty,0))
@@ -1157,7 +1172,7 @@ ${rowsHtml}
     const buf = await wb.xlsx.writeBuffer()
     const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
     const url = URL.createObjectURL(blob)
-    const a = document.createElement('a'); a.href=url; a.download=filterUbic?`stock-ubicacion-${filterUbic}.xlsx`:'stock-deposito-peniarol.xlsx'; a.click()
+    const a = document.createElement('a'); a.href=url; a.download=filterUbic?`stock-ubicacion-${filterUbic}.xlsx`:filterShelf?`stock-estanteria-${filterShelf}.xlsx`:'stock-deposito-peniarol.xlsx'; a.click()
     URL.revokeObjectURL(url)
   }
   const exportProductoExcel = async () => {
@@ -1213,10 +1228,59 @@ ${rowsHtml}
     const a = document.createElement('a'); a.href=url; a.download='plantel-peniarol.xlsx'; a.click()
     URL.revokeObjectURL(url)
   }
+  const downloadEntrenamientoExcel = async () => {
+    const YELLOW = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
+    const F_BOLD = {name:'Calibri',size:11,bold:true}
+    const F_NORM = {name:'Calibri',size:11}
+    const BORDER = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('Entrenamiento')
+    ws.columns = [
+      {header:'Nº', width:6}, {header:'NOMBRE', width:28}, {header:'POSICIÓN', width:12},
+      {header:'REMERA', width:10}, {header:'BUZO', width:10}, {header:'CAMP. LLUVIA', width:13},
+      {header:'SHORT', width:10}, {header:'PANTALÓN', width:12}, {header:'REM. TÉRMICA', width:14}, {header:'CALZA', width:10},
+    ]
+    ws.getRow(1).eachCell(cell => { cell.fill=YELLOW; cell.font=F_BOLD; cell.border=BORDER; cell.alignment={horizontal:'center',vertical:'middle'} })
+    ws.getRow(1).height = 20
+    ;(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).forEach(j => {
+      const e = j.tallesEntrenamiento || {}
+      const row = ws.addRow([j.numero||'', j.nombre, j.posicion||'Jugador', e.remera||'', e.buzo||'', e.camperaLluvia||'', e.short||'', e.pantalon||'', e.remeraTermica||'', e.calza||''])
+      row.eachCell(cell => { cell.font=F_NORM; cell.border=BORDER })
+    })
+    const buf = await wb.xlsx.writeBuffer()
+    const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href=url; a.download='indumentaria-entrenamiento.xlsx'; a.click()
+    URL.revokeObjectURL(url)
+  }
+  const downloadCasualExcel = async () => {
+    const YELLOW = {type:'pattern',pattern:'solid',fgColor:{argb:'FFFFD966'}}
+    const F_BOLD = {name:'Calibri',size:11,bold:true}
+    const F_NORM = {name:'Calibri',size:11}
+    const BORDER = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('Casual')
+    ws.columns = [
+      {header:'Nº', width:6}, {header:'NOMBRE', width:28}, {header:'POSICIÓN', width:12},
+      {header:'REMERA', width:10}, {header:'CAMPERA', width:12}, {header:'PANTALÓN', width:12}, {header:'SHORT', width:10},
+    ]
+    ws.getRow(1).eachCell(cell => { cell.fill=YELLOW; cell.font=F_BOLD; cell.border=BORDER; cell.alignment={horizontal:'center',vertical:'middle'} })
+    ws.getRow(1).height = 20
+    ;(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).forEach(j => {
+      const c = j.tallesCasual || {}
+      const row = ws.addRow([j.numero||'', j.nombre, j.posicion||'Jugador', c.remera||'', c.campera||'', c.pantalon||'', c.short||''])
+      row.eachCell(cell => { cell.font=F_NORM; cell.border=BORDER })
+    })
+    const buf = await wb.xlsx.writeBuffer()
+    const blob = new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href=url; a.download='indumentaria-casual.xlsx'; a.click()
+    URL.revokeObjectURL(url)
+  }
   const mvConfirm = () => {
     const toMove = Object.entries(mv.qtys).map(([t,q]) => [t, parseInt(q,10)||0]).filter(([,q]) => q > 0)
     if(toMove.length === 0) { showToast('Ingresá la cantidad a mover en al menos un talle.'); return }
-    const newUbic = mv.estante === 'TRANSITO' ? 'TRANSITO' : mv.estante + mv.altura
+    const newUbic = SIN_ALTURA.includes(mv.estante) ? mv.estante : mv.estante + mv.altura
     if(newUbic === selA.ubic) { showToast('La ubicación destino es la misma que la actual.'); return }
     for(const [t, q] of toMove) {
       const src = selA.sizes.find(sz => sz.talle === t)
@@ -1264,7 +1328,7 @@ ${rowsHtml}
     })
     if (newDbState) saveToSupabase(newDbState)
     setModal(null); setView('inventario')
-    showToast('Movido a ' + (mv.estante === 'TRANSITO' ? 'TRANSITO' : mv.estante + mv.altura) + '.')
+    showToast('Movido a ' + (SIN_ALTURA.includes(mv.estante) ? mv.estante : mv.estante + mv.altura) + '.')
   }
 
   // ---- Editar ----
@@ -1367,15 +1431,38 @@ ${rowsHtml}
     setConfirm(null)
   }
 
+  // ---- Admin: marcar aceptado sin notificación ----
+  const adminAceptar = (delId) => {
+    setDb(s => {
+      const deliveries = s.deliveries.map(d => d.id === delId ? {...d, status:'aceptado', confirmedAt:today()} : d)
+      return {...s, deliveries}
+    })
+    showToast('Entrega marcada como aceptada.')
+  }
+
   // ---- Receptor: aceptar / rechazar entrega ----
+  const getCreadorEmail = (del) => {
+    if (del?.creadoPorEmail) return del.creadoPorEmail
+    const u = db.users.find(u => u.displayName === del?.creadoPor || u.username === del?.creadoPor)
+    return u?.username || null
+  }
   const receptorAceptar = (delId) => {
+    const del = db.deliveries.find(d => d.id === delId)
     setDb(s => {
       const deliveries = s.deliveries.map(d => d.id === delId ? {...d, status:'aceptado', confirmedAt:today()} : d)
       return {...s, deliveries}
     })
     showToast('Entrega aceptada.')
+    const creadorEmail = getCreadorEmail(del)
+    if (creadorEmail) {
+      fetch('/api/notify-confirmacion', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ type:'aceptado', to: creadorEmail, creadorDisplayName: del.creadoPor, receptorNombre: currentUser?.displayName||session, delId, lines: del.lines, persona: del.persona })
+      }).catch(() => {})
+    }
   }
   const receptorRechazar = (delId, motivo) => {
+    const del = db.deliveries.find(d => d.id === delId)
     setDb(s => {
       const del = s.deliveries.find(d => d.id === delId); if(!del) return {...s}
       // revert stock
@@ -1386,6 +1473,13 @@ ${rowsHtml}
     })
     setRechazarModal({ delId: null, motivo: '' })
     showToast('Entrega rechazada y stock restituido.')
+    const creadorEmail = getCreadorEmail(del)
+    if (creadorEmail) {
+      fetch('/api/notify-confirmacion', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ type:'rechazado', to: creadorEmail, creadorDisplayName: del.creadoPor, receptorNombre: currentUser?.displayName||session, delId, lines: del.lines, persona: del.persona, motivo })
+      }).catch(() => {})
+    }
   }
 
   // ---- Derived data ----
@@ -1435,12 +1529,17 @@ ${rowsHtml}
   const q = normStr(search.trim())
   let filtered = articles.filter(a => total(a) > 0 && (cat==='Todas' || a.cat===cat))
   if(q) filtered = filtered.filter(a => normStr(a.name).includes(q) || normStr(a.code).includes(q) || normStr(a.ubic||'').includes(q))
-  if(filterUbic) filtered = filtered.filter(a => (a.ubic||'') === filterUbic)
-
   const parseUbic = u => {
     if(!u || u==='—') return { n: Infinity, l: '' }
     const m = u.match(/^(\d+)(.*)$/)
     return m ? { n: parseInt(m[1], 10), l: m[2] } : { n: Infinity, l: u }
+  }
+  if(filterUbic) filtered = filtered.filter(a => (a.ubic||'') === filterUbic)
+  else if(filterShelf) {
+    const shelfNum = parseInt(filterShelf, 10)
+    filtered = isNaN(shelfNum)
+      ? filtered.filter(a => (a.ubic||'') === filterShelf)
+      : filtered.filter(a => parseUbic(a.ubic||'').n === shelfNum)
   }
   filtered = [...filtered].sort((a, b) => {
     const ua = parseUbic(a.ubic), ub = parseUbic(b.ubic)
@@ -1453,6 +1552,12 @@ ${rowsHtml}
     if(pa.n !== pb.n) return pa.n - pb.n
     return pa.l.localeCompare(pb.l)
   })
+  const numericShelves = [...new Set(availableUbics.map(u => parseUbic(u).n).filter(n => n !== Infinity))].sort((a,b) => a-b).map(String)
+  const nonNumericUbics = availableUbics.filter(u => parseUbic(u).n === Infinity)
+  const isNumericShelf = filterShelf && numericShelves.includes(filterShelf)
+  const availableHeights = isNumericShelf
+    ? availableUbics.filter(u => String(parseUbic(u).n) === filterShelf).map(u => parseUbic(u).l).filter(Boolean)
+    : []
 
   // Group by code for inventory rows
   const groupedCodes = {}
@@ -1536,9 +1641,10 @@ ${rowsHtml}
   const filteredDeliveryRows = deliveryRows
     .filter(d => !delFilterReceptor || delFilterReceptor === REP_FILTER || d.receptor === delFilterReceptor)
     .filter(d => delFilterReceptor !== 'Deportes Anexos' || !delFilterDisciplina || d.disciplina === delFilterDisciplina)
-    .filter(d => !delFilterPersona || d.persona.toLowerCase().includes(delFilterPersona.toLowerCase()) || (d.obs||'').toLowerCase().includes(delFilterPersona.toLowerCase()))
+    .filter(d => !delFilterPersona || normStr(d.persona).includes(normStr(delFilterPersona)) || normStr(d.obs||'').includes(normStr(delFilterPersona)))
     .filter(d => delFilterReceptor !== 'Protocolo' || !delFilterPaga || d.paga === delFilterPaga)
-    .filter(d => !delFilterPrenda || d.lines.some(l => (codeName[l.code]||'').toLowerCase().includes(delFilterPrenda.toLowerCase()) || (l.code||'').toLowerCase().includes(delFilterPrenda.toLowerCase())))
+    .filter(d => !delFilterPrenda || d.lines.some(l => normStr(codeName[l.code]||'').includes(normStr(delFilterPrenda)) || normStr(l.code||'').includes(normStr(delFilterPrenda))))
+    .sort((a, b) => { const toISO = f => f ? f.split('/').reverse().join('-') : ''; return toISO(b.fecha).localeCompare(toISO(a.fecha)) })
   const repRows = (db.reposiciones||[]).map(r => {
     const totalCamisetas = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
     const totalShorts = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
@@ -1547,7 +1653,7 @@ ${rowsHtml}
     if (totalShorts) parts.push(`${totalShorts} short${totalShorts!==1?'s':''}`)
     return { id:r.id, fecha:r.fecha, persona:r.concepto, subLabel:r.torneo||'', ini:ini(r.concepto), resumen:parts.join(' · ')||'—', totalUd:totalCamisetas+totalShorts, creadoPor:r.creadoPor, _rep:r }
   })
-  const filteredRepRows = repRows.filter(r => !delFilterPersona || r.persona.toLowerCase().includes(delFilterPersona.toLowerCase()))
+  const filteredRepRows = repRows.filter(r => !delFilterPersona || normStr(r.persona).includes(normStr(delFilterPersona)))
   const recentDeliveries = deliveries.slice(0,4).map(delEnrich)
   const pendingApprovals = db.users.filter(u => u.status === 'pendiente')
   const pendingSeparar = deliveries.filter(d => d.status === 'pendiente_separar')
@@ -1870,7 +1976,7 @@ ${rowsHtml}
           persona: d.persona,
           fecha:   d.fecha,
           estado:  estadoLabel(d.status),
-          paga:    showMoney ? (d.receptor==='Protocolo' ? (d.paga==='si'?'Sí':d.paga==='no'?'No':'—') : '—') : null,
+          paga:    showMoney ? (d.receptor==='Protocolo' ? (d.paga==='si'?'Sí':d.paga==='no'?'No':d.paga==='descuento'?'Desc. salario':'—') : '—') : null,
           monto:   showMoney ? (d.paga==='si' && d.monto>0 ? d.monto : null) : null,
         })
       })
@@ -2076,7 +2182,7 @@ ${blocksHtml}
           persona:  d.persona,
           fecha:    d.fecha,
           estado:   estadoLabel(d.status),
-          paga:     showMoney ? (d.receptor==='Protocolo' ? (d.paga==='si'?'Sí':d.paga==='no'?'No':'—') : '—') : undefined,
+          paga:     showMoney ? (d.receptor==='Protocolo' ? (d.paga==='si'?'Sí':d.paga==='no'?'No':d.paga==='descuento'?'Desc. salario':'—') : '—') : undefined,
           monto:    showMoney ? (d.paga==='si' && d.monto>0 ? d.monto : null) : undefined,
         })
       })
@@ -2324,12 +2430,22 @@ tfoot td{padding:9px 12px;font-weight:700}
     setDisciplinaEdit(null)
     showToast('Disciplina actualizada.')
   }
+
+  const toggleExcludePuma = (deliveryId) => {
+    let newDbState = null
+    setDb(s => {
+      const r = {...s, deliveries:s.deliveries.map(d=>d.id===deliveryId?{...d,excludePuma:!d.excludePuma}:d)}
+      newDbState = r; return r
+    })
+    setTimeout(() => { if (newDbState) saveToSupabase(newDbState) }, 0)
+    showToast('Contrato Puma actualizado.')
+  }
   const saveEditDelivery = async () => {
     if (!editDelivery?.persona?.trim()) { showToast('El nombre no puede estar vacío.'); return }
     const capturedLines = (editDelivery.lines || []).filter(l => l.qty > 0)
     if (capturedLines.length === 0) { showToast('La entrega debe tener al menos un artículo.'); return }
     const delId = editDelivery.id
-    const { receptor, persona, fecha, paga, obs } = editDelivery
+    const { receptor, persona, fecha, paga, obs, toUser } = editDelivery
     const currentDel = db.deliveries.find(d => d.id === delId)
     if (!currentDel) { showToast('Error: entrega no encontrada. Recargá la página.'); return }
     const findArt = (arts, code, ubic) => {
@@ -2364,7 +2480,9 @@ tfoot td{padding:9px 12px;font-weight:700}
       articles,
       deliveries: db.deliveries.map(d => {
         if (d.id !== delId) return d
-        return {...d, receptor, persona:persona.trim(), fecha, paga:updatedPaga, monto:updatedMonto, obs:obs?.trim()||undefined, lines:capturedLines}
+        const newToUser = toUser || null
+        const newStatus = newToUser ? (d.status === 'aceptado' && !d.toUser ? 'pendiente' : d.status) : (d.toUser && d.status === 'pendiente' ? 'aceptado' : d.status)
+        return {...d, receptor, persona:persona.trim(), fecha, paga:updatedPaga, monto:updatedMonto, obs:obs?.trim()||undefined, lines:capturedLines, toUser:newToUser, status:newStatus, confirmedAt: newStatus==='aceptado'&&!d.confirmedAt ? fecha : d.confirmedAt}
       }),
       movimientos: db.movimientos.map(m => m.delId === delId ? {...m, detalle:newDetalle} : m)
     }
@@ -2373,6 +2491,28 @@ tfoot td{padding:9px 12px;font-weight:700}
     if (!ok) { showToast('Error al guardar. Verificá la conexión e intentá de nuevo.'); return }
     setEditDelivery(null)
     showToast('Entrega actualizada.')
+    // Enviar email si se asignó un usuario nuevo/diferente, o si cambiaron las líneas con usuario ya asignado
+    const userChanged = toUser && toUser !== currentDel.toUser
+    const linesChanged = JSON.stringify(capturedLines.map(l=>({code:l.code,talle:l.talle,qty:l.qty}))) !== JSON.stringify((currentDel.lines||[]).map(l=>({code:l.code,talle:l.talle,qty:l.qty})))
+    if (toUser && (userChanged || linesChanged)) {
+      const recipient = db.users.find(u => u.username === toUser)
+      const recipientEmail = recipient?.email || (toUser.includes('@') ? toUser : null)
+      if (recipientEmail) {
+        fetch('/api/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: recipientEmail,
+            displayName: recipient?.displayName || toUser,
+            lines: capturedLines.map(l => ({ name: l.name || l.code, talle: l.talle, qty: l.qty })),
+            delId,
+          })
+        })
+        .then(r => r.json())
+        .then(d => { if (d.ok) showToast('Email enviado a ' + recipientEmail); else showToast('Error al enviar email.') })
+        .catch(() => showToast('No se pudo conectar con el servidor de email.'))
+      }
+    }
   }
   const saveRepConcepto = async () => {
     if (savesBlocked) { showToast('⚠ Hay cambios de otro usuario — sincronizá antes de guardar.'); return }
@@ -2417,7 +2557,7 @@ tfoot td{padding:9px 12px;font-weight:700}
       if (!validas.length) { showToast('Seleccioná al menos una prenda.'); return }
       const base = Date.now()
       const obs = descExtraForm.observaciones?.trim() || null
-      const nuevos = validas.map((p,i)=>({id:base+i,fecha,jugadorNombre:descExtraForm.jugadorNombre,jugadorNumero:descExtraForm.jugadorNumero,articulo:p.articulo,precio:p.precio,cantidad:p.cantidad||1,observaciones:obs}))
+      const nuevos = validas.map((p,i)=>({id:base+i,fecha,jugadorNombre:descExtraForm.jugadorNombre,jugadorNumero:descExtraForm.jugadorNumero,articulo:p.articulo,precio:p.precio,cantidad:p.cantidad||1,estampado:p.estampado||0,observaciones:obs}))
       setDb(s => { const r = {...s, descExtras:[...(s.descExtras||[]), ...nuevos]}; newDbState=r; return r })
     }
     const ok = await saveToSupabase(newDbState || dbRef.current)
@@ -2452,6 +2592,11 @@ tfoot td{padding:9px 12px;font-weight:700}
     setPlantelModal(false)
     showToast(plantelForm.id!==null ? 'Jugador actualizado.' : 'Jugador agregado al plantel.')
   }
+  const updatePlayerTalles = (playerId, category, field, value) => {
+    let newDbState = null
+    setDb(s => { const r = {...s, plantel:s.plantel.map(j=>j.id===playerId?{...j,[category]:{...(j[category]||{}),[field]:value}}:j)}; newDbState=r; return r })
+    saveToSupabase(newDbState || dbRef.current)
+  }
   const mergeEntriesByUbic = (code, ubic) => {
     setDb(s => {
       const toMerge = s.articles.filter(a => a.code === code && a.ubic === ubic)
@@ -2482,7 +2627,7 @@ tfoot td{padding:9px 12px;font-weight:700}
   }
   const utiFiltered = (db.camisetasUtileria || []).filter(c =>
     (!utiFilter      || c.competicion === utiFilter) &&
-    (!utiFilterJugador || (c.jugador||'').toLowerCase().includes(utiFilterJugador.trim().toLowerCase())) &&
+    (!utiFilterJugador || normStr(c.jugador||'').includes(normStr(utiFilterJugador.trim()))) &&
     (!utiFilterTipo  || c.tipo === utiFilterTipo) &&
     (!utiFilterTemp  || c.temporada === utiFilterTemp) &&
     (!utiFilterModelo|| c.modelo === utiFilterModelo) &&
@@ -2681,7 +2826,7 @@ tfoot td{padding:9px 12px;font-weight:700}
             <div style={{width:56,height:56,borderRadius:'50%',background:'#1e3a2e',display:'flex',alignItems:'center',justifyContent:'center',fontSize:26}}>✓</div>
             <div style={{textAlign:'center'}}>
               <div style={{fontWeight:700,fontSize:15,color:'#fff',marginBottom:6}}>Cuenta creada</div>
-              <div style={{fontSize:13,color:'#8a8a82',lineHeight:1.5}}>Tu solicitud fue enviada.<br/>El administrador debe aprobarla antes de que puedas ingresar.</div>
+              <div style={{fontSize:13,color:'#8a8a82',lineHeight:1.5}}>Tu cuenta está lista.<br/>Ya podés ingresar con tu correo y contraseña.</div>
             </div>
             <button className="btn btn-yellow" style={{width:'100%',justifyContent:'center',height:44}} onClick={()=>setLoginView('login')}>Volver al inicio de sesión</button>
           </div>
@@ -2735,9 +2880,9 @@ tfoot td{padding:9px 12px;font-weight:700}
                 <span className="nav-dot" />DESC. EXTRAS{(db.descExtras||[]).length>0?` (${(db.descExtras||[]).length})`:''}
               </button>
             )}
-            <button className={`nav-item${receptorTab==='plantel'?' active':''}`} onClick={() => { setReceptorTab('plantel'); setSidebarOpen(false) }}>
+            {isReceptorReposiciones && <button className={`nav-item${receptorTab==='plantel'?' active':''}`} onClick={() => { setReceptorTab('plantel'); setSidebarOpen(false) }}>
               <span className="nav-dot" />PLANTEL
-            </button>
+            </button>}
           </nav>
           <div style={{flex:1}} />
           <div className="sidebar-user" style={{flexDirection:'column',gap:10}}>
@@ -2783,7 +2928,7 @@ tfoot td{padding:9px 12px;font-weight:700}
               const totalEquiposMes = repsDelMesActual.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
               const totalShortsMes  = repsDelMesActual.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
               const totalExtrasCountMes = (db.descExtras||[]).filter(e=>cicloKey(e.fecha)===mesActualKey).reduce((acc,e)=>acc+(e.cantidad||1),0)
-              const totalExtrasMes  = (db.descExtras||[]).filter(e=>cicloKey(e.fecha)===mesActualKey).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
+              const totalExtrasMes  = (db.descExtras||[]).filter(e=>cicloKey(e.fecha)===mesActualKey).reduce((acc,e)=>acc+e.precio*(e.cantidad||1)+(e.estampado||0),0)
               const totalDineroMes  = totalEquiposMes * PRECIO_CAMISETA + totalShortsMes * PRECIO_SHORT + totalExtrasMes
               return (
                 <div style={{display:'flex',alignItems:'flex-start',gap:12,flexWrap:'wrap'}}>
@@ -2808,7 +2953,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   </div>
                   <div style={{display:'flex',flexDirection:'column',gap:8,alignSelf:'flex-start'}}>
                     <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed'}}>+ Nueva reposición</button>
-                    <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',fecha:'',prendas:[{articulo:'',precio:0,cantidad:1}]});setDescExtraModal(true)}}>+ Descuento</button>
+                    <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',jugadorLibre:false,fecha:'',prendas:[{articulo:'',precio:0,cantidad:1,estampado:0}]});setDescExtraModal(true)}}>+ Descuento</button>
                   </div>
                 </div>
               )
@@ -2954,7 +3099,7 @@ tfoot td{padding:9px 12px;font-weight:700}
         {receptorTab === 'extras' && isReceptorReposiciones && (
           <div style={{display:'flex',flexDirection:'column',gap:12}}>
             <div style={{display:'flex',justifyContent:'flex-end'}}>
-              <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',fecha:'',prendas:[{articulo:'',precio:0,cantidad:1}]});setDescExtraModal(true)}}>+ Descuento</button>
+              <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',jugadorLibre:false,fecha:'',prendas:[{articulo:'',precio:0,cantidad:1,estampado:0}]});setDescExtraModal(true)}}>+ Descuento</button>
             </div>
             {(db.descExtras||[]).length === 0
               ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>Sin descuentos adicionales registrados.</div>
@@ -3004,8 +3149,12 @@ tfoot td{padding:9px 12px;font-weight:700}
 
         {receptorTab === 'plantel' && (
           <div style={{display:'flex',flexDirection:'column',gap:12}}>
-            <div style={{display:'flex',justifyContent:'flex-end'}}>
-              <button className="btn btn-dark" onClick={() => { setPlantelForm({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',cantCamiseta:1,talleShort:'L',cantShort:1}); setPlantelModal(true) }}>+ Jugador</button>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <div style={{fontSize:12,fontWeight:700,letterSpacing:'.05em',color:'#121212',background:'#f2cb12',display:'inline-block',padding:'3px 12px',borderRadius:4}}>INDUMENTARIA DE JUEGO</div>
+              <div style={{display:'flex',gap:8}}>
+                {(db.plantel||[]).length > 0 && <button className="btn" onClick={downloadPlantelExcel} style={{fontSize:12.5}}>⬇ Excel</button>}
+                <button className="btn btn-dark" onClick={() => { setPlantelForm({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',cantCamiseta:1,talleShort:'L',cantShort:1}); setPlantelModalSection(null); setPlantelModal(true) }}>+ Jugador</button>
+              </div>
             </div>
             {(db.plantel||[]).length === 0
               ? <div style={{color:'#8a8a82',fontSize:14,textAlign:'center',padding:'40px 0'}}>No hay jugadores en el plantel.</div>
@@ -3030,7 +3179,10 @@ tfoot td{padding:9px 12px;font-weight:700}
                       <div style={{width:20,fontWeight:700,fontSize:13,flexShrink:0}}>{qty}</div>
                     </div>
                   )
-                  return (
+                  const cell = {padding:'13px 20px',borderBottom:'1px solid #F0F0EC',fontSize:13.5,display:'flex',alignItems:'center'}
+                  const cellSm = {padding:'10px 16px',borderBottom:'1px solid #F0F0EC',fontSize:13,background:'#fff'}
+                  const val = (j, cat, field) => (j[cat]||{})[field] || <span style={{color:'#ccc'}}>—</span>
+                  return (<>
                     <div style={{display:'flex',gap:16,alignItems:'flex-start',flexWrap:'wrap'}}>
                       <div className="card" style={{padding:0,overflow:'hidden',flexShrink:0,overflowX:'auto'}}>
                         <div style={{display:'grid',gridTemplateColumns:'50px max-content 80px 90px 90px 60px'}}>
@@ -3042,16 +3194,16 @@ tfoot td{padding:9px 12px;font-weight:700}
                             const isGolero = j.posicion==='Golero'
                             const baseBg = isLibre?'#3a3a3a':isGolero?'#A5D6A7':'#fff'
                             const textColor = isLibre?'#888':'#1a1a1a'
-                            const cell = {background:baseBg,padding:'13px 20px',borderBottom:'1px solid #F0F0EC',fontSize:13.5,color:textColor,display:'flex',alignItems:'center'}
+                            const c = {...cell,background:baseBg,color:textColor}
                             return (
                               <Fragment key={j.id}>
-                                <div style={{...cell,fontWeight:800,fontSize:15}}>{j.numero||'—'}</div>
-                                <div style={{...cell,fontWeight:700,fontStyle:isLibre?'italic':undefined,textTransform:isLibre?undefined:'uppercase',whiteSpace:'nowrap'}}>{j.nombre}</div>
-                                <div style={{...cell,fontSize:12}}>{j.posicion||'Jugador'}</div>
-                                <div style={cell}>{j.talleCamiseta}{(j.cantCamiseta||1)>1?<span style={{color:'#8a8a82',fontSize:11,marginLeft:4}}>×{j.cantCamiseta}</span>:null}</div>
-                                <div style={cell}>{j.talleShort}{(j.cantShort||1)>1?<span style={{color:'#8a8a82',fontSize:11,marginLeft:4}}>×{j.cantShort}</span>:null}</div>
-                                <div style={{...cell,gap:6,justifyContent:'flex-end',cursor:'default'}}>
-                                  <button onClick={e=>{e.stopPropagation();setPlantelForm({...j,cantCamiseta:j.cantCamiseta||1,cantShort:j.cantShort||1});setPlantelModal(true)}} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button>
+                                <div style={{...c,fontWeight:800,fontSize:15}}>{j.numero||'—'}</div>
+                                <div style={{...c,fontWeight:700,fontStyle:isLibre?'italic':undefined,textTransform:isLibre?undefined:'uppercase',whiteSpace:'nowrap'}}>{j.nombre}</div>
+                                <div style={{...c,fontSize:12}}>{j.posicion||'Jugador'}</div>
+                                <div style={c}>{j.talleCamiseta}{(j.cantCamiseta||1)>1?<span style={{color:'#8a8a82',fontSize:11,marginLeft:4}}>×{j.cantCamiseta}</span>:null}</div>
+                                <div style={c}>{j.talleShort}{(j.cantShort||1)>1?<span style={{color:'#8a8a82',fontSize:11,marginLeft:4}}>×{j.cantShort}</span>:null}</div>
+                                <div style={{...c,gap:6,justifyContent:'flex-end',cursor:'default'}}>
+                                  <button onClick={e=>{e.stopPropagation();setPlantelForm({...j,cantCamiseta:j.cantCamiseta||1,cantShort:j.cantShort||1});setPlantelModalSection('juego');setPlantelModal(true)}} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button>
                                   <button onClick={e=>{e.stopPropagation();deletePlantelJugador(j.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'#C2473D',fontSize:16,fontWeight:700,padding:'2px 4px'}}>×</button>
                                 </div>
                               </Fragment>
@@ -3070,7 +3222,64 @@ tfoot td{padding:9px 12px;font-weight:700}
                         </div>
                       </div>
                     </div>
-                  )
+                    {jugadoresPlantel.length > 0 && (() => {
+                      const jug = [...jugadoresPlantel].sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0))
+                      const tblH = (cols) => cols.map((h,i)=>(<div key={i} style={{padding:'10px 16px',background:'#121212',color:'#f2cb12',fontWeight:700,fontSize:11,letterSpacing:'.04em',whiteSpace:'nowrap'}}>{h}</div>))
+                      return (<>
+                        <div style={{marginTop:24}}>
+                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+                            <div style={{fontSize:12,fontWeight:700,letterSpacing:'.05em',color:'#121212',background:'#f2cb12',display:'inline-block',padding:'3px 12px',borderRadius:4}}>INDUMENTARIA ENTRENAMIENTO</div>
+                            <button className="btn" onClick={downloadEntrenamientoExcel} style={{fontSize:12.5}}>⬇ Excel</button>
+                          </div>
+                          <div style={{overflowX:'auto'}}>
+                            <div className="card" style={{padding:0,overflow:'hidden',width:'max-content'}}>
+                              <div style={{display:'grid',gridTemplateColumns:'50px max-content 85px 85px 105px 85px 95px 110px 85px 48px'}}>
+                                {tblH(['Nº','NOMBRE','REMERA','BUZO','CAMP.LLUVIA','SHORT','PANTALÓN','REM.TÉRMICA','CALZA',''])}
+                                {jug.map(j=>(
+                                  <Fragment key={j.id}>
+                                    <div style={{...cellSm,fontWeight:800,fontSize:15}}>{j.numero||'—'}</div>
+                                    <div style={{...cellSm,fontWeight:700,textTransform:'uppercase',whiteSpace:'nowrap'}}>{j.nombre}</div>
+                                    <div style={cellSm}>{val(j,'tallesEntrenamiento','remera')}</div>
+                                    <div style={cellSm}>{val(j,'tallesEntrenamiento','buzo')}</div>
+                                    <div style={cellSm}>{val(j,'tallesEntrenamiento','camperaLluvia')}</div>
+                                    <div style={cellSm}>{val(j,'tallesEntrenamiento','short')}</div>
+                                    <div style={cellSm}>{val(j,'tallesEntrenamiento','pantalon')}</div>
+                                    <div style={cellSm}>{val(j,'tallesEntrenamiento','remeraTermica')}</div>
+                                    <div style={cellSm}>{val(j,'tallesEntrenamiento','calza')}</div>
+                                    <div style={{...cellSm,justifyContent:'center',display:'flex'}}><button onClick={e=>{e.stopPropagation();setPlantelForm({...j,cantCamiseta:j.cantCamiseta||1,cantShort:j.cantShort||1});setPlantelModalSection('entrenamiento');setPlantelModal(true)}} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button></div>
+                                  </Fragment>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{marginTop:24,paddingBottom:24}}>
+                          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+                            <div style={{fontSize:12,fontWeight:700,letterSpacing:'.05em',color:'#121212',background:'#f2cb12',display:'inline-block',padding:'3px 12px',borderRadius:4}}>INDUMENTARIA CASUAL</div>
+                            <button className="btn" onClick={downloadCasualExcel} style={{fontSize:12.5}}>⬇ Excel</button>
+                          </div>
+                          <div style={{overflowX:'auto'}}>
+                            <div className="card" style={{padding:0,overflow:'hidden',width:'max-content'}}>
+                              <div style={{display:'grid',gridTemplateColumns:'50px max-content 85px 95px 95px 85px 48px'}}>
+                                {tblH(['Nº','NOMBRE','REMERA','CAMPERA','PANTALÓN','SHORT',''])}
+                                {jug.map(j=>(
+                                  <Fragment key={j.id}>
+                                    <div style={{...cellSm,fontWeight:800,fontSize:15}}>{j.numero||'—'}</div>
+                                    <div style={{...cellSm,fontWeight:700,textTransform:'uppercase',whiteSpace:'nowrap'}}>{j.nombre}</div>
+                                    <div style={cellSm}>{val(j,'tallesCasual','remera')}</div>
+                                    <div style={cellSm}>{val(j,'tallesCasual','campera')}</div>
+                                    <div style={cellSm}>{val(j,'tallesCasual','pantalon')}</div>
+                                    <div style={cellSm}>{val(j,'tallesCasual','short')}</div>
+                                    <div style={{...cellSm,justifyContent:'center',display:'flex'}}><button onClick={e=>{e.stopPropagation();setPlantelForm({...j,cantCamiseta:j.cantCamiseta||1,cantShort:j.cantShort||1});setPlantelModalSection('casual');setPlantelModal(true)}} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button></div>
+                                  </Fragment>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </>)
+                    })()}
+                  </>)
                 })()
             }
           </div>
@@ -3555,11 +3764,23 @@ tfoot td{padding:9px 12px;font-weight:700}
                   <input className="field-input" type="text" placeholder={today()} value={descExtraForm.fecha} onChange={e=>setDescExtraForm(p=>({...p,fecha:e.target.value}))} />
                 </div>
                 <div className="form-group">
-                  <label className="field-label">Jugador</label>
-                  <select className="field-input" value={descExtraForm.jugadorNombre} onChange={e=>{const j=(db.plantel||[]).find(p=>p.nombre===e.target.value);setDescExtraForm(p=>({...p,jugadorNombre:e.target.value,jugadorNumero:j?.numero||''}))}}>
+                  <label className="field-label">Del plantel</label>
+                  <select className="field-input" value={descExtraForm.jugadorLibre?'':descExtraForm.jugadorNombre}
+                    disabled={!!descExtraForm.jugadorLibre}
+                    style={descExtraForm.jugadorLibre?{background:'#F5F5F0',color:'#b0b0a8',cursor:'not-allowed'}:{}}
+                    onChange={e=>{const j=(db.plantel||[]).find(p=>p.nombre===e.target.value);setDescExtraForm(p=>({...p,jugadorNombre:e.target.value,jugadorNumero:j?.numero||'',jugadorLibre:false}))}}>
                     <option value="">Seleccionar jugador…</option>
                     {(db.plantel||[]).filter(j=>j.nombre?.trim().toLowerCase()!=='libre').sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j=>(<option key={j.id} value={j.nombre}>{j.numero} — {j.nombre}</option>))}
                   </select>
+                </div>
+                <div style={{textAlign:'center',fontSize:11,color:'#b0b0a8',margin:'-4px 0 4px',letterSpacing:'.04em'}}>— O —</div>
+                <div className="form-group">
+                  <label className="field-label">Nombre libre</label>
+                  <input className="field-input" type="text" placeholder="Nombre de la persona…"
+                    value={descExtraForm.jugadorLibre||''}
+                    disabled={!!(descExtraForm.jugadorNombre&&!descExtraForm.jugadorLibre)}
+                    style={(descExtraForm.jugadorNombre&&!descExtraForm.jugadorLibre)?{background:'#F5F5F0',color:'#b0b0a8',cursor:'not-allowed'}:{}}
+                    onChange={e=>setDescExtraForm(p=>({...p,jugadorLibre:e.target.value,jugadorNombre:e.target.value,jugadorNumero:''}))} />
                 </div>
                 {descExtraForm.id ? (<>
                   <div className="form-group">
@@ -3579,39 +3800,51 @@ tfoot td{padding:9px 12px;font-weight:700}
                       <input className="field-input mono" type="number" min="1" value={descExtraForm.cantidad} onChange={e=>setDescExtraForm(p=>({...p,cantidad:Math.max(1,parseInt(e.target.value)||1)}))} style={{textAlign:'center'}} />
                     </div>
                   </div>
+                  <div className="form-group" style={{marginTop:4}}>
+                    <label className="field-label">Estampados ($)</label>
+                    <input className="field-input mono" type="number" min="0" placeholder="0" value={descExtraForm.estampado||''} onChange={e=>setDescExtraForm(p=>({...p,estampado:parseFloat(e.target.value)||0}))} />
+                  </div>
                   {descExtraForm.precio>0 && (
                     <div style={{textAlign:'right',fontWeight:700,fontSize:14,fontFamily:'IBM Plex Mono,monospace',color:'#121212'}}>
-                      Total: $ {(descExtraForm.precio*(descExtraForm.cantidad||1)).toLocaleString('es-UY')}
+                      Total: $ {(descExtraForm.precio*(descExtraForm.cantidad||1)+(descExtraForm.estampado||0)).toLocaleString('es-UY')}
                     </div>
                   )}
                 </>) : (<>
                   <div style={{borderTop:'1px solid #ECECE8',marginTop:4,paddingTop:12}}>
                     <div style={{fontSize:11,fontWeight:700,letterSpacing:'.04em',color:'#8a8a82',marginBottom:8}}>PRENDAS</div>
                     {(descExtraForm.prendas||[]).map((pr,i)=>(
-                      <div key={i} style={{display:'flex',gap:8,alignItems:'center',marginBottom:8}}>
-                        <select style={{flex:1,padding:'6px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,background:'#fff'}}
-                          value={pr.articulo}
-                          onChange={e=>{const found=EXTRAS_PRENDAS.find(p=>p.nombre===e.target.value);setDescExtraForm(f=>({...f,prendas:f.prendas.map((p,j)=>j===i?{...p,articulo:e.target.value,precio:found?.precio||0}:p)}))}}>
-                          <option value="">Seleccionar prenda…</option>
-                          {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre}</option>))}
-                        </select>
-                        <input style={{width:52,padding:'6px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,textAlign:'center'}}
-                          type="number" min="1" value={pr.cantidad}
-                          onChange={e=>setDescExtraForm(f=>({...f,prendas:f.prendas.map((p,j)=>j===i?{...p,cantidad:Math.max(1,parseInt(e.target.value)||1)}:p)}))} />
-                        {(descExtraForm.prendas||[]).length>1 && (
-                          <button onClick={()=>setDescExtraForm(f=>({...f,prendas:f.prendas.filter((_,j)=>j!==i)}))}
-                            style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:18,lineHeight:1,padding:'0 4px',flexShrink:0}}>×</button>
-                        )}
+                      <div key={i} style={{marginBottom:8}}>
+                        <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                          <select style={{flex:1,padding:'6px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,background:'#fff'}}
+                            value={pr.articulo}
+                            onChange={e=>{const found=EXTRAS_PRENDAS.find(p=>p.nombre===e.target.value);setDescExtraForm(f=>({...f,prendas:f.prendas.map((p,j)=>j===i?{...p,articulo:e.target.value,precio:found?.precio||0}:p)}))}}>
+                            <option value="">Seleccionar prenda…</option>
+                            {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre}</option>))}
+                          </select>
+                          <input style={{width:52,padding:'6px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,textAlign:'center'}}
+                            type="number" min="1" value={pr.cantidad}
+                            onChange={e=>setDescExtraForm(f=>({...f,prendas:f.prendas.map((p,j)=>j===i?{...p,cantidad:Math.max(1,parseInt(e.target.value)||1)}:p)}))} />
+                          {(descExtraForm.prendas||[]).length>1 && (
+                            <button onClick={()=>setDescExtraForm(f=>({...f,prendas:f.prendas.filter((_,j)=>j!==i)}))}
+                              style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:18,lineHeight:1,padding:'0 4px',flexShrink:0}}>×</button>
+                          )}
+                        </div>
+                        <div style={{display:'flex',alignItems:'center',gap:6,marginTop:4}}>
+                          <span style={{fontSize:11,color:'#8a8a82',whiteSpace:'nowrap'}}>Estampados $</span>
+                          <input style={{width:90,padding:'4px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,fontFamily:'IBM Plex Mono,monospace'}}
+                            type="number" min="0" placeholder="0" value={pr.estampado||''}
+                            onChange={e=>setDescExtraForm(f=>({...f,prendas:f.prendas.map((p,j)=>j===i?{...p,estampado:parseFloat(e.target.value)||0}:p)}))} />
+                        </div>
                       </div>
                     ))}
-                    <button onClick={()=>setDescExtraForm(f=>({...f,prendas:[...(f.prendas||[]),{articulo:'',precio:0,cantidad:1}]}))}
+                    <button onClick={()=>setDescExtraForm(f=>({...f,prendas:[...(f.prendas||[]),{articulo:'',precio:0,cantidad:1,estampado:0}]}))}
                       style={{fontSize:12,color:'#5a5a52',background:'none',border:'1px dashed #ccc',borderRadius:6,padding:'5px 12px',cursor:'pointer',width:'100%',marginTop:2}}>
                       + Agregar prenda
                     </button>
                   </div>
                   {(descExtraForm.prendas||[]).some(p=>p.precio>0) && (
                     <div style={{textAlign:'right',fontWeight:700,fontSize:14,fontFamily:'IBM Plex Mono,monospace',color:'#121212',marginTop:10}}>
-                      Total: $ {(descExtraForm.prendas||[]).reduce((s,p)=>s+p.precio*(p.cantidad||1),0).toLocaleString('es-UY')}
+                      Total: $ {(descExtraForm.prendas||[]).reduce((s,p)=>s+p.precio*(p.cantidad||1)+(p.estampado||0),0).toLocaleString('es-UY')}
                     </div>
                   )}
                 </>)}
@@ -3659,7 +3892,7 @@ tfoot td{padding:9px 12px;font-weight:700}
             const jugsMes = Object.values(jugMapMes).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0))
             const getCam = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const dc=j.descuentoCamiseta!==undefined?j.descuentoCamiseta!==false:j.descuento!==false;return acc+(dc?Number(j.cantCamiseta)||0:0)},0)
             const getSht = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const ds=j.descuentoShort!==undefined?j.descuentoShort!==false:j.descuento!==false;return acc+(ds?Number(j.cantShort)||0:0)},0)
-            const getExtras = nombre => extrasDelMes.filter(e=>e.jugadorNombre===nombre).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
+            const getExtras = nombre => extrasDelMes.filter(e=>e.jugadorNombre===nombre).reduce((acc,e)=>acc+e.precio*(e.cantidad||1)+(e.estampado||0),0)
             const filas = jugsMes.map(j=>({...j,cam:getCam(j.nombre),sht:getSht(j.nombre),extras:getExtras(j.nombre)})).map(f=>({...f,desc:f.cam*PRECIO_DESC_CAMISETA+f.sht*PRECIO_DESC_SHORT+f.extras})).filter(f=>f.desc>0)
             const totCam = filas.reduce((s,f)=>s+f.cam,0)
             const totSht = filas.reduce((s,f)=>s+f.sht,0)
@@ -3879,11 +4112,16 @@ tfoot td{padding:9px 12px;font-weight:700}
         })()}
 
         {plantelModal && (
-          <div className="modal-backdrop" onClick={() => setPlantelModal(false)}>
+          <div className="modal-backdrop" onClick={() => { setPlantelModal(false); setPlantelModalSection(null) }}>
             <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
               <div className="modal-header">
-                <div className="modal-title">{plantelForm.id !== null ? 'Editar jugador' : 'Agregar jugador'}</div>
-                <button className="modal-close" onClick={() => setPlantelModal(false)}>×</button>
+                <div className="modal-title">
+                  {plantelModalSection === 'juego' ? 'Editar — Indumentaria de juego'
+                   : plantelModalSection === 'entrenamiento' ? 'Editar — Indumentaria entrenamiento'
+                   : plantelModalSection === 'casual' ? 'Editar — Indumentaria casual'
+                   : plantelForm.id !== null ? 'Editar jugador' : 'Agregar jugador'}
+                </div>
+                <button className="modal-close" onClick={() => { setPlantelModal(false); setPlantelModalSection(null) }}>×</button>
               </div>
               <div className="modal-body">
                 <div style={{display:'flex',gap:12}}>
@@ -3891,44 +4129,84 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <label className="field-label">Número</label>
                     <input className="field-input mono" type="number" min="1" max="99" value={plantelForm.numero}
                       onChange={e => setPlantelForm(p=>({...p,numero:e.target.value}))}
-                      placeholder="10" style={{textAlign:'center'}} />
+                      placeholder="10" style={{textAlign:'center'}} readOnly={!!plantelModalSection} />
                   </div>
                   <div className="form-group" style={{flex:1}}>
                     <label className="field-label">Nombre completo</label>
                     <input className="field-input" value={plantelForm.nombre}
                       onChange={e => setPlantelForm(p=>({...p,nombre:e.target.value}))}
-                      placeholder="Ej. Maximiliano Olivera" autoFocus />
+                      placeholder="Ej. Maximiliano Olivera" autoFocus readOnly={!!plantelModalSection} />
                   </div>
                 </div>
-                <div style={{display:'flex',gap:8,marginTop:4}}>
-                  {['Jugador','Golero'].map(pos => (
-                    <button key={pos} type="button"
-                      onClick={() => setPlantelForm(p=>({...p,posicion:pos}))}
-                      style={{flex:1,padding:'8px 0',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:13,cursor:'pointer',
-                        borderColor: plantelForm.posicion===pos ? '#f2cb12' : '#ECECE8',
-                        background: plantelForm.posicion===pos ? '#FFF8D6' : '#fff',
-                        color: plantelForm.posicion===pos ? '#7a5800' : '#8a8a82'}}>
-                      {pos}
-                    </button>
-                  ))}
-                </div>
-                <div style={{display:'flex',gap:12,marginTop:4}}>
-                  <div className="form-group" style={{flex:1}}>
-                    <label className="field-label">Talle Camiseta</label>
-                    <select className="field-input" value={plantelForm.talleCamiseta} onChange={e => setPlantelForm(p=>({...p,talleCamiseta:e.target.value}))}>
-                      {TALLES_ADULTO.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
+                {!plantelModalSection && (
+                  <div style={{display:'flex',gap:8,marginTop:4}}>
+                    {['Jugador','Golero'].map(pos => (
+                      <button key={pos} type="button"
+                        onClick={() => setPlantelForm(p=>({...p,posicion:pos}))}
+                        style={{flex:1,padding:'8px 0',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:13,cursor:'pointer',
+                          borderColor: plantelForm.posicion===pos ? '#f2cb12' : '#ECECE8',
+                          background: plantelForm.posicion===pos ? '#FFF8D6' : '#fff',
+                          color: plantelForm.posicion===pos ? '#7a5800' : '#8a8a82'}}>
+                        {pos}
+                      </button>
+                    ))}
                   </div>
-                  <div className="form-group" style={{flex:1}}>
-                    <label className="field-label">Talle Short</label>
-                    <select className="field-input" value={plantelForm.talleShort} onChange={e => setPlantelForm(p=>({...p,talleShort:e.target.value}))}>
-                      {TALLES_ADULTO.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
+                )}
+                {(!plantelModalSection || plantelModalSection === 'juego') && (
+                  <div style={{display:'flex',gap:12,marginTop:4}}>
+                    <div className="form-group" style={{flex:1}}>
+                      <label className="field-label">Talle Camiseta</label>
+                      <select className="field-input" value={plantelForm.talleCamiseta} onChange={e => setPlantelForm(p=>({...p,talleCamiseta:e.target.value}))}>
+                        {TALLES_ADULTO.map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-group" style={{flex:1}}>
+                      <label className="field-label">Talle Short</label>
+                      <select className="field-input" value={plantelForm.talleShort} onChange={e => setPlantelForm(p=>({...p,talleShort:e.target.value}))}>
+                        {TALLES_ADULTO.map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </div>
                   </div>
-                </div>
+                )}
+                {(!plantelModalSection || plantelModalSection === 'entrenamiento') && (
+                  <div style={{borderTop:'1px solid #ECECE8',marginTop:12,paddingTop:10}}>
+                    <div style={{fontSize:11,fontWeight:700,letterSpacing:'.04em',color:'#8a8a82',marginBottom:8}}>ENTRENAMIENTO</div>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px 12px'}}>
+                      {[['remera','Remera'],['buzo','Buzo'],['camperaLluvia','Camp. lluvia'],['short','Short'],['pantalon','Pantalón'],['remeraTermica','Rem. térmica'],['calza','Calza']].map(([k,label])=>(
+                        <div key={k}>
+                          <label style={{fontSize:11,color:'#8a8a82',display:'block',marginBottom:2}}>{label}</label>
+                          <select style={{width:'100%',padding:'5px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,background:'#fff'}}
+                            value={(plantelForm.tallesEntrenamiento||{})[k]||''}
+                            onChange={e=>setPlantelForm(p=>({...p,tallesEntrenamiento:{...(p.tallesEntrenamiento||{}),[k]:e.target.value}}))}>
+                            <option value="">—</option>
+                            {TALLES_ADULTO.map(t=><option key={t} value={t}>{t}</option>)}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {(!plantelModalSection || plantelModalSection === 'casual') && (
+                  <div style={{borderTop:'1px solid #ECECE8',marginTop:12,paddingTop:10}}>
+                    <div style={{fontSize:11,fontWeight:700,letterSpacing:'.04em',color:'#8a8a82',marginBottom:8}}>CASUAL</div>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px 12px'}}>
+                      {[['remera','Remera'],['campera','Campera'],['pantalon','Pantalón'],['short','Short']].map(([k,label])=>(
+                        <div key={k}>
+                          <label style={{fontSize:11,color:'#8a8a82',display:'block',marginBottom:2}}>{label}</label>
+                          <select style={{width:'100%',padding:'5px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,background:'#fff'}}
+                            value={(plantelForm.tallesCasual||{})[k]||''}
+                            onChange={e=>setPlantelForm(p=>({...p,tallesCasual:{...(p.tallesCasual||{}),[k]:e.target.value}}))}>
+                            <option value="">—</option>
+                            {TALLES_ADULTO.map(t=><option key={t} value={t}>{t}</option>)}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="modal-footer">
-                <button className="btn btn-ghost" onClick={() => setPlantelModal(false)}>Cancelar</button>
+                <button className="btn btn-ghost" onClick={() => { setPlantelModal(false); setPlantelModalSection(null) }}>Cancelar</button>
                 <button className="btn btn-dark" onClick={savePlantelJugador}>Guardar</button>
               </div>
             </div>
@@ -3954,7 +4232,7 @@ tfoot td{padding:9px 12px;font-weight:700}
           const totSht = filas.reduce((s,f)=>s+f.sht,0)
           const totMonto = filas.reduce((s,f)=>s+f.monto,0)
           const extrasJug = (db.descExtras||[]).filter(e => e.jugadorNombre?.trim().toLowerCase() === nombre.toLowerCase())
-          const totExtrasItems = extrasJug.reduce((s,e) => s + e.precio*(e.cantidad||1), 0)
+          const totExtrasItems = extrasJug.reduce((s,e) => s + e.precio*(e.cantidad||1)+(e.estampado||0), 0)
           return (
             <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:1100,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setRankingDetalle(null)}>
               <div style={{background:'#fff',borderRadius:12,padding:28,minWidth:360,maxWidth:500,boxShadow:'0 8px 32px rgba(0,0,0,0.18)',maxHeight:'80vh',display:'flex',flexDirection:'column'}} onClick={e=>e.stopPropagation()}>
@@ -4380,12 +4658,21 @@ tfoot td{padding:9px 12px;font-weight:700}
                 {['Todas',...CATEGORIAS].map(c => (
                   <button key={c} className={`chip${cat===c?' active':''}`} onClick={() => setCat(c)}>{c}</button>
                 ))}
-                <select className="field-input" style={{height:32,fontSize:12.5,padding:'0 8px',minWidth:110,maxWidth:140}}
-                  value={filterUbic} onChange={e => setFilterUbic(e.target.value)}>
-                  <option value="">Ubicación…</option>
-                  {availableUbics.map(u => <option key={u} value={u}>{u}</option>)}
+                <select className="field-input" style={{height:32,fontSize:12.5,padding:'0 8px',minWidth:120,maxWidth:150}}
+                  value={filterShelf} onChange={e => { setFilterShelf(e.target.value); setFilterUbic('') }}>
+                  <option value="">Estantería…</option>
+                  {numericShelves.map(s => <option key={s} value={s}>Estantería {s}</option>)}
+                  {nonNumericUbics.length > 0 && numericShelves.length > 0 && <option disabled>──────────</option>}
+                  {nonNumericUbics.map(u => <option key={u} value={u}>{u}</option>)}
                 </select>
-                {filterUbic && <button className="chip active" onClick={()=>setFilterUbic('')}>× {filterUbic}</button>}
+                {filterShelf && availableHeights.length > 0 && (
+                  <select className="field-input" style={{height:32,fontSize:12.5,padding:'0 8px',minWidth:100,maxWidth:130}}
+                    value={filterUbic} onChange={e => setFilterUbic(e.target.value)}>
+                    <option value="">Toda la est.</option>
+                    {availableHeights.map(h => <option key={h} value={filterShelf+h}>Altura {h}</option>)}
+                  </select>
+                )}
+                {(filterShelf || filterUbic) && <button className="chip active" onClick={()=>{ setFilterShelf(''); setFilterUbic('') }}>× limpiar</button>}
                 <div style={{flex:1}}/>
                 <button className="btn btn-ghost" style={{fontSize:12.5,padding:'5px 12px'}} onClick={exportExcel}>↓ Exportar Excel</button>
               </div>
@@ -4596,7 +4883,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 </div>
               )}
               {delFilterReceptor==='Protocolo' && currentUser?.role !== 'admin-palacio' && (() => {
-                const totalRec = deliveryRows.filter(d => d.receptor==='Protocolo' && d.paga==='si' && (!delFilterPersona || d.persona.toLowerCase().includes(delFilterPersona.toLowerCase()))).reduce((s,d) => s+(d.monto||0), 0)
+                const totalRec = deliveryRows.filter(d => d.receptor==='Protocolo' && d.paga==='si' && (!delFilterPersona || normStr(d.persona).includes(normStr(delFilterPersona)))).reduce((s,d) => s+(d.monto||0), 0)
                 return (
                   <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center',marginBottom:12}}>
                     <span style={{fontSize:12,color:'#8a8a82',fontWeight:600}}>Paga:</span>
@@ -4709,7 +4996,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                           <div style={{fontSize:11.5,color:'#8a8a82'}}>
                             {d.receptor}
                             {d.tipo==='prestamo' && <span style={{marginLeft:6,fontWeight:700,color:d.status==='devuelto'?'#6a6a62':'#7a4f00',background:d.status==='devuelto'?'#EBEBEB':'#FFF3CD',borderRadius:4,padding:'1px 6px',fontSize:11}}>Préstamo{d.status==='devuelto'?' · Devuelto':' · Activo'}</span>}
-                            {d.paga !== null && d.paga !== undefined && currentUser?.role !== 'admin-palacio' && <span style={{marginLeft:6,fontWeight:600,color:d.paga==='si'?'#2e9b5e':'#C2473D'}}>· Paga: {d.paga==='si'?'Sí':'No'}{d.paga==='si'&&d.monto>0?' — $ '+d.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}):''}</span>}
+                            {d.paga !== null && d.paga !== undefined && currentUser?.role !== 'admin-palacio' && <span style={{marginLeft:6,fontWeight:600,color:d.paga==='si'?'#2e9b5e':d.paga==='descuento'?'#8a5a00':'#C2473D'}}>· Paga: {d.paga==='si'?'Sí':d.paga==='descuento'?'Desc. salario':'No'}{d.paga==='si'&&d.monto>0?' — $ '+d.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}):''}</span>}
                           </div>
                         </div>
                       </div>
@@ -4720,7 +5007,11 @@ tfoot td{padding:9px 12px;font-weight:700}
                       <div style={{textAlign:'right'}}>
                         {(() => { const st=d.status||'aceptado'; const bSt={borderRadius:5,padding:'2px 7px',fontSize:11,fontWeight:700,whiteSpace:'nowrap'}; return st==='pendiente'?<span style={{...bSt,background:'#FFF8D6',color:'#7a5800',border:'1px solid #f2cb12'}}>Pendiente</span>:st==='rechazado'?<span style={{...bSt,background:'#FBEAE8',color:'#C2473D',border:'1px solid #C2473D'}}>Rechazado</span>:st==='pendiente_separar'?<span style={{...bSt,background:'#FFF3E0',color:'#B45309',border:'1px solid #F59E0B'}}>Pend. separar</span>:<span style={{...bSt,background:'#EDF7F2',color:'#2e9b5e',border:'1px solid #2e9b5e'}}>Aceptado</span> })()}
                       </div>
-                      <div style={{display:'flex',justifyContent:'flex-end',alignItems:'center'}}>
+                      <div style={{display:'flex',justifyContent:'flex-end',alignItems:'center',gap:6}}>
+                        {isAdmin && (d.status||'aceptado') === 'pendiente' && remitoSelIds === null && (
+                          <button style={{padding:'2px 8px',borderRadius:5,border:'none',cursor:'pointer',fontWeight:700,fontSize:11,background:'#2e9b5e',color:'#fff',whiteSpace:'nowrap'}}
+                            onClick={e => { e.stopPropagation(); adminAceptar(d.id) }}>✓ Aceptar</button>
+                        )}
                         {!isSoloVista && remitoSelIds === null && <button className="btn-del" onClick={e => { e.stopPropagation(); askDeleteDelivery(d.id) }}>✕</button>}
                       </div>
                     </div>
@@ -4999,14 +5290,18 @@ tfoot td{padding:9px 12px;font-weight:700}
               s + (r.jugadores||[]).reduce((a, j) => a + (Number(j.cantCamiseta)||0) + (Number(j.cantShort)||0), 0), 0)
             const extrasUnidades = (db.descExtras||[]).reduce((s,e) => s + (e.cantidad||1), 0)
             const extrasMonto    = (db.descExtras||[]).reduce((s,e) => s + e.precio*(e.cantidad||1), 0)
-            const baseData = receptorCards
-              .map(r => {
-                const extraU = r.name === 'Protocolo' ? extrasUnidades : 0
-                const extraM = r.name === 'Protocolo' ? extrasMonto : 0
-                const total = r.unidades + extraU
-                return { name: r.name, unidades: total, pct: total / TOTAL_CONTRATO * 100, monto: r.monto + extraM }
+            const pumaDeliveries = (db.deliveries||[]).filter(d => !d.excludePuma && d.status !== 'pendiente_separar')
+            const repCamisetasU = pumaDeliveries.filter(d => d.receptor === 'Reposición Camisetas').reduce((s,d)=>s+d.lines.reduce((x,l)=>x+l.qty,0),0)
+            const baseData = RECEPTORES.filter(n => n !== 'Reposición Camisetas').map(name => {
+                const ds = pumaDeliveries.filter(d => d.receptor === name)
+                const extraU = name === 'Protocolo' ? extrasUnidades : 0
+                const extraM = name === 'Protocolo' ? extrasMonto : 0
+                const unidades = ds.reduce((s,d)=>s+d.lines.reduce((x,l)=>x+l.qty,0),0) + extraU
+                const monto = ds.reduce((s,d)=>s+d.lines.reduce((x,l)=>{const art=articles.find(a=>a.code===l.code);return x+(art?.precio||0)*l.qty},0),0) + extraM
+                return { name, unidades, pct: unidades / TOTAL_CONTRATO * 100, monto }
               })
-            baseData.push({ name: 'Equipos de juego 1° División', unidades: repUnidades, pct: repUnidades / TOTAL_CONTRATO * 100, monto: 0 })
+            const equiposTotal = repUnidades + repCamisetasU
+            baseData.push({ name: 'Equipos de juego 1° División', unidades: equiposTotal, pct: equiposTotal / TOTAL_CONTRATO * 100, monto: 0 })
             const data = baseData.sort((a, b) => {
                 const ia = RECEPTOR_ORDER.indexOf(a.name)
                 const ib = RECEPTOR_ORDER.indexOf(b.name)
@@ -5201,7 +5496,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                       </div>
                       <div style={{display:'flex',flexDirection:'column',gap:8,alignSelf:'flex-start'}}>
                         <button className="btn btn-dark" onClick={openRepModal} disabled={!(db.plantel||[]).length} style={{opacity:(db.plantel||[]).length?1:0.5,cursor:(db.plantel||[]).length?'pointer':'not-allowed'}}>+ Nueva reposición</button>
-                        <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',fecha:'',prendas:[{articulo:'',precio:0,cantidad:1}]});setDescExtraModal(true)}}>+ Descuento</button>
+                        <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',jugadorLibre:false,fecha:'',prendas:[{articulo:'',precio:0,cantidad:1,estampado:0}]});setDescExtraModal(true)}}>+ Descuento</button>
                         <button className="btn btn-ghost" style={{border:'1px solid #2d6a4f',color:'#2d6a4f',fontSize:12}} onClick={exportDescuentosPivot}>↓ Excel por partido</button>
                       </div>
                     </div>
@@ -5322,7 +5617,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                       <div className="kpi-sub">jugadores registrados →</div>
                     </div>
                     <div style={{display:'flex',flexDirection:'column',gap:8,alignSelf:'flex-start'}}>
-                      <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',fecha:'',prendas:[{articulo:'',precio:0,cantidad:1}]});setDescExtraModal(true)}}>+ Descuento</button>
+                      <button className="btn btn-dark" onClick={()=>{setDescExtraForm({jugadorNombre:'',jugadorNumero:'',jugadorLibre:false,fecha:'',prendas:[{articulo:'',precio:0,cantidad:1,estampado:0}]});setDescExtraModal(true)}}>+ Descuento</button>
                     </div>
                   </div>
                   {(db.descExtras||[]).length === 0
@@ -5377,11 +5672,12 @@ tfoot td{padding:9px 12px;font-weight:700}
                 <div style={{display:'flex',alignItems:'flex-start',gap:24,flexWrap:'wrap'}}>
                   {/* Tabla */}
                   <div style={{flex:'0 0 auto',minWidth:0}}>
+                    <div style={{fontSize:12,fontWeight:700,letterSpacing:'.05em',color:'#121212',background:'#f2cb12',display:'inline-block',padding:'3px 12px',borderRadius:4,marginBottom:8}}>INDUMENTARIA DE JUEGO</div>
                     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-                      <span style={{fontSize:12.5,color:'#8a8a82'}}>Jugadores con su talle de camiseta y short</span>
+                      <span style={{fontSize:12.5,color:'#8a8a82'}}>Talles de camiseta y short de juego</span>
                       <div style={{display:'flex',gap:8}}>
                         {(db.plantel||[]).length > 0 && <button className="btn" onClick={downloadPlantelExcel} style={{fontSize:12.5}}>⬇ Excel</button>}
-                        <button className="btn btn-dark" onClick={() => { setPlantelForm({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',cantCamiseta:1,talleShort:'L',cantShort:1}); setPlantelModal(true) }}>+ Jugador</button>
+                        <button className="btn btn-dark" onClick={() => { setPlantelForm({id:null,numero:'',nombre:'',posicion:'Jugador',talleCamiseta:'L',cantCamiseta:1,talleShort:'L',cantShort:1}); setPlantelModalSection(null); setPlantelModal(true) }}>+ Jugador</button>
                       </div>
                     </div>
                     {(db.plantel||[]).length === 0
@@ -5409,7 +5705,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                                   <div style={cell} {...rowEvents}>{j.talleCamiseta}{(j.cantCamiseta||1)>1?<span style={{color:'#8a8a82',fontSize:11,marginLeft:4}}>×{j.cantCamiseta}</span>:null}</div>
                                   <div style={cell} {...rowEvents}>{j.talleShort}{(j.cantShort||1)>1?<span style={{color:'#8a8a82',fontSize:11,marginLeft:4}}>×{j.cantShort}</span>:null}</div>
                                   <div style={{...cell,gap:6,justifyContent:'flex-end',cursor:'default'}} onMouseEnter={rowEvents.onMouseEnter} onMouseLeave={rowEvents.onMouseLeave}>
-                                    <button onClick={e=>{e.stopPropagation();setPlantelForm({...j,cantCamiseta:j.cantCamiseta||1,cantShort:j.cantShort||1});setPlantelModal(true)}} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button>
+                                    <button onClick={e=>{e.stopPropagation();setPlantelForm({...j,cantCamiseta:j.cantCamiseta||1,cantShort:j.cantShort||1});setPlantelModalSection('juego');setPlantelModal(true)}} style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button>
                                     <button onClick={e=>{e.stopPropagation();deletePlantelJugador(j.id)}} style={{background:'none',border:'none',cursor:'pointer',color:'#C2473D',fontSize:16,fontWeight:700,padding:'2px 4px'}}>×</button>
                                   </div>
                                 </Fragment>
@@ -5501,6 +5797,70 @@ tfoot td{padding:9px 12px;font-weight:700}
                     )
                   })()}
                 </div>
+                {/* Tablas ENTRENAMIENTO y CASUAL */}
+                {(db.plantel||[]).filter(j=>j.nombre.trim().toLowerCase()!=='libre').length > 0 && (() => {
+                  const jugadores = (db.plantel||[]).filter(j=>j.nombre.trim().toLowerCase()!=='libre').sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0))
+                  const tblHeader = (cols) => cols.map((h,i)=>(<div key={i} style={{padding:'10px 16px',background:'#121212',color:'#f2cb12',fontWeight:700,fontSize:11,letterSpacing:'.04em',whiteSpace:'nowrap'}}>{h}</div>))
+                  const cell = {padding:'10px 16px',borderBottom:'1px solid #F0F0EC',fontSize:13,background:'#fff'}
+                  const val = (j, cat, field) => (j[cat]||{})[field] || <span style={{color:'#ccc'}}>—</span>
+                  const editBtn = (j, section) => (
+                    <button onClick={e=>{e.stopPropagation();setPlantelForm({...j,cantCamiseta:j.cantCamiseta||1,cantShort:j.cantShort||1});setPlantelModalSection(section||null);setPlantelModal(true)}}
+                      style={{background:'none',border:'none',cursor:'pointer',color:'#8a8a82',fontSize:14,padding:'2px 4px'}}>✎</button>
+                  )
+                  return (<>
+                    <div style={{marginTop:32}}>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+                        <div style={{fontSize:12,fontWeight:700,letterSpacing:'.05em',color:'#121212',background:'#f2cb12',display:'inline-block',padding:'3px 12px',borderRadius:4}}>INDUMENTARIA ENTRENAMIENTO</div>
+                        {jugadores.length > 0 && <button className="btn" onClick={downloadEntrenamientoExcel} style={{fontSize:12.5}}>⬇ Excel</button>}
+                      </div>
+                      <div style={{overflowX:'auto'}}>
+                        <div className="card" style={{padding:0,overflow:'hidden',width:'max-content'}}>
+                          <div style={{display:'grid',gridTemplateColumns:'50px max-content 85px 85px 105px 85px 95px 110px 85px 48px'}}>
+                            {tblHeader(['Nº','NOMBRE','REMERA','BUZO','CAMP.LLUVIA','SHORT','PANTALÓN','REM.TÉRMICA','CALZA',''])}
+                            {jugadores.map(j=>(
+                              <Fragment key={j.id}>
+                                <div style={{...cell,fontWeight:800,fontSize:15}}>{j.numero||'—'}</div>
+                                <div style={{...cell,fontWeight:700,textTransform:'uppercase',whiteSpace:'nowrap'}}>{j.nombre}</div>
+                                <div style={cell}>{val(j,'tallesEntrenamiento','remera')}</div>
+                                <div style={cell}>{val(j,'tallesEntrenamiento','buzo')}</div>
+                                <div style={cell}>{val(j,'tallesEntrenamiento','camperaLluvia')}</div>
+                                <div style={cell}>{val(j,'tallesEntrenamiento','short')}</div>
+                                <div style={cell}>{val(j,'tallesEntrenamiento','pantalon')}</div>
+                                <div style={cell}>{val(j,'tallesEntrenamiento','remeraTermica')}</div>
+                                <div style={cell}>{val(j,'tallesEntrenamiento','calza')}</div>
+                                <div style={{...cell,justifyContent:'center',display:'flex'}}>{editBtn(j,'entrenamiento')}</div>
+                              </Fragment>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{marginTop:24,paddingBottom:24}}>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+                        <div style={{fontSize:12,fontWeight:700,letterSpacing:'.05em',color:'#121212',background:'#f2cb12',display:'inline-block',padding:'3px 12px',borderRadius:4}}>INDUMENTARIA CASUAL</div>
+                        {jugadores.length > 0 && <button className="btn" onClick={downloadCasualExcel} style={{fontSize:12.5}}>⬇ Excel</button>}
+                      </div>
+                      <div style={{overflowX:'auto'}}>
+                        <div className="card" style={{padding:0,overflow:'hidden',width:'max-content'}}>
+                          <div style={{display:'grid',gridTemplateColumns:'50px max-content 85px 95px 95px 85px 48px'}}>
+                            {tblHeader(['Nº','NOMBRE','REMERA','CAMPERA','PANTALÓN','SHORT',''])}
+                            {jugadores.map(j=>(
+                              <Fragment key={j.id}>
+                                <div style={{...cell,fontWeight:800,fontSize:15}}>{j.numero||'—'}</div>
+                                <div style={{...cell,fontWeight:700,textTransform:'uppercase',whiteSpace:'nowrap'}}>{j.nombre}</div>
+                                <div style={cell}>{val(j,'tallesCasual','remera')}</div>
+                                <div style={cell}>{val(j,'tallesCasual','campera')}</div>
+                                <div style={cell}>{val(j,'tallesCasual','pantalon')}</div>
+                                <div style={cell}>{val(j,'tallesCasual','short')}</div>
+                                <div style={{...cell,justifyContent:'center',display:'flex'}}>{editBtn(j,'casual')}</div>
+                              </Fragment>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>)
+                })()}
               </>)}
             </div>
           )}
@@ -5699,7 +6059,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 {!isSoloVista && st === 'pendiente_separar' && (
                   <button className="btn btn-ghost" onClick={() => openPrintWindow(buildPedidoHtml(d.lines, d.persona, d.receptor, d.disciplina, d.fecha))}>🖨 Reimprimir</button>
                 )}
-                {!isSoloVista && st !== 'pendiente_separar' && <button className="btn" onClick={() => { setEditDelivery({id:d.id,persona:d.persona,fecha:d.fecha,paga:d.paga,obs:d.obs||'',receptor:d.receptor,lines:d.lines.map(l=>({...l}))}); setSelectedDeliveryId(null) }}>✎ Editar</button>}
+                {!isSoloVista && st !== 'pendiente_separar' && <button className="btn" onClick={() => { setEditDelivery({id:d.id,persona:d.persona,fecha:d.fecha,paga:d.paga,obs:d.obs||'',receptor:d.receptor,toUser:d.toUser||'',lines:d.lines.map(l=>({...l}))}); setSelectedDeliveryId(null) }}>✎ Editar</button>}
                 {!isSoloVista && <button className="btn btn-red" onClick={() => { setSelectedDeliveryId(null); askDeleteDelivery(d.id) }}>Eliminar entrega</button>}
               </div>
             </div>
@@ -5748,6 +6108,16 @@ tfoot td{padding:9px 12px;font-weight:700}
                   </div>
                 </div>
               )}
+              <div className="form-group">
+                <label className="field-label">Usuario receptor <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional)</span></label>
+                <select className="field-input" value={editDelivery.toUser||''}
+                  onChange={e => setEditDelivery(p => ({...p, toUser:e.target.value}))}>
+                  <option value="">Sin usuario asignado</option>
+                  {(db.users||[]).filter(u=>u.status==='aprobado').sort((a,b)=>(a.displayName||a.username).localeCompare(b.displayName||b.username,'es')).map(u=>(
+                    <option key={u.username} value={u.username}>{u.displayName||u.username}</option>
+                  ))}
+                </select>
+              </div>
               <div className="form-group">
                 <label className="field-label">Observaciones <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional)</span></label>
                 <textarea className="field-input" value={editDelivery.obs||''} onChange={e => setEditDelivery(p => ({...p, obs:e.target.value}))}
@@ -6634,11 +7004,23 @@ tfoot td{padding:9px 12px;font-weight:700}
                 <input className="field-input" type="text" placeholder={today()} value={descExtraForm.fecha} onChange={e=>setDescExtraForm(p=>({...p,fecha:e.target.value}))} />
               </div>
               <div className="form-group">
-                <label className="field-label">Jugador</label>
-                <select className="field-input" value={descExtraForm.jugadorNombre} onChange={e=>{const j=(db.plantel||[]).find(p=>p.nombre===e.target.value);setDescExtraForm(p=>({...p,jugadorNombre:e.target.value,jugadorNumero:j?.numero||''}))}}>
+                <label className="field-label">Del plantel</label>
+                <select className="field-input" value={descExtraForm.jugadorLibre?'':descExtraForm.jugadorNombre}
+                  disabled={!!descExtraForm.jugadorLibre}
+                  style={descExtraForm.jugadorLibre?{background:'#F5F5F0',color:'#b0b0a8',cursor:'not-allowed'}:{}}
+                  onChange={e=>{const j=(db.plantel||[]).find(p=>p.nombre===e.target.value);setDescExtraForm(p=>({...p,jugadorNombre:e.target.value,jugadorNumero:j?.numero||'',jugadorLibre:false}))}}>
                   <option value="">Seleccionar jugador…</option>
                   {(db.plantel||[]).filter(j=>j.nombre?.trim().toLowerCase()!=='libre').sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j=>(<option key={j.id} value={j.nombre}>{j.numero} — {j.nombre}</option>))}
                 </select>
+              </div>
+              <div style={{textAlign:'center',fontSize:11,color:'#b0b0a8',margin:'-4px 0 4px',letterSpacing:'.04em'}}>— O —</div>
+              <div className="form-group">
+                <label className="field-label">Nombre libre</label>
+                <input className="field-input" type="text" placeholder="Nombre de la persona…"
+                  value={descExtraForm.jugadorLibre||''}
+                  disabled={!!(descExtraForm.jugadorNombre&&!descExtraForm.jugadorLibre)}
+                  style={(descExtraForm.jugadorNombre&&!descExtraForm.jugadorLibre)?{background:'#F5F5F0',color:'#b0b0a8',cursor:'not-allowed'}:{}}
+                  onChange={e=>setDescExtraForm(p=>({...p,jugadorLibre:e.target.value,jugadorNombre:e.target.value,jugadorNumero:''}))} />
               </div>
               {descExtraForm.id ? (<>
                 <div className="form-group">
@@ -6658,39 +7040,51 @@ tfoot td{padding:9px 12px;font-weight:700}
                     <input className="field-input mono" type="number" min="1" value={descExtraForm.cantidad} onChange={e=>setDescExtraForm(p=>({...p,cantidad:Math.max(1,parseInt(e.target.value)||1)}))} style={{textAlign:'center'}} />
                   </div>
                 </div>
+                <div className="form-group" style={{marginTop:4}}>
+                  <label className="field-label">Estampados ($)</label>
+                  <input className="field-input mono" type="number" min="0" placeholder="0" value={descExtraForm.estampado||''} onChange={e=>setDescExtraForm(p=>({...p,estampado:parseFloat(e.target.value)||0}))} />
+                </div>
                 {!hideMoney && descExtraForm.precio>0 && (
                   <div style={{textAlign:'right',fontWeight:700,fontSize:14,fontFamily:'IBM Plex Mono,monospace',color:'#121212'}}>
-                    Total: $ {(descExtraForm.precio*(descExtraForm.cantidad||1)).toLocaleString('es-UY')}
+                    Total: $ {(descExtraForm.precio*(descExtraForm.cantidad||1)+(descExtraForm.estampado||0)).toLocaleString('es-UY')}
                   </div>
                 )}
               </>) : (<>
                 <div style={{borderTop:'1px solid #ECECE8',marginTop:4,paddingTop:12}}>
                   <div style={{fontSize:11,fontWeight:700,letterSpacing:'.04em',color:'#8a8a82',marginBottom:8}}>PRENDAS</div>
                   {(descExtraForm.prendas||[]).map((pr,i)=>(
-                    <div key={i} style={{display:'flex',gap:8,alignItems:'center',marginBottom:8}}>
-                      <select style={{flex:1,padding:'6px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,background:'#fff'}}
-                        value={pr.articulo}
-                        onChange={e=>{const found=EXTRAS_PRENDAS.find(p=>p.nombre===e.target.value);setDescExtraForm(f=>({...f,prendas:f.prendas.map((p,j)=>j===i?{...p,articulo:e.target.value,precio:found?.precio||0}:p)}))}}>
-                        <option value="">Seleccionar prenda…</option>
-                        {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre}</option>))}
-                      </select>
-                      <input style={{width:52,padding:'6px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,textAlign:'center'}}
-                        type="number" min="1" value={pr.cantidad}
-                        onChange={e=>setDescExtraForm(f=>({...f,prendas:f.prendas.map((p,j)=>j===i?{...p,cantidad:Math.max(1,parseInt(e.target.value)||1)}:p)}))} />
-                      {(descExtraForm.prendas||[]).length>1 && (
-                        <button onClick={()=>setDescExtraForm(f=>({...f,prendas:f.prendas.filter((_,j)=>j!==i)}))}
-                          style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:18,lineHeight:1,padding:'0 4px',flexShrink:0}}>×</button>
-                      )}
+                    <div key={i} style={{marginBottom:8}}>
+                      <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                        <select style={{flex:1,padding:'6px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,background:'#fff'}}
+                          value={pr.articulo}
+                          onChange={e=>{const found=EXTRAS_PRENDAS.find(p=>p.nombre===e.target.value);setDescExtraForm(f=>({...f,prendas:f.prendas.map((p,j)=>j===i?{...p,articulo:e.target.value,precio:found?.precio||0}:p)}))}}>
+                          <option value="">Seleccionar prenda…</option>
+                          {EXTRAS_PRENDAS.map(p=>(<option key={p.nombre} value={p.nombre}>{p.nombre}</option>))}
+                        </select>
+                        <input style={{width:52,padding:'6px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,textAlign:'center'}}
+                          type="number" min="1" value={pr.cantidad}
+                          onChange={e=>setDescExtraForm(f=>({...f,prendas:f.prendas.map((p,j)=>j===i?{...p,cantidad:Math.max(1,parseInt(e.target.value)||1)}:p)}))} />
+                        {(descExtraForm.prendas||[]).length>1 && (
+                          <button onClick={()=>setDescExtraForm(f=>({...f,prendas:f.prendas.filter((_,j)=>j!==i)}))}
+                            style={{background:'none',border:'none',cursor:'pointer',color:'#c0392b',fontSize:18,lineHeight:1,padding:'0 4px',flexShrink:0}}>×</button>
+                        )}
+                      </div>
+                      <div style={{display:'flex',alignItems:'center',gap:6,marginTop:4}}>
+                        <span style={{fontSize:11,color:'#8a8a82',whiteSpace:'nowrap'}}>Estampados $</span>
+                        <input style={{width:90,padding:'4px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,fontFamily:'IBM Plex Mono,monospace'}}
+                          type="number" min="0" placeholder="0" value={pr.estampado||''}
+                          onChange={e=>setDescExtraForm(f=>({...f,prendas:f.prendas.map((p,j)=>j===i?{...p,estampado:parseFloat(e.target.value)||0}:p)}))} />
+                      </div>
                     </div>
                   ))}
-                  <button onClick={()=>setDescExtraForm(f=>({...f,prendas:[...(f.prendas||[]),{articulo:'',precio:0,cantidad:1}]}))}
+                  <button onClick={()=>setDescExtraForm(f=>({...f,prendas:[...(f.prendas||[]),{articulo:'',precio:0,cantidad:1,estampado:0}]}))}
                     style={{fontSize:12,color:'#5a5a52',background:'none',border:'1px dashed #ccc',borderRadius:6,padding:'5px 12px',cursor:'pointer',width:'100%',marginTop:2}}>
                     + Agregar prenda
                   </button>
                 </div>
                 {!hideMoney && (descExtraForm.prendas||[]).some(p=>p.precio>0) && (
                   <div style={{textAlign:'right',fontWeight:700,fontSize:14,fontFamily:'IBM Plex Mono,monospace',color:'#121212',marginTop:10}}>
-                    Total: $ {(descExtraForm.prendas||[]).reduce((s,p)=>s+p.precio*(p.cantidad||1),0).toLocaleString('es-UY')}
+                    Total: $ {(descExtraForm.prendas||[]).reduce((s,p)=>s+p.precio*(p.cantidad||1)+(p.estampado||0),0).toLocaleString('es-UY')}
                   </div>
                 )}
               </>)}
@@ -6934,11 +7328,16 @@ tfoot td{padding:9px 12px;font-weight:700}
 
       {/* Modal: Plantel — agregar/editar jugador */}
       {plantelModal && (
-        <div className="modal-backdrop" onClick={() => setPlantelModal(false)}>
+        <div className="modal-backdrop" onClick={() => { setPlantelModal(false); setPlantelModalSection(null) }}>
           <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <div className="modal-title">{plantelForm.id !== null ? 'Editar jugador' : 'Agregar jugador'}</div>
-              <button className="modal-close" onClick={() => setPlantelModal(false)}>×</button>
+              <div className="modal-title">
+                {plantelModalSection === 'juego' ? 'Editar — Indumentaria de juego'
+                 : plantelModalSection === 'entrenamiento' ? 'Editar — Indumentaria entrenamiento'
+                 : plantelModalSection === 'casual' ? 'Editar — Indumentaria casual'
+                 : plantelForm.id !== null ? 'Editar jugador' : 'Agregar jugador'}
+              </div>
+              <button className="modal-close" onClick={() => { setPlantelModal(false); setPlantelModalSection(null) }}>×</button>
             </div>
             <div className="modal-body">
               <div style={{display:'flex',gap:12}}>
@@ -6946,56 +7345,84 @@ tfoot td{padding:9px 12px;font-weight:700}
                   <label className="field-label">Número</label>
                   <input className="field-input mono" type="number" min="1" max="99" value={plantelForm.numero}
                     onChange={e => setPlantelForm(p=>({...p,numero:e.target.value}))}
-                    placeholder="10" style={{textAlign:'center'}} />
+                    placeholder="10" style={{textAlign:'center'}} readOnly={!!plantelModalSection} />
                 </div>
                 <div className="form-group" style={{flex:1}}>
                   <label className="field-label">Nombre completo</label>
                   <input className="field-input" value={plantelForm.nombre}
                     onChange={e => setPlantelForm(p=>({...p,nombre:e.target.value}))}
-                    placeholder="Ej. Maximiliano Olivera" autoFocus />
+                    placeholder="Ej. Maximiliano Olivera" autoFocus readOnly={!!plantelModalSection} />
                 </div>
               </div>
-              <div style={{display:'flex',gap:8,marginTop:4}}>
-                {['Jugador','Golero'].map(pos => (
-                  <button key={pos} type="button"
-                    onClick={() => setPlantelForm(p=>({...p,posicion:pos}))}
-                    style={{flex:1,padding:'8px 0',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:13,cursor:'pointer',
-                      borderColor: plantelForm.posicion===pos ? '#f2cb12' : '#ECECE8',
-                      background: plantelForm.posicion===pos ? '#FFF8D6' : '#fff',
-                      color: plantelForm.posicion===pos ? '#7a5800' : '#8a8a82'}}>
-                    {pos}
-                  </button>
-                ))}
-              </div>
-              <div style={{display:'flex',gap:12,marginTop:4}}>
-                <div className="form-group" style={{flex:1}}>
-                  <label className="field-label">Talle Camiseta</label>
-                  <select className="field-input" value={plantelForm.talleCamiseta} onChange={e => setPlantelForm(p=>({...p,talleCamiseta:e.target.value}))}>
-                    {TALLES_ADULTO.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
+              {!plantelModalSection && (
+                <div style={{display:'flex',gap:8,marginTop:4}}>
+                  {['Jugador','Golero'].map(pos => (
+                    <button key={pos} type="button"
+                      onClick={() => setPlantelForm(p=>({...p,posicion:pos}))}
+                      style={{flex:1,padding:'8px 0',borderRadius:6,border:'2px solid',fontWeight:700,fontSize:13,cursor:'pointer',
+                        borderColor: plantelForm.posicion===pos ? '#f2cb12' : '#ECECE8',
+                        background: plantelForm.posicion===pos ? '#FFF8D6' : '#fff',
+                        color: plantelForm.posicion===pos ? '#7a5800' : '#8a8a82'}}>
+                      {pos}
+                    </button>
+                  ))}
                 </div>
-                <div className="form-group" style={{width:72}}>
-                  <label className="field-label">Cant.</label>
-                  <input className="field-input mono" type="number" min="1" max="99" value={plantelForm.cantCamiseta||1}
-                    onChange={e => setPlantelForm(p=>({...p,cantCamiseta:Math.max(1,parseInt(e.target.value)||1)}))}
-                    style={{textAlign:'center'}} />
+              )}
+              {(!plantelModalSection || plantelModalSection === 'juego') && (
+                <div style={{display:'flex',gap:12,marginTop:4}}>
+                  <div className="form-group" style={{flex:1}}>
+                    <label className="field-label">Talle Camiseta</label>
+                    <select className="field-input" value={plantelForm.talleCamiseta} onChange={e => setPlantelForm(p=>({...p,talleCamiseta:e.target.value}))}>
+                      {TALLES_ADULTO.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group" style={{flex:1}}>
+                    <label className="field-label">Talle Short</label>
+                    <select className="field-input" value={plantelForm.talleShort} onChange={e => setPlantelForm(p=>({...p,talleShort:e.target.value}))}>
+                      {TALLES_ADULTO.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
                 </div>
-                <div className="form-group" style={{flex:1}}>
-                  <label className="field-label">Talle Short</label>
-                  <select className="field-input" value={plantelForm.talleShort} onChange={e => setPlantelForm(p=>({...p,talleShort:e.target.value}))}>
-                    {TALLES_ADULTO.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
+              )}
+              {(!plantelModalSection || plantelModalSection === 'entrenamiento') && (
+                <div style={{borderTop:'1px solid #ECECE8',marginTop:12,paddingTop:10}}>
+                  <div style={{fontSize:11,fontWeight:700,letterSpacing:'.04em',color:'#8a8a82',marginBottom:8}}>ENTRENAMIENTO</div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px 12px'}}>
+                    {[['remera','Remera'],['buzo','Buzo'],['camperaLluvia','Camp. lluvia'],['short','Short'],['pantalon','Pantalón'],['remeraTermica','Rem. térmica'],['calza','Calza']].map(([k,label])=>(
+                      <div key={k}>
+                        <label style={{fontSize:11,color:'#8a8a82',display:'block',marginBottom:2}}>{label}</label>
+                        <select style={{width:'100%',padding:'5px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,background:'#fff'}}
+                          value={(plantelForm.tallesEntrenamiento||{})[k]||''}
+                          onChange={e=>setPlantelForm(p=>({...p,tallesEntrenamiento:{...(p.tallesEntrenamiento||{}),[k]:e.target.value}}))}>
+                          <option value="">—</option>
+                          {TALLES_ADULTO.map(t=><option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="form-group" style={{width:72}}>
-                  <label className="field-label">Cant.</label>
-                  <input className="field-input mono" type="number" min="1" max="99" value={plantelForm.cantShort||1}
-                    onChange={e => setPlantelForm(p=>({...p,cantShort:Math.max(1,parseInt(e.target.value)||1)}))}
-                    style={{textAlign:'center'}} />
+              )}
+              {(!plantelModalSection || plantelModalSection === 'casual') && (
+                <div style={{borderTop:'1px solid #ECECE8',marginTop:12,paddingTop:10}}>
+                  <div style={{fontSize:11,fontWeight:700,letterSpacing:'.04em',color:'#8a8a82',marginBottom:8}}>CASUAL</div>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px 12px'}}>
+                    {[['remera','Remera'],['campera','Campera'],['pantalon','Pantalón'],['short','Short']].map(([k,label])=>(
+                      <div key={k}>
+                        <label style={{fontSize:11,color:'#8a8a82',display:'block',marginBottom:2}}>{label}</label>
+                        <select style={{width:'100%',padding:'5px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,background:'#fff'}}
+                          value={(plantelForm.tallesCasual||{})[k]||''}
+                          onChange={e=>setPlantelForm(p=>({...p,tallesCasual:{...(p.tallesCasual||{}),[k]:e.target.value}}))}>
+                          <option value="">—</option>
+                          {TALLES_ADULTO.map(t=><option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
             <div className="modal-footer">
-              <button className="btn btn-ghost" onClick={() => setPlantelModal(false)}>Cancelar</button>
+              <button className="btn btn-ghost" onClick={() => { setPlantelModal(false); setPlantelModalSection(null) }}>Cancelar</button>
               <button className="btn btn-dark" onClick={savePlantelJugador}>Guardar</button>
             </div>
           </div>
@@ -7133,8 +7560,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                 <div className="form-group">
                   <label className="field-label">¿Paga?</label>
                   <div style={{display:'flex',gap:8}}>
-                    {[['si','SÍ'],['no','NO']].map(([v,label]) => (
-                      <button key={v} style={{flex:1,padding:'7px 0',borderRadius:6,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:13,
+                    {[['si','SÍ'],['no','NO'],['descuento','DESC. SALARIO']].map(([v,label]) => (
+                      <button key={v} style={{flex:1,padding:'7px 0',borderRadius:6,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:12,
                         background:nd.paga===v?'#f2cb12':'#F5F5F0',
                         borderColor:nd.paga===v?'#e6be00':'#E0E0DA',
                         color:nd.paga===v?'#121212':'#8a8a82'}}
@@ -7222,12 +7649,12 @@ tfoot td{padding:9px 12px;font-weight:700}
                     {!nd.cCode && nd.cSearch && (
                       <div onMouseDown={e => e.preventDefault()} style={{position:'absolute',top:'calc(100% + 4px)',left:0,right:0,background:'#fff',border:'1px solid #ECECE8',borderRadius:8,zIndex:200,maxHeight:220,overflowY:'auto',boxShadow:'0 4px 16px rgba(0,0,0,.12)'}}>
                         {(() => {
-                          const term = nd.cSearch.toLowerCase()
+                          const term = normStr(nd.cSearch)
                           const seen = new Set()
                           const unique = articles.filter(a => {
                             if(seen.has(a.code)) return false
                             seen.add(a.code)
-                            return a.name?.toLowerCase().includes(term) || a.code?.toLowerCase().includes(term)
+                            return normStr(a.name||'').includes(term) || normStr(a.code||'').includes(term)
                           })
                           return unique.length === 0
                             ? <div style={{padding:'10px 14px',fontSize:13,color:'#8a8a82'}}>Sin resultados</div>
@@ -7328,8 +7755,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                         <span>Ya existe en <b>{existing.ubic}</b></span>
                         <button type="button" onClick={() => {
                           const ubic = existing.ubic
-                          const isT = ubic === 'TRANSITO'
-                          setNa(p => ({...p, estante: isT ? 'TRANSITO' : ubic.slice(0,-1), altura: isT ? 'A' : ubic.slice(-1)}))
+                          const isT = SIN_ALTURA.includes(ubic)
+                          setNa(p => ({...p, estante: isT ? ubic : ubic.slice(0,-1), altura: isT ? 'A' : ubic.slice(-1)}))
                         }} style={{padding:'3px 10px',borderRadius:5,border:'1px solid #e6be00',background:'#f2cb12',color:'#121212',fontWeight:700,fontSize:11.5,cursor:'pointer',whiteSpace:'nowrap'}}>
                           Usar ubicación
                         </button>
@@ -7401,7 +7828,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                       {ESTANTES.map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
                   </div>
-                  {na.estante !== 'TRANSITO' && (
+                  {!SIN_ALTURA.includes(na.estante) && (
                   <div style={{display:'flex',alignItems:'center',gap:8}}>
                     <span style={{fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>Altura</span>
                     <select className="field-input" style={{flex:1}} value={na.altura} onChange={e => setNa(p=>({...p,altura:e.target.value}))}>
@@ -7707,14 +8134,14 @@ tfoot td{padding:9px 12px;font-weight:700}
                   <select className="field-input" style={{flex:1}} value={mv.estante} onChange={e => setMv(p=>({...p,estante:e.target.value}))}>
                     {ESTANTES.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
-                  {mv.estante !== 'TRANSITO' && <>
+                  {!SIN_ALTURA.includes(mv.estante) && <>
                   <span style={{fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>Altura</span>
                   <select className="field-input" style={{flex:1}} value={mv.altura} onChange={e => setMv(p=>({...p,altura:e.target.value}))}>
                     {ALTURAS.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
                   </>}
                 </div>
-                <div style={{marginTop:6,fontSize:12,color:'#8a8a82'}}>Destino: <b style={{color:'#1a1a1a'}}>{mv.estante === 'TRANSITO' ? 'TRANSITO' : mv.estante + mv.altura}</b></div>
+                <div style={{marginTop:6,fontSize:12,color:'#8a8a82'}}>Destino: <b style={{color:'#1a1a1a'}}>{SIN_ALTURA.includes(mv.estante) ? mv.estante : mv.estante + mv.altura}</b></div>
               </div>
             </div>
             <div className="modal-footer">
@@ -7730,7 +8157,7 @@ tfoot td{padding:9px 12px;font-weight:700}
         <div className="modal-backdrop" onClick={closeModal}>
           <div className="modal modal-md" onClick={e=>e.stopPropagation()}>
             <div className="modal-header">
-              <div className="modal-title">Gestión de usuarios</div>
+              <div className="modal-title">Gestión de usuarios <span style={{fontSize:14,fontWeight:400,color:'#8a8a82',marginLeft:6}}>({userMgmt.list.length})</span></div>
               <button className="modal-close" onClick={closeModal}>✕</button>
             </div>
             <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:16}}>
