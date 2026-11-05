@@ -29,6 +29,9 @@ const ROLE_LABELS = { admin:'Admin', 'admin-palacio':'Admin. Palacio', 'solo-vis
 const ROLE_OPTIONS = [['admin','Administrador'],['admin-palacio','Admin. Palacio'],['solo-vista','Solo Vista'],['receptor','Receptor'],['receptor_reposiciones','Receptor + Reposiciones']]
 const PRECIO_DESC_CAMISETA = 1945
 const PRECIO_DESC_SHORT = 1145
+// helpers: returns # of units with discount (handles old boolean + new numeric format)
+const getDescCam = j => { const d = j.descuentoCamiseta, c = Number(j.cantCamiseta)||0; return d===true||d===null||d===undefined ? c : d===false ? 0 : Math.min(Number(d)||0, c) }
+const getDescSht = j => { const d = j.descuentoShort, c = Number(j.cantShort)||0; return d===true||d===null||d===undefined ? c : d===false ? 0 : Math.min(Number(d)||0, c) }
 const EXTRAS_PRENDAS = [
   {nombre:'Campera Concentración',precio:2245},
   {nombre:'Pantalón Concentración',precio:1660},
@@ -270,6 +273,7 @@ export default function App() {
   const [talleDetalle, setTalleDetalle] = useState(null)
   const [repararRanking, setRepararRanking] = useState(null)
   const [rankingDetalle, setRankingDetalle] = useState(null)
+  const [devModal, setDevModal] = useState(null) // {delivery, step:'select'|'ubicacion', selectedLines:[], ubicacion:''}
   const [repFilterTorneo, setRepFilterTorneo] = useState('')
   const [repConceptoEdit, setRepConceptoEdit] = useState(null)
   const [disciplinaEdit, setDisciplinaEdit] = useState(null)
@@ -916,43 +920,50 @@ ${rowsHtml}
     showToast('Entrega confirmada.')
   }
 
-  const devolverPrestamo = (delId) => {
-    const del = db.deliveries.find(d => d.id === delId)
-    if (!del) return
+  const confirmarDevolucionUsado = () => {
+    const { delivery: del, selectedLines, lineQtys, ubicacion } = devModal
+    if (!del || !ubicacion) return
+    const lineasADevolver = selectedLines.map(i => ({ line: del.lines[i], lineIdx: i, qty: parseInt(lineQtys[i]||0,10) })).filter(({line,qty}) => line && qty > 0)
+    if (!lineasADevolver.length) return
     let newDbState = null
+    const fecha = today()
     setDb(s => {
       let articles = s.articles.map(a => ({...a, sizes: a.sizes.map(z => ({...z}))}))
       const movimientos = [...s.movimientos]
       let nextId = s.nextId
       let mid = s.nextMov
-      const fecha = today()
-      del.lines.forEach(l => {
+      lineasADevolver.forEach(({ line: l, qty }) => {
         const usCode = l.code + 'US'
         const origArt = s.articles.find(a => a.code === l.code)
-        const usName = (origArt?.name || l.name || l.code) + ' (Usado)'
+        const usName = (origArt?.name || l.name || l.code) + ' Usado'
         const usCat = origArt?.cat || 'Entrenamiento'
         const usPrecio = origArt?.precio || 0
-        const usUbic = origArt?.ubic || ''
-        const existing = articles.find(a => a.code === usCode)
+        const existing = articles.find(a => a.code === usCode && a.ubic === ubicacion)
         if (!existing) {
-          articles.push({ id: nextId++, code: usCode, name: usName, cat: usCat, precio: usPrecio, ubic: usUbic, sizes: [{talle: l.talle, qty: l.qty, min: 0}], photos: origArt?.photos || [] })
+          articles.push({ id: nextId++, code: usCode, name: usName, cat: usCat, precio: usPrecio, ubic: ubicacion, sizes: [{talle: l.talle, qty, min: 0}], photos: [] })
         } else {
           articles = articles.map(a => {
-            if (a.code !== usCode) return a
+            if (a.code !== usCode || a.ubic !== ubicacion) return a
             const sz = a.sizes.find(z => z.talle === l.talle)
-            if (sz) return {...a, sizes: a.sizes.map(z => z.talle === l.talle ? {...z, qty: z.qty + l.qty} : z)}
-            return {...a, sizes: [...a.sizes, {talle: l.talle, qty: l.qty, min: 0}]}
+            if (sz) return {...a, sizes: a.sizes.map(z => z.talle === l.talle ? {...z, qty: z.qty + qty} : z)}
+            return {...a, sizes: [...a.sizes, {talle: l.talle, qty, min: 0}]}
           })
         }
-        movimientos.unshift({id: mid++, code: usCode, name: usName, tipo: 'entrada', fecha, talle: l.talle, qty: l.qty, detalle: 'Devolución de préstamo de ' + del.persona + ' — ingresa como usado', creadoPor: currentUser?.displayName || session})
+        movimientos.unshift({id: mid++, code: usCode, name: usName, tipo: 'entrada', fecha, talle: l.talle, qty, detalle: 'Devolución de ' + del.persona + ' (' + del.receptor + ') — ingresa como usado', creadoPor: currentUser?.displayName || session})
       })
-      const deliveries = s.deliveries.map(d => d.id === delId ? {...d, status: 'devuelto', devueltoAt: fecha} : d)
+      // Registrar devolución en la entrega original
+      const nuevasDev = lineasADevolver.map(({line:l, lineIdx, qty}) => ({lineIdx, code: l.code, talle: l.talle, qty, fecha, ubicacion}))
+      const deliveries = s.deliveries.map(d => {
+        if (d.id !== del.id) return d
+        return {...d, devoluciones: [...(d.devoluciones||[]), ...nuevasDev]}
+      })
       const r = {...s, articles, movimientos, deliveries, nextId, nextMov: mid}
       newDbState = r; return r
     })
     if (newDbState) saveToSupabase(newDbState)
+    setDevModal(null)
     setSelectedDeliveryId(null)
-    showToast('Préstamo devuelto. Artículos ingresados como usados.')
+    showToast('Devolución registrada. Artículos ingresados como usados.')
   }
 
   const migrarStockPendientes = () => {
@@ -1007,7 +1018,7 @@ ${rowsHtml}
         if(esDev) {
           movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'entrada', fecha, talle:l.talle, qty:l.qty, detalle:'Devolución de '+nd.persona+' ('+nd.receptor+')', creadoPor:currentUser?.displayName||session})
         } else {
-          movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'salida', fecha, talle:l.talle, qty:l.qty, detalle:(nd.tipoPrestamo?'Préstamo a ':'Entrega a ')+nd.persona+' ('+nd.receptor+(nd.disciplina?' - '+nd.disciplina:'')+')', delId:s.nextDel, creadoPor:currentUser?.displayName||session})
+          movimientos.unshift({id:mid++, code:l.code, name:a?.name||l.code, tipo:'salida', fecha, talle:l.talle, qty:l.qty, detalle:'Entrega a '+nd.persona+' ('+nd.receptor+(nd.disciplina?' - '+nd.disciplina:'')+')', delId:s.nextDel, creadoPor:currentUser?.displayName||session})
         }
       })
       const activeArticles = removeZeroStock(articles)
@@ -1015,7 +1026,7 @@ ${rowsHtml}
       const toUser = nd.toUser || null
       const status = toUser ? 'pendiente' : 'aceptado'
       const confirmedAt = toUser ? null : fecha
-      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, disciplina:nd.receptor==='Deportes Anexos'?nd.disciplina.trim():undefined, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, estampados:nd.receptor==='Protocolo'&&nd.paga==='si'?nd.estampados:[], estampadoCosto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndEstampado:0, obs:nd.obs?.trim()||undefined, tipo:nd.tipoPrestamo?'prestamo':'entrega', lines:[...nd.lines], toUser, status, confirmedAt, creadoPor:currentUser?.displayName||session, creadoPorEmail:session}, ...s.deliveries]
+      const deliveries = [{id:s.nextDel, fecha, persona:nd.persona.trim(), receptor:nd.receptor, disciplina:nd.receptor==='Deportes Anexos'?nd.disciplina.trim():undefined, paga:nd.receptor==='Protocolo'?nd.paga:null, monto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndMonto:null, estampados:nd.receptor==='Protocolo'&&nd.paga==='si'?nd.estampados:[], estampadoCosto:nd.receptor==='Protocolo'&&nd.paga==='si'?ndEstampado:0, obs:nd.obs?.trim()||undefined, tipo:'entrega', lines:[...nd.lines], toUser, status, confirmedAt, creadoPor:currentUser?.displayName||session, creadoPorEmail:session}, ...s.deliveries]
       const r = { ...s, articles:activeArticles, movimientos, deliveries, nextDel:s.nextDel+1, nextMov:mid }
       newDbState = r; return r
     })
@@ -1729,7 +1740,7 @@ ${rowsHtml}
       fechaPartido:'',
       tipoCamisetaJugador: REP_TIPOS_JUGADOR[0],
       tipoCamisetaGolero: REP_TIPOS_GOLERO[0],
-      rows:(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j=>({...j,cantCamiseta:'',cantShort:'',descuentoCamiseta:true,descuentoShort:true})),
+      rows:(db.plantel||[]).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0)).map(j=>({...j,cantCamiseta:'',cantShort:'',descuentoCamiseta:null,descuentoShort:null})),
       extraRows:[], observaciones:''
     }
     repFormSnapshotRef.current = JSON.stringify(initialForm)
@@ -1747,9 +1758,10 @@ ${rowsHtml}
       if (idx >= 0) matchedIdx.add(idx)
       const ex = idx >= 0 ? rep.jugadores[idx] : null
       const descFallback = ex ? ex.descuento !== false : true
+      const toD = (val, fallback) => val===true||val===null||val===undefined ? null : val===false ? 0 : typeof val==='number' ? val : (fallback ? null : 0)
       return { ...j, cantCamiseta: ex ? String(ex.cantCamiseta) : '', cantShort: ex ? String(ex.cantShort) : '',
-        descuentoCamiseta: ex ? (ex.descuentoCamiseta !== undefined ? ex.descuentoCamiseta !== false : descFallback) : true,
-        descuentoShort: ex ? (ex.descuentoShort !== undefined ? ex.descuentoShort !== false : descFallback) : true }
+        descuentoCamiseta: ex ? toD(ex.descuentoCamiseta, descFallback) : null,
+        descuentoShort: ex ? toD(ex.descuentoShort, descFallback) : null }
     })
     const extraRows = (rep.jugadores||[])
       .map((jj,idx) => ({jj,idx}))
@@ -1758,7 +1770,7 @@ ${rowsHtml}
         numero:String(jj.numero||''), nombre:jj.nombre||'',
         talleCamiseta:jj.talleCamiseta||'L', talleShort:jj.talleShort||'L',
         cantCamiseta:String(jj.cantCamiseta||''), cantShort:String(jj.cantShort||''),
-        descuentoCamiseta:jj.descuentoCamiseta !== false, descuentoShort:jj.descuentoShort !== false
+        descuentoCamiseta:jj.descuentoCamiseta===false?0:(typeof jj.descuentoCamiseta==='number'?jj.descuentoCamiseta:null), descuentoShort:jj.descuentoShort===false?0:(typeof jj.descuentoShort==='number'?jj.descuentoShort:null)
       }))
     const editForm = {
       editId: rep.id,
@@ -1801,7 +1813,7 @@ ${rowsHtml}
         const tipo = (r.posicion||'Jugador')==='Golero' ? repForm.tipoCamisetaGolero : repForm.tipoCamisetaJugador
         return { numero:r.numero, nombre:r.nombre, posicion:r.posicion||'Jugador',
           talleCamiseta:r.talleCamiseta, talleShort:r.talleShort,
-          descuentoCamiseta:r.descuentoCamiseta !== false, descuentoShort:r.descuentoShort !== false,
+          descuentoCamiseta:getDescCam(r), descuentoShort:getDescSht(r),
           tipoCamiseta: tipo, cantCamiseta:Number(r.cantCamiseta)||0, cantShort:Number(r.cantShort)||0 }
       })
     const extraJugadores = (repForm.extraRows||[])
@@ -1809,7 +1821,7 @@ ${rowsHtml}
       .map(r => ({
         numero:r.numero||'—', nombre:r.nombre||'', posicion:'Jugador',
         talleCamiseta:r.talleCamiseta||'L', talleShort:r.talleShort||'L',
-        descuentoCamiseta:r.descuentoCamiseta !== false, descuentoShort:r.descuentoShort !== false,
+        descuentoCamiseta:getDescCam(r), descuentoShort:getDescSht(r),
         tipoCamiseta:repForm.tipoCamisetaJugador,
         cantCamiseta:Number(r.cantCamiseta)||0, cantShort:Number(r.cantShort)||0
       }))
@@ -2915,18 +2927,16 @@ tfoot td{padding:9px 12px;font-weight:700}
         {receptorTab === 'reposiciones' && isReceptorReposiciones && (
           <div style={{display:'flex',flexDirection:'column',gap:10}}>
             {(() => {
-              const descCam = j => j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
-              const descSht = j => j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
               const totalCamTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
               const totalShtTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
-              const totalEquipos  = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
-              const totalShorts   = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
+              const totalEquipos  = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+getDescCam(j),0),0)
+              const totalShorts   = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+getDescSht(j),0),0)
               const totalExtras   = (db.descExtras||[]).reduce((acc,e)=>acc+(e.cantidad||1),0)
               const totalDinero   = totalEquipos * PRECIO_CAMISETA + totalShorts * PRECIO_SHORT
               const mesActualKey  = cicloKey(today())
               const repsDelMesActual = (db.reposiciones||[]).filter(r => cicloKey(r.fechaPartido||r.fecha||'') === mesActualKey)
-              const totalEquiposMes = repsDelMesActual.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
-              const totalShortsMes  = repsDelMesActual.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
+              const totalEquiposMes = repsDelMesActual.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+getDescCam(j),0),0)
+              const totalShortsMes  = repsDelMesActual.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+getDescSht(j),0),0)
               const totalExtrasCountMes = (db.descExtras||[]).filter(e=>cicloKey(e.fecha)===mesActualKey).reduce((acc,e)=>acc+(e.cantidad||1),0)
               const totalExtrasMes  = (db.descExtras||[]).filter(e=>cicloKey(e.fecha)===mesActualKey).reduce((acc,e)=>acc+e.precio*(e.cantidad||1)+(e.estampado||0),0)
               const totalDineroMes  = totalEquiposMes * PRECIO_CAMISETA + totalShortsMes * PRECIO_SHORT + totalExtrasMes
@@ -2988,11 +2998,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                           const totCam = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
                           const totSht = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
                           const equipoStr = [r.tipoCamisetaJugador, r.tipoCamisetaGolero].filter(Boolean).join(' / ')
-                          const totalDesc = (r.jugadores||[]).reduce((s,j)=>{
-                            const dc = j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
-                            const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
-                            return s + (dc ? (Number(j.cantCamiseta)||0)*PRECIO_CAMISETA : 0) + (ds ? (Number(j.cantShort)||0)*PRECIO_SHORT : 0)
-                          }, 0)
+                          const totalDesc = (r.jugadores||[]).reduce((s,j)=>s+getDescCam(j)*PRECIO_CAMISETA+getDescSht(j)*PRECIO_SHORT, 0)
                           const _isFinal = r.fechaTorneo!=null&&r.fechaTorneo!==''&&(r.fechaTorneo==='Final'||r.fechaTorneo==='NaN'||Number.isNaN(r.fechaTorneo))
                           const torneoStr = [_isFinal?'Final':null, r.torneo, !_isFinal&&r.fechaTorneo!=null&&r.fechaTorneo!==''?'F.'+r.fechaTorneo:null].filter(Boolean).join(' ')
                           return (
@@ -3397,8 +3403,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                 <div style={{marginTop:16}}>
                   <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:6,marginBottom:4}}>
                     <span style={{fontSize:11,fontWeight:700,color:'#5a5a50'}}>Descuentos:</span>
-                    <button type="button" onClick={()=>setTodosDescuentos(true)} style={{padding:'3px 12px',borderRadius:5,border:'2px solid #2d6a4f',background:'#d8f3dc',color:'#1b4332',fontWeight:700,fontSize:11,cursor:'pointer'}}>SÍ</button>
-                    <button type="button" onClick={()=>setTodosDescuentos(false)} style={{padding:'3px 12px',borderRadius:5,border:'2px solid #ccc',background:'#f5f5f5',color:'#999',fontWeight:700,fontSize:11,cursor:'pointer'}}>NO</button>
+                    <button type="button" onClick={()=>setTodosDescuentos(null)} style={{padding:'3px 12px',borderRadius:5,border:'2px solid #2d6a4f',background:'#d8f3dc',color:'#1b4332',fontWeight:700,fontSize:11,cursor:'pointer'}}>SÍ</button>
+                    <button type="button" onClick={()=>setTodosDescuentos(0)} style={{padding:'3px 12px',borderRadius:5,border:'2px solid #ccc',background:'#f5f5f5',color:'#999',fontWeight:700,fontSize:11,cursor:'pointer'}}>NO</button>
                   </div>
                   <div style={{display:'grid',gridTemplateColumns:'40px 1fr 62px 38px 62px 38px',gap:4,marginBottom:4,fontSize:10,fontWeight:700,color:'#8a8a82',padding:'4px 6px',background:'#F5F5F0',borderRadius:6}}>
                     <div>Nº</div><div>NOMBRE</div><div style={{textAlign:'center'}}>CAM.</div><div style={{textAlign:'center'}}>DC</div><div style={{textAlign:'center'}}>SHT.</div><div style={{textAlign:'center'}}>DS</div>
@@ -3406,9 +3412,6 @@ tfoot td{padding:9px 12px;font-weight:700}
                   {repForm.rows.map((r, i) => {
                     const hasQty = Number(r.cantCamiseta)>0 || Number(r.cantShort)>0
                     const isLibre = r.nombre.trim().toLowerCase()==='libre'
-                    const dcam = r.descuentoCamiseta !== false
-                    const dsht = r.descuentoShort !== false
-                    const toggle = (field) => setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,[field]:!x[field]}:x)}))
                     return (
                       <div key={i} style={{display:'grid',gridTemplateColumns:'40px 1fr 62px 38px 62px 38px',gap:4,marginBottom:3,alignItems:'center',padding:'5px 6px',borderRadius:6,
                         background:isLibre?'#3a3a3a':hasQty?'#FFFDF0':'transparent',border:hasQty?'1px solid #f2cb12':'1px solid transparent'}}>
@@ -3421,21 +3424,21 @@ tfoot td{padding:9px 12px;font-weight:700}
                           onChange={e=>setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,cantCamiseta:e.target.value}:x)}))}
                           placeholder="0" style={{textAlign:'center',padding:'5px 2px'}} />
                         {!isLibre
-                          ? <button type="button" onClick={()=>toggle('descuentoCamiseta')}
-                              style={{padding:'4px 2px',borderRadius:5,border:'2px solid',fontWeight:700,fontSize:10,cursor:'pointer',width:'100%',
-                                borderColor:dcam?'#2d6a4f':'#ccc',background:dcam?'#d8f3dc':'#f5f5f5',color:dcam?'#1b4332':'#999'}}>
-                              {dcam?'SÍ':'NO'}
-                            </button>
+                          ? <input className="field-input mono" type="number" min="0"
+                              value={r.descuentoCamiseta===null||r.descuentoCamiseta===undefined?'':r.descuentoCamiseta}
+                              onChange={e=>setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,descuentoCamiseta:e.target.value===''?null:Number(e.target.value)}:x)}))}
+                              placeholder={r.cantCamiseta||'—'} title="Cantidad con descuento (vacío = todas)"
+                              style={{textAlign:'center',padding:'5px 2px'}} />
                           : <div/>}
                         <input className="field-input mono" type="number" min="0" value={r.cantShort}
                           onChange={e=>setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,cantShort:e.target.value}:x)}))}
                           placeholder="0" style={{textAlign:'center',padding:'5px 2px'}} />
                         {!isLibre
-                          ? <button type="button" onClick={()=>toggle('descuentoShort')}
-                              style={{padding:'4px 2px',borderRadius:5,border:'2px solid',fontWeight:700,fontSize:10,cursor:'pointer',width:'100%',
-                                borderColor:dsht?'#2d6a4f':'#ccc',background:dsht?'#d8f3dc':'#f5f5f5',color:dsht?'#1b4332':'#999'}}>
-                              {dsht?'SÍ':'NO'}
-                            </button>
+                          ? <input className="field-input mono" type="number" min="0"
+                              value={r.descuentoShort===null||r.descuentoShort===undefined?'':r.descuentoShort}
+                              onChange={e=>setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,descuentoShort:e.target.value===''?null:Number(e.target.value)}:x)}))}
+                              placeholder={r.cantShort||'—'} title="Cantidad con descuento (vacío = todas)"
+                              style={{textAlign:'center',padding:'5px 2px'}} />
                           : <div/>}
                       </div>
                     )
@@ -3446,10 +3449,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   <div style={{fontSize:10,fontWeight:700,color:'#8a8a82',letterSpacing:'.05em',marginBottom:8}}>CAMISETAS ADICIONALES</div>
                   {(repForm.extraRows||[]).map((r,i) => {
                     const hasQty = Number(r.cantCamiseta)>0 || Number(r.cantShort)>0
-                    const dcam = r.descuentoCamiseta !== false
-                    const dsht = r.descuentoShort !== false
                     const upd = (field,val) => setRepForm(p=>({...p,extraRows:p.extraRows.map((x,ix)=>ix===i?{...x,[field]:val}:x)}))
-                    const tog = (field) => upd(field, !r[field])
                     const rem = () => setRepForm(p=>({...p,extraRows:p.extraRows.filter((_,ix)=>ix!==i)}))
                     return (
                       <div key={i} style={{display:'grid',gridTemplateColumns:'46px 1fr 54px 52px 36px 54px 52px 36px 24px',gap:4,marginBottom:4,alignItems:'center',padding:'5px 6px',borderRadius:6,
@@ -3463,27 +3463,27 @@ tfoot td{padding:9px 12px;font-weight:700}
                         </select>
                         <input className="field-input mono" type="number" min="0" value={r.cantCamiseta} onChange={e=>upd('cantCamiseta',e.target.value)}
                           placeholder="0" style={{textAlign:'center',padding:'5px 2px'}} />
-                        <button type="button" onClick={()=>tog('descuentoCamiseta')}
-                          style={{padding:'4px 2px',borderRadius:5,border:'2px solid',fontWeight:700,fontSize:10,cursor:'pointer',width:'100%',
-                            borderColor:dcam?'#2d6a4f':'#ccc',background:dcam?'#d8f3dc':'#f5f5f5',color:dcam?'#1b4332':'#999'}}>
-                          {dcam?'SÍ':'NO'}
-                        </button>
+                        <input className="field-input mono" type="number" min="0"
+                          value={r.descuentoCamiseta===null||r.descuentoCamiseta===undefined?'':r.descuentoCamiseta}
+                          onChange={e=>upd('descuentoCamiseta',e.target.value===''?null:Number(e.target.value))}
+                          placeholder={r.cantCamiseta||'—'} title="Cantidad con descuento (vacío = todas)"
+                          style={{textAlign:'center',padding:'5px 2px'}} />
                         <select className="field-input" value={r.talleShort} onChange={e=>upd('talleShort',e.target.value)} style={{padding:'5px 2px',fontSize:11}}>
                           {[...TALLES_ADULTO,...TALLES_NINO].map(t=><option key={t} value={t}>{t}</option>)}
                         </select>
                         <input className="field-input mono" type="number" min="0" value={r.cantShort} onChange={e=>upd('cantShort',e.target.value)}
                           placeholder="0" style={{textAlign:'center',padding:'5px 2px'}} />
-                        <button type="button" onClick={()=>tog('descuentoShort')}
-                          style={{padding:'4px 2px',borderRadius:5,border:'2px solid',fontWeight:700,fontSize:10,cursor:'pointer',width:'100%',
-                            borderColor:dsht?'#2d6a4f':'#ccc',background:dsht?'#d8f3dc':'#f5f5f5',color:dsht?'#1b4332':'#999'}}>
-                          {dsht?'SÍ':'NO'}
-                        </button>
+                        <input className="field-input mono" type="number" min="0"
+                          value={r.descuentoShort===null||r.descuentoShort===undefined?'':r.descuentoShort}
+                          onChange={e=>upd('descuentoShort',e.target.value===''?null:Number(e.target.value))}
+                          placeholder={r.cantShort||'—'} title="Cantidad con descuento (vacío = todas)"
+                          style={{textAlign:'center',padding:'5px 2px'}} />
                         <button type="button" onClick={rem} style={{padding:'4px',border:'none',background:'none',cursor:'pointer',color:'#C00',fontSize:18,lineHeight:1,textAlign:'center'}}>×</button>
                       </div>
                     )
                   })}
                   <button type="button"
-                    onClick={()=>setRepForm(p=>({...p,extraRows:[...(p.extraRows||[]),{numero:'',nombre:'',talleCamiseta:'L',talleShort:'L',cantCamiseta:'',cantShort:'',descuentoCamiseta:true,descuentoShort:true}]}))}
+                    onClick={()=>setRepForm(p=>({...p,extraRows:[...(p.extraRows||[]),{numero:'',nombre:'',talleCamiseta:'L',talleShort:'L',cantCamiseta:'',cantShort:'',descuentoCamiseta:null,descuentoShort:null}]}))}
                     style={{marginTop:4,padding:'7px 14px',borderRadius:6,border:'1px dashed #C0C0B8',background:'transparent',color:'#666',fontSize:12,cursor:'pointer',fontWeight:600}}>
                     + Agregar camiseta
                   </button>
@@ -3890,8 +3890,8 @@ tfoot td{padding:9px 12px;font-weight:700}
             }))
             extrasDelMes.forEach(e => { if (!jugMapMes[e.jugadorNombre]) jugMapMes[e.jugadorNombre] = {numero:e.jugadorNumero||'—', nombre:e.jugadorNombre} })
             const jugsMes = Object.values(jugMapMes).sort((a,b)=>(Number(a.numero)||0)-(Number(b.numero)||0))
-            const getCam = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const dc=j.descuentoCamiseta!==undefined?j.descuentoCamiseta!==false:j.descuento!==false;return acc+(dc?Number(j.cantCamiseta)||0:0)},0)
-            const getSht = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);if(!j)return acc;const ds=j.descuentoShort!==undefined?j.descuentoShort!==false:j.descuento!==false;return acc+(ds?Number(j.cantShort)||0:0)},0)
+            const getCam = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);return acc+(j?getDescCam(j):0)},0)
+            const getSht = nombre => repsDelMes.reduce((acc,r)=>{const j=(r.jugadores||[]).find(x=>x.nombre===nombre);return acc+(j?getDescSht(j):0)},0)
             const getExtras = nombre => extrasDelMes.filter(e=>e.jugadorNombre===nombre).reduce((acc,e)=>acc+e.precio*(e.cantidad||1)+(e.estampado||0),0)
             const filas = jugsMes.map(j=>({...j,cam:getCam(j.nombre),sht:getSht(j.nombre),extras:getExtras(j.nombre)})).map(f=>({...f,desc:f.cam*PRECIO_DESC_CAMISETA+f.sht*PRECIO_DESC_SHORT+f.extras})).filter(f=>f.desc>0)
             const totCam = filas.reduce((s,f)=>s+f.cam,0)
@@ -3925,11 +3925,7 @@ tfoot td{padding:9px 12px;font-weight:700}
             const BORDER   = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
             const s = (cell,fill,font,align) => { cell.fill=fill; cell.font=font; cell.alignment=align||CENTER; cell.border=BORDER }
             ;[{mesKey:mesMostrado,mesNombre:mesNombreMostrado,filas}].forEach(({mesKey, mesNombre, filas}) => {
-              const hasDesc = rep => (rep.jugadores||[]).some(j => {
-                const dc = j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
-                const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
-                return (dc && Number(j.cantCamiseta) > 0) || (ds && Number(j.cantShort) > 0)
-              })
+              const hasDesc = rep => (rep.jugadores||[]).some(j => getDescCam(j) > 0 || getDescSht(j) > 0)
               const reps = (mesesMap[mesKey]||[]).filter(hasDesc).sort((a,b)=>{
                 const toD = str => { const p=(str||'').split('/'); return p.length===3?new Date(`${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`):new Date(0) }
                 return toD(a.fechaPartido||a.fecha)-toD(b.fechaPartido||b.fecha)
@@ -3979,10 +3975,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                 const c2=r.getCell(2); c2.value=f.nombre; s(c2,fill,F_NORM,LEFT)
                 reps.forEach((rep,i)=>{
                   const jj=(rep.jugadores||[]).find(x=>x.nombre===f.nombre)
-                  const dc=jj?(jj.descuentoCamiseta!==undefined?jj.descuentoCamiseta!==false:jj.descuento!==false):false
-                  const ds=jj?(jj.descuentoShort!==undefined?jj.descuentoShort!==false:jj.descuento!==false):false
-                  const cam=(jj&&dc)?Number(jj.cantCamiseta)||0:0
-                  const sht=(jj&&ds)?Number(jj.cantShort)||0:0
+                  const cam=jj?getDescCam(jj):0
+                  const sht=jj?getDescSht(jj):0
                   const cCam=r.getCell(3+i*2); cCam.value=cam||''; s(cCam,fill,F_NORM)
                   const cSht=r.getCell(4+i*2); cSht.value=sht||''; s(cSht,fill,F_NORM)
                 })
@@ -4221,10 +4215,8 @@ tfoot td{padding:9px 12px;font-weight:700}
           const filas = (db.reposiciones||[]).flatMap(r => {
             const j = (r.jugadores||[]).find(jj => jj.nombre?.trim().toLowerCase() === nombre.toLowerCase())
             if (!j) return []
-            const dc = j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
-            const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
-            const cam = dc ? Number(j.cantCamiseta)||0 : 0
-            const sht = ds ? Number(j.cantShort)||0 : 0
+            const cam = getDescCam(j)
+            const sht = getDescSht(j)
             if (cam === 0 && sht === 0) return []
             return [{label: r.concepto||'Sin nombre', fecha: r.fecha||'', torneo: r.torneo||'', cam, sht, monto: cam*PRECIO_CAMISETA + sht*PRECIO_SHORT}]
           })
@@ -4407,7 +4399,7 @@ tfoot td{padding:9px 12px;font-weight:700}
             </button>
           ))}
           {/* Items top-level */}
-          {[['contrato-puma','CONTRATO PUMA'],['usuarios-reg','USUARIOS REGISTRADOS']].map(([key,label]) => {
+          {[['contrato-puma','CONTRATO PUMA'],['prestamo-puma','INDUMENTARIA A PRÉSTAMO'],['usuarios-reg','USUARIOS REGISTRADOS']].map(([key,label]) => {
             const isActive = view===key
             return (
               <button key={key} className={`nav-item${isActive?' active':''}`} onClick={() => goView(key)}>
@@ -4445,7 +4437,7 @@ tfoot td{padding:9px 12px;font-weight:700}
             <span/><span/><span/>
           </button>
           <div className="topbar-title">
-            {{panel:'PANEL PRINCIPAL',inventario:'INVENTARIO',detalle:'DETALLE',entregas:'ENTREGAS',movimientos:'MOVIMIENTOS',receptores:'RECEPTORES','usuarios-reg':'USUARIOS REGISTRADOS',utileria:'CAMISETAS UTILERÍA',reposiciones:'REPOSICIÓN CAMISETAS','contrato-puma':'CONTRATO PUMA'}[view]}
+            {{panel:'PANEL PRINCIPAL',inventario:'INVENTARIO',detalle:'DETALLE',entregas:'ENTREGAS',movimientos:'MOVIMIENTOS',receptores:'RECEPTORES','usuarios-reg':'USUARIOS REGISTRADOS',utileria:'CAMISETAS UTILERÍA',reposiciones:'REPOSICIÓN CAMISETAS','contrato-puma':'CONTRATO PUMA','prestamo-puma':'INDUMENTARIA A PRÉSTAMO'}[view]}
           </div>
           <div className="topbar-spacer" />
           <div className="search-box">
@@ -4995,7 +4987,6 @@ tfoot td{padding:9px 12px;font-weight:700}
                           <div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{d.persona}</div>
                           <div style={{fontSize:11.5,color:'#8a8a82'}}>
                             {d.receptor}
-                            {d.tipo==='prestamo' && <span style={{marginLeft:6,fontWeight:700,color:d.status==='devuelto'?'#6a6a62':'#7a4f00',background:d.status==='devuelto'?'#EBEBEB':'#FFF3CD',borderRadius:4,padding:'1px 6px',fontSize:11}}>Préstamo{d.status==='devuelto'?' · Devuelto':' · Activo'}</span>}
                             {d.paga !== null && d.paga !== undefined && currentUser?.role !== 'admin-palacio' && <span style={{marginLeft:6,fontWeight:600,color:d.paga==='si'?'#2e9b5e':d.paga==='descuento'?'#8a5a00':'#C2473D'}}>· Paga: {d.paga==='si'?'Sí':d.paga==='descuento'?'Desc. salario':'No'}{d.paga==='si'&&d.monto>0?' — $ '+d.monto.toLocaleString('es-UY',{minimumFractionDigits:2,maximumFractionDigits:2}):''}</span>}
                           </div>
                         </div>
@@ -5291,13 +5282,18 @@ tfoot td{padding:9px 12px;font-weight:700}
             const extrasUnidades = (db.descExtras||[]).reduce((s,e) => s + (e.cantidad||1), 0)
             const extrasMonto    = (db.descExtras||[]).reduce((s,e) => s + e.precio*(e.cantidad||1), 0)
             const pumaDeliveries = (db.deliveries||[]).filter(d => !d.excludePuma && d.status !== 'pendiente_separar')
-            const repCamisetasU = pumaDeliveries.filter(d => d.receptor === 'Reposición Camisetas').reduce((s,d)=>s+d.lines.reduce((x,l)=>x+l.qty,0),0)
+            const getNetQty = (d, l, li) => {
+              const devs = (d.devoluciones||[]).filter(dv => dv.lineIdx === li && dv.talle === l.talle)
+              const devTotal = devs.reduce((s, dv) => s + (dv.qty||0), 0)
+              return Math.max(0, l.qty - devTotal)
+            }
+            const repCamisetasU = pumaDeliveries.filter(d => d.receptor === 'Reposición Camisetas').reduce((s,d)=>s+d.lines.reduce((x,l,li)=>x+getNetQty(d,l,li),0),0)
             const baseData = RECEPTORES.filter(n => n !== 'Reposición Camisetas').map(name => {
                 const ds = pumaDeliveries.filter(d => d.receptor === name)
                 const extraU = name === 'Protocolo' ? extrasUnidades : 0
                 const extraM = name === 'Protocolo' ? extrasMonto : 0
-                const unidades = ds.reduce((s,d)=>s+d.lines.reduce((x,l)=>x+l.qty,0),0) + extraU
-                const monto = ds.reduce((s,d)=>s+d.lines.reduce((x,l)=>{const art=articles.find(a=>a.code===l.code);return x+(art?.precio||0)*l.qty},0),0) + extraM
+                const unidades = ds.reduce((s,d)=>s+d.lines.reduce((x,l,li)=>x+getNetQty(d,l,li),0),0) + extraU
+                const monto = ds.reduce((s,d)=>s+d.lines.reduce((x,l,li)=>{const art=articles.find(a=>a.code===l.code);return x+(art?.precio||0)*getNetQty(d,l,li)},0),0) + extraM
                 return { name, unidades, pct: unidades / TOTAL_CONTRATO * 100, monto }
               })
             const equiposTotal = repUnidades + repCamisetasU
@@ -5434,6 +5430,145 @@ tfoot td{padding:9px 12px;font-weight:700}
             )
           })()}
 
+          {/* INDUMENTARIA A PRÉSTAMO */}
+          {view === 'prestamo-puma' && (() => {
+            const RECEPTOR_ORDER = ['Protocolo','1° División','3° División','Juveniles','Femenino','Juveniles Femenino','Basket','Captación','Fútbol Sala Masculino','Fútbol Sala Femenino','Deportes Anexos','Funcionarios','Marketing','Sponsors','Canjes']
+            const RECEPTOR_COLORS = {
+              'Protocolo':             '#7BC67E',
+              '1° División':           '#f2cb12',
+              '3° División':           '#BDBDBD',
+              'Juveniles':             '#5a5a5a',
+              'Femenino':              '#9B59B6',
+              'Juveniles Femenino':    '#C2185B',
+              'Basket':                '#FF7043',
+              'Captación':             '#4FC3F7',
+              'Fútbol Sala Masculino': '#1565C0',
+              'Fútbol Sala Femenino':  '#F48FB1',
+              'Deportes Anexos':       '#E53935',
+              'Funcionarios':          '#90A4AE',
+              'Marketing':             '#26A69A',
+              'Sponsors':              '#8D6E63',
+              'Canjes':                '#78909C',
+            }
+            const pumaDeliveries = (db.deliveries||[]).filter(d => !d.excludePuma && d.status !== 'pendiente_separar')
+            const data = RECEPTOR_ORDER.map(name => {
+              const ds = pumaDeliveries.filter(d => d.receptor === name)
+              const entregado = ds.reduce((s,d)=>s+d.lines.reduce((x,l)=>x+l.qty,0),0)
+              const devuelto  = ds.reduce((s,d)=>{
+                return s + (d.devoluciones||[]).reduce((x,dv)=>x+(dv.qty||0),0)
+              },0)
+              const enPrestamo = Math.max(0, entregado - devuelto)
+              return { name, entregado, devuelto, enPrestamo }
+            }).filter(r => r.devuelto > 0)
+            const totalEntregado = data.reduce((s,r)=>s+r.entregado,0)
+            const totalDevuelto  = data.reduce((s,r)=>s+r.devuelto,0)
+            const totalPrestamo  = data.reduce((s,r)=>s+r.enPrestamo,0)
+            const maxVal = Math.max(...data.map(r=>r.devuelto),1)
+            const BAR_HEIGHT = 220
+            return (
+              <div style={{display:'flex',flexDirection:'column',gap:20}}>
+                {/* KPIs */}
+                <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
+                  <div className="kpi-card" style={{minWidth:160}}>
+                    <div className="kpi-label">TOTAL ENTREGADO</div>
+                    <div className="kpi-value">{totalEntregado.toLocaleString('es-UY')}</div>
+                    <div className="kpi-sub">unidades entregadas</div>
+                  </div>
+                  <div className="kpi-card" style={{minWidth:160}}>
+                    <div className="kpi-label">DEVUELTO</div>
+                    <div className="kpi-value" style={{color:'#7BC67E'}}>{totalDevuelto.toLocaleString('es-UY')}</div>
+                    <div className="kpi-sub">unidades ingresadas como usado</div>
+                  </div>
+                  <div className="kpi-card" style={{minWidth:160}}>
+                    <div className="kpi-label">EN PRÉSTAMO</div>
+                    <div className="kpi-value" style={{color:'#f2cb12'}}>{totalPrestamo.toLocaleString('es-UY')}</div>
+                    <div className="kpi-sub">actualmente fuera del depósito</div>
+                  </div>
+                </div>
+                {/* Gráfica */}
+                {data.length === 0
+                  ? <div className="card" style={{padding:32,textAlign:'center',color:'#8a8a82',fontSize:14}}>Sin devoluciones registradas todavía.</div>
+                  : (
+                  <div className="card" style={{padding:'20px 24px'}}>
+                    <div style={{fontWeight:700,fontSize:13,marginBottom:16}}>Devoluciones por receptor</div>
+                    <div style={{display:'flex',alignItems:'flex-end',gap:12,height:BAR_HEIGHT+40,overflowX:'auto',paddingBottom:4}}>
+                      {/* Eje Y */}
+                      <div style={{display:'flex',flexDirection:'column',justifyContent:'space-between',height:BAR_HEIGHT,alignItems:'flex-end',flexShrink:0,paddingRight:6}}>
+                        {[100,75,50,25,0].map(v=>(
+                          <span key={v} style={{fontSize:10,color:'#aaa',lineHeight:1}}>{Math.round(maxVal*v/100)}</span>
+                        ))}
+                      </div>
+                      {/* Líneas guía + barras */}
+                      <div style={{position:'relative',flex:1,height:BAR_HEIGHT,minWidth:0}}>
+                        {[0,25,50,75,100].map(v=>(
+                          <div key={v} style={{position:'absolute',left:0,right:0,bottom:`${v}%`,borderTop:'1px dashed #E8E8E0',zIndex:0}}/>
+                        ))}
+                        <div style={{display:'flex',alignItems:'flex-end',gap:8,height:'100%',position:'relative',zIndex:1}}>
+                          {data.map(r => {
+                            const devH  = (r.devuelto / maxVal) * BAR_HEIGHT
+                            const color = RECEPTOR_COLORS[r.name]||'#999'
+                            return (
+                              <div key={r.name}
+                                onClick={()=>{ setDelFilterReceptor(r.name); setView('entregas') }}
+                                style={{display:'flex',flexDirection:'column',alignItems:'center',flex:1,minWidth:40,height:'100%',justifyContent:'flex-end',cursor:'pointer'}}
+                                title={`${r.name}: ${r.devuelto} devuelto`}
+                              >
+                                <div style={{fontSize:11,fontWeight:700,color,marginBottom:2,background:'rgba(255,255,255,0.9)',borderRadius:4,padding:'1px 4px',lineHeight:1.3,textAlign:'center'}}>
+                                  {r.devuelto}
+                                </div>
+                                <div style={{width:'100%',display:'flex',flexDirection:'column',alignItems:'stretch'}}>
+                                  {devH > 0 && <div style={{height:devH,background:'#7BC67E',borderRadius:'4px 4px 0 0',transition:'height .4s'}}/>}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Eje X */}
+                    <div style={{display:'flex',gap:8,marginLeft:42,marginTop:8}}>
+                      {data.map(r=>(
+                        <div key={r.name} style={{flex:1,minWidth:40,display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
+                          <div style={{width:8,height:8,borderRadius:'50%',background:RECEPTOR_COLORS[r.name]||'#999'}}/>
+                          <div style={{fontSize:10,fontWeight:700,color:'#1a1a1a',textAlign:'center',lineHeight:1.2,textTransform:'uppercase'}}>{r.name}</div>
+                          <div style={{fontSize:10,color:'#7BC67E',fontWeight:600}}>{r.devuelto>0?`↩ ${r.devuelto}`:''}</div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Tabla resumen */}
+                    <div style={{marginTop:20,overflowX:'auto'}}>
+                      <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
+                        <thead>
+                          <tr style={{borderBottom:'2px solid #E7E7E3'}}>
+                            {['Receptor','Entregado','Devuelto','En préstamo'].map(h=>(
+                              <th key={h} style={{padding:'6px 10px',textAlign:h==='Receptor'?'left':'right',color:'#8a8a82',fontWeight:700,textTransform:'uppercase',fontSize:10}}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {data.map(r=>(
+                            <tr key={r.name} style={{borderBottom:'1px solid #F0F0EC'}}>
+                              <td style={{padding:'7px 10px',fontWeight:600,color:RECEPTOR_COLORS[r.name]||'#1a1a1a'}}>{r.name}</td>
+                              <td style={{padding:'7px 10px',textAlign:'right'}}>{r.entregado}</td>
+                              <td style={{padding:'7px 10px',textAlign:'right',color:'#7BC67E',fontWeight:r.devuelto>0?700:400}}>{r.devuelto>0?r.devuelto:'—'}</td>
+                              <td style={{padding:'7px 10px',textAlign:'right',fontWeight:700,color:r.enPrestamo>0?'#f2cb12':'#aaa'}}>{r.enPrestamo>0?r.enPrestamo:'—'}</td>
+                            </tr>
+                          ))}
+                          <tr style={{borderTop:'2px solid #E7E7E3',fontWeight:700}}>
+                            <td style={{padding:'7px 10px'}}>TOTAL</td>
+                            <td style={{padding:'7px 10px',textAlign:'right'}}>{totalEntregado}</td>
+                            <td style={{padding:'7px 10px',textAlign:'right',color:'#7BC67E'}}>{totalDevuelto}</td>
+                            <td style={{padding:'7px 10px',textAlign:'right',color:'#f2cb12'}}>{totalPrestamo}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
           {/* REPOSICIÓN CAMISETAS */}
           {view === 'reposiciones' && (
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
@@ -5441,10 +5576,8 @@ tfoot td{padding:9px 12px;font-weight:700}
               {/* Tab: Reposiciones */}
               {repTab === 'reposiciones' && (<>
                 {(() => {
-                  const descCam = j => j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
-                  const descSht = j => j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
-                  const totalEquipos = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
-                  const totalShorts  = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
+                  const totalEquipos = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+getDescCam(j),0),0)
+                  const totalShorts  = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+getDescSht(j),0),0)
                   const totalExtras  = (db.descExtras||[]).reduce((acc,e)=>acc+(e.cantidad||1),0)
                   const totalDinero  = totalEquipos * PRECIO_CAMISETA + totalShorts * PRECIO_SHORT
                   const totalCamTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
@@ -5452,8 +5585,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                   const mesActualKeyAdmin = cicloKey(today())
                   const mesNombreAdmin = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][Number(mesActualKeyAdmin.split('/')[0])]
                   const repsDelMesAdmin = (db.reposiciones||[]).filter(r => cicloKey(r.fechaPartido||r.fecha||'') === mesActualKeyAdmin)
-                  const totalEquiposMesAdmin = repsDelMesAdmin.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
-                  const totalShortsMesAdmin  = repsDelMesAdmin.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
+                  const totalEquiposMesAdmin = repsDelMesAdmin.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+getDescCam(j),0),0)
+                  const totalShortsMesAdmin  = repsDelMesAdmin.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+getDescSht(j),0),0)
                   const totalExtrasCountMesAdmin = (db.descExtras||[]).filter(e=>cicloKey(e.fecha)===mesActualKeyAdmin).reduce((acc,e)=>acc+(e.cantidad||1),0)
                   const totalExtrasMesAdmin  = (db.descExtras||[]).filter(e=>cicloKey(e.fecha)===mesActualKeyAdmin).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
                   const totalDineroMesAdmin  = totalEquiposMesAdmin * PRECIO_CAMISETA + totalShortsMesAdmin * PRECIO_SHORT + totalExtrasMesAdmin
@@ -5532,11 +5665,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                               const totCam = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantCamiseta)||0),0)
                               const totSht = (r.jugadores||[]).reduce((s,j)=>s+(Number(j.cantShort)||0),0)
                               const equipoStr = [r.tipoCamisetaJugador, r.tipoCamisetaGolero].filter(Boolean).join(' / ')
-                              const totalDesc = (r.jugadores||[]).reduce((s,j)=>{
-                                const dc = j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
-                                const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
-                                return s + (dc ? (Number(j.cantCamiseta)||0)*PRECIO_CAMISETA : 0) + (ds ? (Number(j.cantShort)||0)*PRECIO_SHORT : 0)
-                              }, 0)
+                              const totalDesc = (r.jugadores||[]).reduce((s,j)=>s+getDescCam(j)*PRECIO_CAMISETA+getDescSht(j)*PRECIO_SHORT, 0)
                               const _isFinal = r.fechaTorneo!=null&&r.fechaTorneo!==''&&(r.fechaTorneo==='Final'||r.fechaTorneo==='NaN'||Number.isNaN(r.fechaTorneo))
                           const torneoStr = [_isFinal?'Final':null, r.torneo, !_isFinal&&r.fechaTorneo!=null&&r.fechaTorneo!==''?'F.'+r.fechaTorneo:null].filter(Boolean).join(' ')
                               return (
@@ -5569,18 +5698,16 @@ tfoot td{padding:9px 12px;font-weight:700}
 
               {/* Tab: Extras */}
               {repTab === 'extras' && (() => {
-                  const descCam = j => j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
-                  const descSht = j => j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
-                  const totalEquipos = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
-                  const totalShorts  = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
+                  const totalEquipos = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+getDescCam(j),0),0)
+                  const totalShorts  = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+getDescSht(j),0),0)
                   const totalExtras  = (db.descExtras||[]).reduce((acc,e)=>acc+(e.cantidad||1),0)
                   const totalCamTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantCamiseta)||0),0),0)
                   const totalShtTodas = (db.reposiciones||[]).reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(Number(j.cantShort)||0),0),0)
                   const mesActualKeyAdmin = cicloKey(today())
                   const mesNombreAdmin = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][Number(mesActualKeyAdmin.split('/')[0])]
                   const repsDelMesAdmin = (db.reposiciones||[]).filter(r => cicloKey(r.fechaPartido||r.fecha||'') === mesActualKeyAdmin)
-                  const totalEquiposMesAdmin = repsDelMesAdmin.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descCam(j)?Number(j.cantCamiseta)||0:0),0),0)
-                  const totalShortsMesAdmin  = repsDelMesAdmin.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+(descSht(j)?Number(j.cantShort)||0:0),0),0)
+                  const totalEquiposMesAdmin = repsDelMesAdmin.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+getDescCam(j),0),0)
+                  const totalShortsMesAdmin  = repsDelMesAdmin.reduce((acc,r)=>acc+(r.jugadores||[]).reduce((a,j)=>a+getDescSht(j),0),0)
                   const totalExtrasCountMesAdmin = (db.descExtras||[]).filter(e=>cicloKey(e.fecha)===mesActualKeyAdmin).reduce((acc,e)=>acc+(e.cantidad||1),0)
                   const totalExtrasMesAdmin  = (db.descExtras||[]).filter(e=>cicloKey(e.fecha)===mesActualKeyAdmin).reduce((acc,e)=>acc+e.precio*(e.cantidad||1),0)
                   const totalDineroMesAdmin  = totalEquiposMesAdmin * PRECIO_CAMISETA + totalShortsMesAdmin * PRECIO_SHORT + totalExtrasMesAdmin
@@ -5744,10 +5871,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                         ;(r.jugadores||[]).forEach(j => {
                           const nombre = j.nombre?.trim()
                           if (!nombre) return
-                          const dc = j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
-                          const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
-                          const cam = dc ? Number(j.cantCamiseta)||0 : 0
-                          const sht = ds ? Number(j.cantShort)||0 : 0
+                          const cam = getDescCam(j)
+                          const sht = getDescSht(j)
                           const total = cam + sht
                           if (total > 0) {
                             if (!counts[nombre]) counts[nombre] = {total:0, monto:0}
@@ -5907,14 +6032,17 @@ tfoot td{padding:9px 12px;font-weight:700}
                     {reps.map(r => {
                       const jj = (r.jugadores||[]).find(x => x.nombre === j.nombre || (j.numero && String(x.numero) === String(j.numero)))
                       if (!jj) return null
-                      const dc = jj.descuentoCamiseta !== undefined ? jj.descuentoCamiseta !== false : jj.descuento !== false
-                      const ds = jj.descuentoShort !== undefined ? jj.descuentoShort !== false : jj.descuento !== false
-                      const badge = (active) => (
-                        <span style={{background:active?'#E8F5E9':'#FBEAE8',color:active?'#2e7d32':'#C2473D',
-                          border:'1px solid '+(active?'#A5D6A7':'#ef9a9a'),borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700}}>
-                          {active?'SÍ':'NO'}
-                        </span>
-                      )
+                      const dc = getDescCam(jj)
+                      const ds = getDescSht(jj)
+                      const badge = (discCount, total) => {
+                        const none = discCount === 0
+                        const all = discCount >= total && total > 0
+                        const partial = !none && !all
+                        const bg = none?'#FBEAE8':partial?'#FFF8D6':'#E8F5E9'
+                        const col = none?'#C2473D':partial?'#7a5800':'#2e7d32'
+                        const bord = none?'#ef9a9a':partial?'#f2cb12':'#A5D6A7'
+                        return <span style={{background:bg,color:col,border:`1px solid ${bord}`,borderRadius:4,padding:'2px 8px',fontSize:11,fontWeight:700}}>{none?'NO':partial?discCount:'SÍ'}</span>
+                      }
                       return (
                         <div key={r.id} style={{display:'grid',gridTemplateColumns:'95px 1fr 60px 60px',padding:'10px 16px',borderBottom:'1px solid #F0F0EC',alignItems:'center',gap:8}}>
                           <div style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11.5,color:'#6a6a62'}}>{r.fecha}</div>
@@ -5922,8 +6050,8 @@ tfoot td{padding:9px 12px;font-weight:700}
                             <div style={{fontWeight:600,fontSize:13}}>{r.concepto}</div>
                             {r.torneo && <div style={{fontSize:11,color:'#8a8a82'}}>{r.torneo}{r.fechaTorneo?(r.fechaTorneo==='Final'||r.fechaTorneo==='NaN'||Number.isNaN(r.fechaTorneo)?' · Final':` · Fecha ${r.fechaTorneo}`):''}</div>}
                           </div>
-                          <div style={{textAlign:'center'}}>{badge(dc)}</div>
-                          <div style={{textAlign:'center'}}>{badge(ds)}</div>
+                          <div style={{textAlign:'center'}}>{badge(dc, Number(jj.cantCamiseta)||0)}</div>
+                          <div style={{textAlign:'center'}}>{badge(ds, Number(jj.cantShort)||0)}</div>
                         </div>
                       )
                     })}
@@ -6046,10 +6174,10 @@ tfoot td{padding:9px 12px;font-weight:700}
               <div className="modal-footer">
                 {st !== 'pendiente_separar' && <button className="btn btn-ghost" onClick={() => setSelectedDeliveryId(null)}>Cerrar</button>}
                 <button className="btn btn-ghost" style={{border:'1px solid #7a5800',color:'#7a5800'}} onClick={() => openPrintWindow(buildRemitoHtml(d.lines, d.persona, d.receptor, d.disciplina, d.fecha, d.obs, d.paga, d.monto))}>↓ Remito</button>
-                {!isSoloVista && d.tipo === 'prestamo' && d.status !== 'devuelto' && (
-                  <button className="btn" style={{background:'#2e9b5e',color:'#fff',fontWeight:700}}
-                    onClick={() => { if(window.confirm('¿Confirmar devolución del préstamo? Se crearán artículos "Usado" con el stock devuelto.')) devolverPrestamo(d.id) }}>
-                    ↩ Devolver préstamo
+                {!isSoloVista && (
+                  <button className="btn" style={{background:'#5a5a50',color:'#fff',fontWeight:700}}
+                    onClick={() => setDevModal({delivery:d, step: d.lines.length === 1 ? 'ubicacion' : 'select', selectedLines: d.lines.length === 1 ? [0] : [], lineQtys: d.lines.length === 1 ? {0: d.lines[0].qty} : {}, estante:'1', altura:'A', ubicacion:'1A'})}>
+                    ↩ Devolución
                   </button>
                 )}
                 {!isSoloVista && st === 'pendiente_separar' && (
@@ -6450,8 +6578,8 @@ tfoot td{padding:9px 12px;font-weight:700}
               <div style={{marginTop:16}}>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'flex-end',gap:6,marginBottom:4}}>
                   <span style={{fontSize:11,fontWeight:700,color:'#5a5a50'}}>Descuentos:</span>
-                  <button type="button" onClick={()=>setTodosDescuentos(true)} style={{padding:'3px 12px',borderRadius:5,border:'2px solid #2d6a4f',background:'#d8f3dc',color:'#1b4332',fontWeight:700,fontSize:11,cursor:'pointer'}}>SÍ</button>
-                  <button type="button" onClick={()=>setTodosDescuentos(false)} style={{padding:'3px 12px',borderRadius:5,border:'2px solid #ccc',background:'#f5f5f5',color:'#999',fontWeight:700,fontSize:11,cursor:'pointer'}}>NO</button>
+                  <button type="button" onClick={()=>setTodosDescuentos(null)} style={{padding:'3px 12px',borderRadius:5,border:'2px solid #2d6a4f',background:'#d8f3dc',color:'#1b4332',fontWeight:700,fontSize:11,cursor:'pointer'}}>SÍ</button>
+                  <button type="button" onClick={()=>setTodosDescuentos(0)} style={{padding:'3px 12px',borderRadius:5,border:'2px solid #ccc',background:'#f5f5f5',color:'#999',fontWeight:700,fontSize:11,cursor:'pointer'}}>NO</button>
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'40px 1fr 62px 38px 62px 38px',gap:4,marginBottom:4,fontSize:10,fontWeight:700,color:'#8a8a82',padding:'4px 6px',background:'#F5F5F0',borderRadius:6}}>
                   <div>Nº</div><div>NOMBRE</div><div style={{textAlign:'center'}}>CAM.</div><div style={{textAlign:'center'}}>DC</div><div style={{textAlign:'center'}}>SHT.</div><div style={{textAlign:'center'}}>DS</div>
@@ -6459,9 +6587,6 @@ tfoot td{padding:9px 12px;font-weight:700}
                 {repForm.rows.map((r, i) => {
                   const hasQty = Number(r.cantCamiseta)>0 || Number(r.cantShort)>0
                   const isLibre = r.nombre.trim().toLowerCase()==='libre'
-                  const dcam = r.descuentoCamiseta !== false
-                  const dsht = r.descuentoShort !== false
-                  const toggle = (field) => setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,[field]:!x[field]}:x)}))
                   return (
                     <div key={i} style={{display:'grid',gridTemplateColumns:'40px 1fr 62px 38px 62px 38px',gap:4,marginBottom:3,alignItems:'center',padding:'5px 6px',borderRadius:6,
                       background:isLibre?'#3a3a3a':hasQty?'#FFFDF0':'transparent',border:hasQty?'1px solid #f2cb12':'1px solid transparent'}}>
@@ -6474,21 +6599,21 @@ tfoot td{padding:9px 12px;font-weight:700}
                         onChange={e=>setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,cantCamiseta:e.target.value}:x)}))}
                         placeholder="0" style={{textAlign:'center',padding:'5px 2px'}} />
                       {!isLibre
-                        ? <button type="button" onClick={()=>toggle('descuentoCamiseta')}
-                            style={{padding:'4px 2px',borderRadius:5,border:'2px solid',fontWeight:700,fontSize:10,cursor:'pointer',width:'100%',
-                              borderColor:dcam?'#2d6a4f':'#ccc',background:dcam?'#d8f3dc':'#f5f5f5',color:dcam?'#1b4332':'#999'}}>
-                            {dcam?'SÍ':'NO'}
-                          </button>
+                        ? <input className="field-input mono" type="number" min="0"
+                            value={r.descuentoCamiseta===null||r.descuentoCamiseta===undefined?'':r.descuentoCamiseta}
+                            onChange={e=>setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,descuentoCamiseta:e.target.value===''?null:Number(e.target.value)}:x)}))}
+                            placeholder={r.cantCamiseta||'—'} title="Cantidad con descuento (vacío = todas)"
+                            style={{textAlign:'center',padding:'5px 2px'}} />
                         : <div/>}
                       <input className="field-input mono" type="number" min="0" value={r.cantShort}
                         onChange={e=>setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,cantShort:e.target.value}:x)}))}
                         placeholder="0" style={{textAlign:'center',padding:'5px 2px'}} />
                       {!isLibre
-                        ? <button type="button" onClick={()=>toggle('descuentoShort')}
-                            style={{padding:'4px 2px',borderRadius:5,border:'2px solid',fontWeight:700,fontSize:10,cursor:'pointer',width:'100%',
-                              borderColor:dsht?'#2d6a4f':'#ccc',background:dsht?'#d8f3dc':'#f5f5f5',color:dsht?'#1b4332':'#999'}}>
-                            {dsht?'SÍ':'NO'}
-                          </button>
+                        ? <input className="field-input mono" type="number" min="0"
+                            value={r.descuentoShort===null||r.descuentoShort===undefined?'':r.descuentoShort}
+                            onChange={e=>setRepForm(p=>({...p,rows:p.rows.map((x,ix)=>ix===i?{...x,descuentoShort:e.target.value===''?null:Number(e.target.value)}:x)}))}
+                            placeholder={r.cantShort||'—'} title="Cantidad con descuento (vacío = todas)"
+                            style={{textAlign:'center',padding:'5px 2px'}} />
                         : <div/>}
                     </div>
                   )
@@ -6499,10 +6624,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                 <div style={{fontSize:10,fontWeight:700,color:'#8a8a82',letterSpacing:'.05em',marginBottom:8}}>CAMISETAS ADICIONALES</div>
                 {(repForm.extraRows||[]).map((r,i) => {
                   const hasQty = Number(r.cantCamiseta)>0 || Number(r.cantShort)>0
-                  const dcam = r.descuentoCamiseta !== false
-                  const dsht = r.descuentoShort !== false
                   const upd = (field,val) => setRepForm(p=>({...p,extraRows:p.extraRows.map((x,ix)=>ix===i?{...x,[field]:val}:x)}))
-                  const tog = (field) => upd(field, !r[field])
                   const rem = () => setRepForm(p=>({...p,extraRows:p.extraRows.filter((_,ix)=>ix!==i)}))
                   return (
                     <div key={i} style={{display:'grid',gridTemplateColumns:'46px 1fr 54px 52px 36px 54px 52px 36px 24px',gap:4,marginBottom:4,alignItems:'center',padding:'5px 6px',borderRadius:6,
@@ -6516,27 +6638,27 @@ tfoot td{padding:9px 12px;font-weight:700}
                       </select>
                       <input className="field-input mono" type="number" min="0" value={r.cantCamiseta} onChange={e=>upd('cantCamiseta',e.target.value)}
                         placeholder="0" style={{textAlign:'center',padding:'5px 2px'}} />
-                      <button type="button" onClick={()=>tog('descuentoCamiseta')}
-                        style={{padding:'4px 2px',borderRadius:5,border:'2px solid',fontWeight:700,fontSize:10,cursor:'pointer',width:'100%',
-                          borderColor:dcam?'#2d6a4f':'#ccc',background:dcam?'#d8f3dc':'#f5f5f5',color:dcam?'#1b4332':'#999'}}>
-                        {dcam?'SÍ':'NO'}
-                      </button>
+                      <input className="field-input mono" type="number" min="0"
+                        value={r.descuentoCamiseta===null||r.descuentoCamiseta===undefined?'':r.descuentoCamiseta}
+                        onChange={e=>upd('descuentoCamiseta',e.target.value===''?null:Number(e.target.value))}
+                        placeholder={r.cantCamiseta||'—'} title="Cantidad con descuento (vacío = todas)"
+                        style={{textAlign:'center',padding:'5px 2px'}} />
                       <select className="field-input" value={r.talleShort} onChange={e=>upd('talleShort',e.target.value)} style={{padding:'5px 2px',fontSize:11}}>
                         {[...TALLES_ADULTO,...TALLES_NINO].map(t=><option key={t} value={t}>{t}</option>)}
                       </select>
                       <input className="field-input mono" type="number" min="0" value={r.cantShort} onChange={e=>upd('cantShort',e.target.value)}
                         placeholder="0" style={{textAlign:'center',padding:'5px 2px'}} />
-                      <button type="button" onClick={()=>tog('descuentoShort')}
-                        style={{padding:'4px 2px',borderRadius:5,border:'2px solid',fontWeight:700,fontSize:10,cursor:'pointer',width:'100%',
-                          borderColor:dsht?'#2d6a4f':'#ccc',background:dsht?'#d8f3dc':'#f5f5f5',color:dsht?'#1b4332':'#999'}}>
-                        {dsht?'SÍ':'NO'}
-                      </button>
+                      <input className="field-input mono" type="number" min="0"
+                        value={r.descuentoShort===null||r.descuentoShort===undefined?'':r.descuentoShort}
+                        onChange={e=>upd('descuentoShort',e.target.value===''?null:Number(e.target.value))}
+                        placeholder={r.cantShort||'—'} title="Cantidad con descuento (vacío = todas)"
+                        style={{textAlign:'center',padding:'5px 2px'}} />
                       <button type="button" onClick={rem} style={{padding:'4px',border:'none',background:'none',cursor:'pointer',color:'#C00',fontSize:18,lineHeight:1,textAlign:'center'}}>×</button>
                     </div>
                   )
                 })}
                 <button type="button"
-                  onClick={()=>setRepForm(p=>({...p,extraRows:[...(p.extraRows||[]),{numero:'',nombre:'',talleCamiseta:'L',talleShort:'L',cantCamiseta:'',cantShort:'',descuentoCamiseta:true,descuentoShort:true}]}))}
+                  onClick={()=>setRepForm(p=>({...p,extraRows:[...(p.extraRows||[]),{numero:'',nombre:'',talleCamiseta:'L',talleShort:'L',cantCamiseta:'',cantShort:'',descuentoCamiseta:null,descuentoShort:null}]}))}
                   style={{marginTop:4,padding:'7px 14px',borderRadius:6,border:'1px dashed #C0C0B8',background:'transparent',color:'#666',fontSize:12,cursor:'pointer',fontWeight:600}}>
                   + Agregar camiseta
                 </button>
@@ -6733,10 +6855,8 @@ tfoot td{padding:9px 12px;font-weight:700}
         const filas = (db.reposiciones||[]).flatMap(r => {
           const j = (r.jugadores||[]).find(jj => jj.nombre?.trim().toLowerCase() === nombre.toLowerCase())
           if (!j) return []
-          const dc = j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
-          const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
-          const cam = dc ? Number(j.cantCamiseta)||0 : 0
-          const sht = ds ? Number(j.cantShort)||0 : 0
+          const cam = getDescCam(j)
+          const sht = getDescSht(j)
           if (cam === 0 && sht === 0) return []
           return [{label: r.concepto||'Sin nombre', fecha: r.fecha||'', torneo: r.torneo||'', cam, sht, monto: cam*PRECIO_CAMISETA + sht*PRECIO_SHORT}]
         })
@@ -7171,11 +7291,7 @@ tfoot td{padding:9px 12px;font-weight:700}
           const BORDER   = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
           const s = (cell,fill,font,align) => { cell.fill=fill; cell.font=font; cell.alignment=align||CENTER; cell.border=BORDER }
           ;[{mesKey:mesMostradoAdmin,mesNombre:mesNombreMod,filas:filasAdmin}].forEach(({mesKey, mesNombre, filas}) => {
-            const hasDesc = rep => (rep.jugadores||[]).some(j => {
-              const dc = j.descuentoCamiseta !== undefined ? j.descuentoCamiseta !== false : j.descuento !== false
-              const ds = j.descuentoShort !== undefined ? j.descuentoShort !== false : j.descuento !== false
-              return (dc && Number(j.cantCamiseta) > 0) || (ds && Number(j.cantShort) > 0)
-            })
+            const hasDesc = rep => (rep.jugadores||[]).some(j => getDescCam(j) > 0 || getDescSht(j) > 0)
             const reps = (mesesMap[mesKey]||[]).filter(hasDesc).sort((a,b)=>{
               const toD = str => { const p=(str||'').split('/'); return p.length===3?new Date(`${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`):new Date(0) }
               return toD(a.fechaPartido||a.fecha)-toD(b.fechaPartido||b.fecha)
@@ -7224,10 +7340,8 @@ tfoot td{padding:9px 12px;font-weight:700}
               const c2=r.getCell(2); c2.value=f.nombre; s(c2,fill,F_NORM,LEFT)
               reps.forEach((rep,i)=>{
                 const jj=(rep.jugadores||[]).find(x=>x.nombre===f.nombre)
-                const dc=jj?(jj.descuentoCamiseta!==undefined?jj.descuentoCamiseta!==false:jj.descuento!==false):false
-                const ds=jj?(jj.descuentoShort!==undefined?jj.descuentoShort!==false:jj.descuento!==false):false
-                const cam=(jj&&dc)?Number(jj.cantCamiseta)||0:0
-                const sht=(jj&&ds)?Number(jj.cantShort)||0:0
+                const cam=jj?getDescCam(jj):0
+                const sht=jj?getDescSht(jj):0
                 const cCam=r.getCell(3+i*2); cCam.value=cam||''; s(cCam,fill,F_NORM)
                 const cSht=r.getCell(4+i*2); cSht.value=sht||''; s(cSht,fill,F_NORM)
               })
@@ -7320,6 +7434,138 @@ tfoot td{padding:9px 12px;font-weight:700}
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={()=>setRepResumen(null)}>Cerrar</button>
                 <button className="btn btn-ghost" style={{border:'1px solid #2d6a4f',color:'#2d6a4f'}} disabled={mesesOrdenados.length===0} onClick={exportResumenExcel}>↓ Excel</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Modal: Devolución de entrega — artículo usado */}
+      {devModal && (() => {
+        const { delivery: del, step, selectedLines, lineQtys, estante, altura, ubicacion } = devModal
+        const canConfirm = ubicacion && selectedLines.length > 0 && selectedLines.every(i => {
+          const q = parseInt(lineQtys[i]||0, 10)
+          return q > 0 && q <= (del.lines[i]?.qty||0)
+        })
+        if (step === 'select') {
+          return (
+            <div className="modal-backdrop" onClick={() => setDevModal(null)}>
+              <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                  <div className="modal-title">Seleccionar artículos a devolver</div>
+                  <button className="modal-close" onClick={() => setDevModal(null)}>×</button>
+                </div>
+                <div className="modal-body">
+                  <div style={{fontSize:13,color:'#8a8a82',marginBottom:12}}>Marcá los artículos que se devuelven de la entrega a <strong>{del.persona}</strong></div>
+                  {del.lines.map((l, i) => {
+                    const checked = selectedLines.includes(i)
+                    const qty = lineQtys[i] ?? l.qty
+                    return (
+                      <div key={i} style={{borderBottom:'1px solid #F0F0EC',padding:'10px 0'}}>
+                        <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer'}}>
+                          <input type="checkbox" checked={checked}
+                            onChange={e => setDevModal(p => ({
+                              ...p,
+                              selectedLines: e.target.checked ? [...p.selectedLines, i] : p.selectedLines.filter(x => x !== i),
+                              lineQtys: e.target.checked ? {...p.lineQtys, [i]: l.qty} : p.lineQtys
+                            }))}
+                            style={{width:16,height:16,cursor:'pointer',flexShrink:0}} />
+                          <span style={{flex:1}}>
+                            <span style={{fontWeight:600,fontSize:13}}>{l.name||l.code}</span>
+                            <span style={{marginLeft:8,fontSize:12,color:'#8a8a82'}}>Talle {l.talle}</span>
+                          </span>
+                          <span style={{fontFamily:'IBM Plex Mono,monospace',fontSize:11,color:'#8a8a82'}}>{l.code}US</span>
+                        </label>
+                        {checked && (
+                          <div style={{display:'flex',alignItems:'center',gap:8,marginTop:8,paddingLeft:26}}>
+                            <label style={{fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>Cant. a devolver</label>
+                            <input type="number" min="1" max={l.qty}
+                              value={qty}
+                              onChange={e => setDevModal(p => ({...p, lineQtys: {...p.lineQtys, [i]: parseInt(e.target.value,10)||1}}))}
+                              style={{width:64,padding:'4px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,fontFamily:'IBM Plex Mono,monospace',textAlign:'center'}} />
+                            <span style={{fontSize:12,color:'#8a8a82'}}>de {l.qty}</span>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+                <div className="modal-footer">
+                  <button className="btn btn-ghost" onClick={() => setDevModal(null)}>Cancelar</button>
+                  <button className="btn btn-dark" disabled={selectedLines.length === 0}
+                    onClick={() => setDevModal(p => ({...p, step:'ubicacion'}))}>
+                    Siguiente →
+                  </button>
+                </div>
+              </div>
+            </div>
+          )
+        }
+        return (
+          <div className="modal-backdrop" onClick={() => setDevModal(null)}>
+            <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <div className="modal-title">¿Dónde guardás lo devuelto?</div>
+                <button className="modal-close" onClick={() => setDevModal(null)}>×</button>
+              </div>
+              <div className="modal-body">
+                {selectedLines.map(i => del.lines[i]).filter(Boolean).map((l, idx) => {
+                  const li = selectedLines[idx]
+                  const qty = lineQtys[li] ?? l.qty
+                  return (
+                    <div key={idx} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 0',borderBottom:'1px solid #F0F0EC'}}>
+                      <div style={{flex:1}}>
+                        <div style={{fontWeight:600,fontSize:13}}>{l.name||l.code}</div>
+                        <div style={{fontSize:12,color:'#8a8a82',marginTop:2}}>Talle {l.talle} · nuevo código: <span style={{fontFamily:'IBM Plex Mono,monospace'}}>{l.code}US</span></div>
+                      </div>
+                      <div style={{display:'flex',alignItems:'center',gap:6}}>
+                        <label style={{fontSize:12,color:'#8a8a82'}}>Cant.</label>
+                        <input type="number" min="1" max={l.qty}
+                          value={qty}
+                          onChange={e => setDevModal(p => ({...p, lineQtys: {...p.lineQtys, [li]: parseInt(e.target.value,10)||1}}))}
+                          style={{width:64,padding:'4px 8px',border:'1px solid #D9D9D4',borderRadius:6,fontSize:13,fontFamily:'IBM Plex Mono,monospace',textAlign:'center'}} />
+                        <span style={{fontSize:12,color:'#8a8a82'}}>/ {l.qty}</span>
+                      </div>
+                    </div>
+                  )
+                })}
+                <div className="form-group" style={{marginTop:14}}>
+                  <label className="field-label">Ubicación destino</label>
+                  <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:6,flex:1}}>
+                      <span style={{fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>Estantería</span>
+                      <select className="field-input" style={{flex:1}} value={estante}
+                        onChange={e => {
+                          const s = e.target.value
+                          const sinAlt = SIN_ALTURA.includes(s)
+                          const newUbic = sinAlt ? s : s + (sinAlt ? '' : altura)
+                          setDevModal(p => ({...p, estante:s, ubicacion: newUbic}))
+                        }}>
+                        {ESTANTES.map(o => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </div>
+                    {!SIN_ALTURA.includes(estante) && (
+                      <div style={{display:'flex',alignItems:'center',gap:6,flex:1}}>
+                        <span style={{fontSize:12,color:'#8a8a82',whiteSpace:'nowrap'}}>Altura</span>
+                        <select className="field-input" style={{flex:1}} value={altura}
+                          onChange={e => {
+                            const a = e.target.value
+                            setDevModal(p => ({...p, altura:a, ubicacion: p.estante + a}))
+                          }}>
+                          {ALTURAS.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{marginTop:6,fontSize:12,color:'#8a8a82'}}>Ubicación: <span style={{fontFamily:'IBM Plex Mono,monospace',fontWeight:700,color:'#1a1a1a'}}>{ubicacion}</span></div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                {del.lines.length > 1 && <button className="btn btn-ghost" onClick={() => setDevModal(p => ({...p, step:'select'}))}>← Atrás</button>}
+                <button className="btn btn-ghost" onClick={() => setDevModal(null)}>Cancelar</button>
+                <button className="btn btn-dark" disabled={!canConfirm} onClick={confirmarDevolucionUsado}>
+                  ✓ Confirmar devolución
+                </button>
               </div>
             </div>
           </div>
@@ -7487,23 +7733,10 @@ tfoot td{padding:9px 12px;font-weight:700}
         <div className="modal-backdrop" onClick={closeModal}>
           <div className="modal modal-lg" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <div className="modal-title">{ndIsDev ? 'Registrar devolución' : nd.tipoPrestamo ? 'Registrar préstamo' : 'Registrar entrega'}</div>
+              <div className="modal-title">{ndIsDev ? 'Registrar devolución' : 'Registrar entrega'}</div>
               <button className="modal-close" onClick={closeModal}>×</button>
             </div>
             <div className="modal-body" style={{display:'flex',flexDirection:'column',gap:14}}>
-              {!ndIsDev && (
-                <div style={{display:'flex',gap:8,marginBottom:2}}>
-                  {[['entrega','Entrega'],['prestamo','Préstamo']].map(([v,label]) => (
-                    <button key={v} style={{flex:1,padding:'7px 0',borderRadius:6,border:'1px solid',cursor:'pointer',fontWeight:700,fontSize:13,
-                      background:(v==='prestamo'?nd.tipoPrestamo:!nd.tipoPrestamo)?'#121212':'#F5F5F0',
-                      borderColor:(v==='prestamo'?nd.tipoPrestamo:!nd.tipoPrestamo)?'#121212':'#E0E0DA',
-                      color:(v==='prestamo'?nd.tipoPrestamo:!nd.tipoPrestamo)?'#f2cb12':'#8a8a82'}}
-                      onClick={() => setNd(p=>({...p,tipoPrestamo:v==='prestamo'}))}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              )}
               <div className="form-group">
                 <label className="field-label">{ndIsDev ? 'Integrante que devuelve' : 'Integrante que recibe'}</label>
                 <input className="field-input" value={nd.persona} onChange={e => setNd(p=>({...p,persona:e.target.value}))} placeholder="Ej. Maximiliano Olivera" />
