@@ -5660,7 +5660,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                       <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
                         <thead>
                           <tr style={{borderBottom:'2px solid #E7E7E3'}}>
-                            {['Receptor','Entregado','Devuelto','En préstamo'].map(h=>(
+                            {['Receptor','Entregado','Devuelto'].map(h=>(
                               <th key={h} style={{padding:'6px 10px',textAlign:h==='Receptor'?'left':'right',color:'#8a8a82',fontWeight:700,textTransform:'uppercase',fontSize:10}}>{h}</th>
                             ))}
                           </tr>
@@ -5671,14 +5671,12 @@ tfoot td{padding:9px 12px;font-weight:700}
                               <td style={{padding:'7px 10px',fontWeight:600,color:RECEPTOR_COLORS[r.name]||'#1a1a1a'}}>{r.name}</td>
                               <td style={{padding:'7px 10px',textAlign:'right'}}>{r.entregado}</td>
                               <td style={{padding:'7px 10px',textAlign:'right',color:'#7BC67E',fontWeight:r.devuelto>0?700:400}}>{r.devuelto>0?r.devuelto:'—'}</td>
-                              <td style={{padding:'7px 10px',textAlign:'right',fontWeight:700,color:r.enPrestamo>0?'#f2cb12':'#aaa'}}>{r.enPrestamo>0?r.enPrestamo:'—'}</td>
                             </tr>
                           ))}
                           <tr style={{borderTop:'2px solid #E7E7E3',fontWeight:700}}>
                             <td style={{padding:'7px 10px'}}>TOTAL</td>
                             <td style={{padding:'7px 10px',textAlign:'right'}}>{totalEntregado}</td>
                             <td style={{padding:'7px 10px',textAlign:'right',color:'#7BC67E'}}>{totalDevuelto}</td>
-                            <td style={{padding:'7px 10px',textAlign:'right',color:'#f2cb12'}}>{totalPrestamo}</td>
                           </tr>
                         </tbody>
                       </table>
