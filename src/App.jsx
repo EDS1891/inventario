@@ -5579,7 +5579,7 @@ tfoot td{padding:9px 12px;font-weight:700}
               },0)
               const enPrestamo = Math.max(0, entregado - devuelto)
               return { name, entregado, devuelto, enPrestamo }
-            }).filter(r => r.devuelto > 0)
+            }).filter(r => r.entregado > 0)
             const totalEntregado = data.reduce((s,r)=>s+r.entregado,0)
             const totalDevuelto  = data.reduce((s,r)=>s+r.devuelto,0)
             const totalPrestamo  = data.reduce((s,r)=>s+r.enPrestamo,0)
