@@ -5627,7 +5627,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                                   {r.devuelto}
                                 </div>
                                 <div style={{width:'100%',display:'flex',flexDirection:'column',alignItems:'stretch'}}>
-                                  {devH > 0 && <div style={{height:devH,background:'#7BC67E',borderRadius:'4px 4px 0 0',transition:'height .4s'}}/>}
+                                  {devH > 0 && <div style={{height:devH,background:color,borderRadius:'4px 4px 0 0',transition:'height .4s'}}/>}
                                 </div>
                               </div>
                             )
