@@ -51,7 +51,7 @@ export default async function handler(req, res) {
                 <span style="font-weight:bold">x${l.qty}</span>
               </div>`).join('')}
           </div>
-          <a href="https://inventario-eds1891.vercel.app" style="display:inline-block;background:#FFD200;color:#121212;font-weight:bold;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px">
+          <a href="https://indumentaria-cap.vercel.app" style="display:inline-block;background:#FFD200;color:#121212;font-weight:bold;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px">
             Aceptar o rechazar entrega
           </a>
           <div style="margin-top:20px;padding:12px 16px;background:#f0f4ff;border:1px solid #c7d4f0;border-radius:8px;font-size:13px;color:#444">
@@ -70,11 +70,12 @@ export default async function handler(req, res) {
       from: '"Indumentaria Peñarol" <edominguez@capenarol.com.uy>',
       to,
       subject: `Entrega #${delId} pendiente de confirmación – Depósito Peñarol`,
-      text: `Hola ${displayName},\n\nTenés una entrega de indumentaria pendiente de confirmación.\n\nDetalle:\n${linesList}\n\nIngresá a https://inventario-eds1891.vercel.app para aceptar o rechazar la entrega.\n\nDepósito Peñarol`,
+      text: `Hola ${displayName},\n\nTenés una entrega de indumentaria pendiente de confirmación.\n\nDetalle:\n${linesList}\n\nIngresá a https://indumentaria-cap.vercel.app para aceptar o rechazar la entrega.\n\nDepósito Peñarol`,
       html,
     })
 
     res.status(200).json({ ok: true })
+
   } catch (err) {
     console.error('Error enviando email:', err.message)
     res.status(500).json({ error: err.message })
