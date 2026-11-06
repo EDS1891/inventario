@@ -5590,19 +5590,9 @@ tfoot td{padding:9px 12px;font-weight:700}
                 {/* KPIs */}
                 <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
                   <div className="kpi-card" style={{minWidth:160}}>
-                    <div className="kpi-label">TOTAL ENTREGADO</div>
-                    <div className="kpi-value">{totalEntregado.toLocaleString('es-UY')}</div>
-                    <div className="kpi-sub">unidades entregadas</div>
-                  </div>
-                  <div className="kpi-card" style={{minWidth:160}}>
                     <div className="kpi-label">DEVUELTO</div>
                     <div className="kpi-value" style={{color:'#7BC67E'}}>{totalDevuelto.toLocaleString('es-UY')}</div>
                     <div className="kpi-sub">unidades ingresadas como usado</div>
-                  </div>
-                  <div className="kpi-card" style={{minWidth:160}}>
-                    <div className="kpi-label">EN PRÉSTAMO</div>
-                    <div className="kpi-value" style={{color:'#f2cb12'}}>{totalPrestamo.toLocaleString('es-UY')}</div>
-                    <div className="kpi-sub">actualmente fuera del depósito</div>
                   </div>
                 </div>
                 {/* Gráfica */}
@@ -5660,7 +5650,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                       <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
                         <thead>
                           <tr style={{borderBottom:'2px solid #E7E7E3'}}>
-                            {['Receptor','Entregado','Devuelto'].map(h=>(
+                            {['Receptor','Devuelto'].map(h=>(
                               <th key={h} style={{padding:'6px 10px',textAlign:h==='Receptor'?'left':'right',color:'#8a8a82',fontWeight:700,textTransform:'uppercase',fontSize:10}}>{h}</th>
                             ))}
                           </tr>
@@ -5669,13 +5659,11 @@ tfoot td{padding:9px 12px;font-weight:700}
                           {data.map(r=>(
                             <tr key={r.name} style={{borderBottom:'1px solid #F0F0EC'}}>
                               <td style={{padding:'7px 10px',fontWeight:600,color:RECEPTOR_COLORS[r.name]||'#1a1a1a'}}>{r.name}</td>
-                              <td style={{padding:'7px 10px',textAlign:'right'}}>{r.entregado}</td>
                               <td style={{padding:'7px 10px',textAlign:'right',color:'#7BC67E',fontWeight:r.devuelto>0?700:400}}>{r.devuelto>0?r.devuelto:'—'}</td>
                             </tr>
                           ))}
                           <tr style={{borderTop:'2px solid #E7E7E3',fontWeight:700}}>
                             <td style={{padding:'7px 10px'}}>TOTAL</td>
-                            <td style={{padding:'7px 10px',textAlign:'right'}}>{totalEntregado}</td>
                             <td style={{padding:'7px 10px',textAlign:'right',color:'#7BC67E'}}>{totalDevuelto}</td>
                           </tr>
                         </tbody>
