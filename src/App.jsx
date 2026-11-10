@@ -322,7 +322,7 @@ export default function App() {
   // delivery/devolución form
   const [nd, setNd] = useState({ mode:'entrega', tipoPrestamo:false, persona:'', receptor:'', disciplina:'', fecha:'', cCode:'', cSearch:'', cUbic:'', cTalle:'', cQty:'', paga:null, estampados:[], lines:[], toUser:'', obs:'' })
   // new article form
-  const [na, setNa] = useState({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', precio:'', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' })
+  const [na, setNa] = useState({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', precio:'', detalle:'', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A' })
   // reponer form
   const [rep, setRep] = useState({ qtys:{} })
   // ajuste form
@@ -1286,7 +1286,7 @@ ${articlesHtml}
   }
 
   // ---- Nuevo artículo ----
-  const openArticulo = () => { setNa({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', precio:'', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A', photos:[] }); setModal('articulo') }
+  const openArticulo = () => { setNa({ code:'', name:'', cat:'Entrenamiento', tipo:'adulto', precio:'', detalle:'', tallesArr:[], tallesMins:{}, tallesQty:{}, estante:'1', altura:'A', photos:[] }); setModal('articulo') }
 
   const naToggleTalle = (t) => {
     setNa(p => {
@@ -1302,7 +1302,7 @@ ${articlesHtml}
   }
 
   const naConfirm = () => {
-    const { code, name, cat:ncat, tallesArr, tallesMins, tallesQty, estante, altura, precio } = na
+    const { code, name, cat:ncat, tallesArr, tallesMins, tallesQty, estante, altura, precio, detalle } = na
     if(!code || !name) { showToast('Completá código y nombre.'); return }
     if(tallesArr.length === 0) { showToast('Seleccioná al menos un talle.'); return }
     const ubic = SIN_ALTURA.includes(estante) ? estante : (estante||'1') + (altura||'A')
@@ -1326,14 +1326,14 @@ ${articlesHtml}
         const mergedPhotos = existing.photos?.length ? existing.photos : (na.photos||[])
         return {
           ...s,
-          articles: s.articles.map(a => a.id === existing.id ? { ...a, sizes: mergedSizes, photos: mergedPhotos, precio: precioNum||a.precio } : a),
+          articles: s.articles.map(a => a.id === existing.id ? { ...a, sizes: mergedSizes, photos: mergedPhotos, precio: precioNum||a.precio, detalle: detalle||a.detalle } : a),
           movimientos: [...newMovs, ...s.movimientos],
           nextMov
         }
       }
       return {
         ...s,
-        articles: [{id:s.nextId, code, name, cat:ncat, ubic, precio:precioNum, sizes, photos:na.photos||[]}, ...s.articles],
+        articles: [{id:s.nextId, code, name, cat:ncat, ubic, precio:precioNum, detalle:detalle||'', sizes, photos:na.photos||[]}, ...s.articles],
         nextId: s.nextId+1,
         movimientos: [...newMovs, ...s.movimientos],
         nextMov
@@ -4788,7 +4788,7 @@ tfoot td{padding:9px 12px;font-weight:700}
               </div>
               <div className="card table-wrap">
                 <div className="table-header inv-cols">
-                  <div>CÓDIGO</div><div>ARTÍCULO</div>
+                  <div>CÓDIGO</div><div>ARTÍCULO</div><div className="inv-col-detalle">DETALLE</div>
                   <div className="inv-col-ubic">UBIC.</div>
                   <div className="inv-col-cat">CATEGORÍA</div>
                   <div className="inv-col-sizes">TALLES</div>
@@ -4802,6 +4802,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                   <div key={r.code} className="table-row clickable inv-cols" onClick={() => openDetail(r.code)}>
                     <div className="mono" style={{fontSize:12.5,color:'#1a1a1a',fontWeight:500}}>{r.code}</div>
                     <div style={{fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.name}</div>
+                    <div className="inv-col-detalle" style={{fontSize:12,color:'#8a8a82',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{r.detalle||'—'}</div>
                     <div className="inv-col-ubic"><span className="ubic-badge">{r.ubic}</span></div>
                     <div className="inv-col-cat" style={{color:'#1a1a1a'}}>{r.cat}</div>
                     <div className="inv-col-sizes" style={{color:'#1a1a1a'}}>{r.sizesLabel}</div>
@@ -4846,6 +4847,7 @@ tfoot td{padding:9px 12px;font-weight:700}
                       <div style={{flex:1}}>
                         <div className="mono" style={{fontSize:12.5,color:'#8a8a82'}}>{detail.code}</div>
                         <div style={{fontWeight:800,fontSize:22,marginTop:3}}>{detail.name}</div>
+                        {detail.detalle && <div style={{fontSize:13,color:'#5a5a52',marginTop:4}}>{detail.detalle}</div>}
                         <div style={{display:'flex',gap:8,marginTop:9,alignItems:'center',flexWrap:'wrap'}}>
                           <span className="badge gray">{detail.cat}</span>
                           {detail.low && <span className="badge low">Bajo mínimo</span>}
@@ -8113,6 +8115,10 @@ tfoot td{padding:9px 12px;font-weight:700}
               <div className="form-group">
                 <label className="field-label">Nombre del artículo</label>
                 <input className="field-input" value={na.name} onChange={e => setNa(p=>({...p,name:e.target.value}))} placeholder="Ej. Camiseta Titular 2026" />
+              </div>
+              <div className="form-group">
+                <label className="field-label">Detalle <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional)</span></label>
+                <input className="field-input" value={na.detalle||''} onChange={e => setNa(p=>({...p,detalle:e.target.value}))} placeholder="Ej. Manga corta, color azul marino" maxLength={80} />
               </div>
               <div className="form-group">
                 <label className="field-label">Precio Tienda (Socio) <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional)</span></label>
