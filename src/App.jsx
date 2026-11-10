@@ -1575,7 +1575,7 @@ ${articlesHtml}
     const a = db.articles.find(x => x.id === selectedId); if(!a) return
     const photos = a.photos?.length ? a.photos : (a.photo ? [a.photo] : [])
     const sizes = a.sizes.map(s=>({...s}))
-    setEditing({id:a.id, code:a.code, name:a.name, cat:a.cat, ubic:a.ubic||'', precio:a.precio||'', photos, sizes, _origSizes:sizes}); setModal('edit')
+    setEditing({id:a.id, code:a.code, name:a.name, cat:a.cat, ubic:a.ubic||'', precio:a.precio||'', detalle:a.detalle||'', photos, sizes, _origSizes:sizes}); setModal('edit')
   }
   const saveEdit = async () => {
     if(!editing.code.trim() || !editing.name.trim()) { showToast('Completá código y nombre.'); return }
@@ -1597,7 +1597,7 @@ ${articlesHtml}
         nextMov,
         movimientos: [...newMovs, ...s.movimientos],
         articles: s.articles.map(a => {
-          if(a.id === editing.id) return {...a, code:newCode, name:editing.name.trim(), cat:editing.cat, ubic:editing.ubic.trim(), precio:parseFloat(editing.precio)||0, photos:newPhotos, photo:'', sizes:newSizes}
+          if(a.id === editing.id) return {...a, code:newCode, name:editing.name.trim(), cat:editing.cat, ubic:editing.ubic.trim(), precio:parseFloat(editing.precio)||0, detalle:editing.detalle||'', photos:newPhotos, photo:'', sizes:newSizes}
           if(a.code === newCode) {
             const existingPhotos = a.photos?.length ? a.photos : (a.photo ? [a.photo] : [])
             return {...a, name:editing.name.trim(), cat:editing.cat, photos:newPhotos.length ? newPhotos : existingPhotos, photo:''}
@@ -8315,6 +8315,10 @@ tfoot td{padding:9px 12px;font-weight:700}
               <div className="form-group">
                 <label className="field-label">Nombre del artículo</label>
                 <input className="field-input" value={editing.name} onChange={e => setEditing(p=>({...p,name:e.target.value}))} />
+              </div>
+              <div className="form-group">
+                <label className="field-label">Detalle <span style={{fontSize:11,color:'#8a8a82',fontWeight:400}}>(opcional)</span></label>
+                <input className="field-input" value={editing.detalle||''} onChange={e => setEditing(p=>({...p,detalle:e.target.value}))} placeholder="Ej. Manga corta, color azul marino" maxLength={80} />
               </div>
               <div className="form-cols-2" style={{gap:12}}>
                 <div className="form-group">
