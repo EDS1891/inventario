@@ -1818,6 +1818,7 @@ ${articlesHtml}
     const photos = entryWithPhoto ? (entryWithPhoto.photos?.length ? entryWithPhoto.photos : [entryWithPhoto.photo]) : []
     return {
       ...g,
+      total: tot,
       totalFmt: fmt(tot),
       sizesLabel: TALLE_ORDER.filter(t => allSizes.some(s => s.talle === t)).join(' · '),
       low,
@@ -4832,6 +4833,18 @@ tfoot td{padding:9px 12px;font-weight:700}
                 ))}
                 {invRows.length === 0 && <div className="empty">{search ? `Sin resultados para «${search}».` : 'Sin artículos. Creá el primero con + Artículo.'}</div>}
               </div>
+              {(filterShelf || filterUbic) && invRows.length > 0 && (() => {
+                const totalPrendas = invRows.reduce((s, r) => s + (r.total || 0), 0)
+                const ubicLabel = filterUbic || filterShelf
+                return (
+                  <div style={{marginTop:12,padding:'10px 16px',background:'#1a1a12',borderRadius:8,display:'flex',alignItems:'center',gap:12}}>
+                    <span className="ubic-badge" style={{background:'#F2CB12',color:'#1a1a12',fontWeight:700,border:'none'}}>{ubicLabel}</span>
+                    <span style={{color:'#F2CB12',fontWeight:700,fontSize:14}}>{invRows.length} referencia{invRows.length !== 1 ? 's' : ''}</span>
+                    <span style={{color:'#8a8a72',fontSize:13}}>·</span>
+                    <span style={{color:'#fff',fontWeight:700,fontSize:14}}>{totalPrendas} unidad{totalPrendas !== 1 ? 'es' : ''} en stock</span>
+                  </div>
+                )
+              })()}
             </>
           )}
 
