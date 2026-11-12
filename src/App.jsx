@@ -72,6 +72,11 @@ let ownSaveTimestamp = 0
 let savesBlocked = false
 // Prevents auto-save from running concurrently with a manual save
 let manualSaveInProgress = false
+// Circuit breaker: pause auto-saves after consecutive failures to avoid hammering Supabase
+let cbFailures = 0
+let cbOpenUntil = 0
+const CB_MAX_FAILURES = 2
+const CB_BACKOFF_MS = 5 * 60 * 1000
 
 async function loadFromSupabase() {
   const [{ data, error }, { data: usersRow }, { data: utiRow }, { data: alertasRow }] = await Promise.all([
@@ -130,10 +135,13 @@ async function loadFromSupabase() {
 }
 
 async function saveToSupabase(db, isManualSave = false) {
-  if (savesBlocked) {
+  if (savesBlocked) return false
+  if (!isManualSave && manualSaveInProgress) return true
+  // Circuit breaker: skip auto-saves while paused, but allow manual saves through
+  if (!isManualSave && cbOpenUntil > Date.now()) {
+    console.warn('[Save] Circuit breaker activo — guardado automático pausado hasta', new Date(cbOpenUntil).toLocaleTimeString())
     return false
   }
-  if (!isManualSave && manualSaveInProgress) return true
   ownSaveTimestamp = Date.now()
   const now = new Date().toISOString()
   const rows = [
@@ -141,9 +149,10 @@ async function saveToSupabase(db, isManualSave = false) {
     { id: 3, articles: db.camisetasUtileria || [], deliveries: db.reposiciones || [], movimientos: db.plantel || [], next_id: 0, next_del: db.nextRep || 1, next_mov: 0, updated_at: now },
     { id: 4, deliveries: db.repoAlertas || [], articles: db.descExtras || [], updated_at: now },
   ]
-  for (let attempt = 1; attempt <= 5; attempt++) {
+  const maxAttempts = isManualSave ? 3 : 2
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     if (!isManualSave && manualSaveInProgress) return false
-    if (attempt > 1) await new Promise(r => setTimeout(r, 2000 * (attempt - 1)))
+    if (attempt > 1) await new Promise(r => setTimeout(r, 3000))
     const r1 = await supabase.from('deposito_state').upsert(rows[0])
     const r4 = await supabase.from('deposito_state').upsert(rows[2])
     // Row 3 uses an RPC with SET LOCAL statement_timeout = '120s'; updated_at set by NOW() server-side
@@ -155,11 +164,21 @@ async function saveToSupabase(db, isManualSave = false) {
     })
     if (!r1.error && !r3.error && !r4.error) {
       ownSaveTimestamp = Date.now()
+      cbFailures = 0
+      cbOpenUntil = 0
       return true
     }
     if (r1.error) console.error(`[Save] Error fila 1 (intento ${attempt}):`, r1.error.message, r1.error.code)
     if (r3.error) console.error(`[Save] Error fila 3 (intento ${attempt}):`, r3.error.message, r3.error.code)
     if (r4.error) console.error(`[Save] Error fila 4 (intento ${attempt}):`, r4.error.message, r4.error.code)
+  }
+  if (!isManualSave) {
+    cbFailures++
+    if (cbFailures >= CB_MAX_FAILURES) {
+      cbOpenUntil = Date.now() + CB_BACKOFF_MS
+      cbFailures = 0
+      console.warn('[Save] Circuit breaker abierto — guardados automáticos pausados 5 minutos')
+    }
   }
   return false
 }
