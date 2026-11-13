@@ -252,6 +252,7 @@ function isLow(a) { return a.sizes.some(s => (s.min||0) > 0 && s.qty <= (s.min||
 export default function App() {
   const [db, setDb] = useState(EMPTY_DB)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [view, setView] = useState('panel')
   const [selectedId, setSelectedId] = useState(null)
   const [selectedCode, setSelectedCode] = useState(null)
@@ -365,6 +366,8 @@ export default function App() {
         setDb({...rest, articles: removeZeroStock(rest.articles || [])})
         saveEnabled.current = true
         setSaveStatus('saved')
+      } else {
+        setLoadError(true)
       }
       setLoading(false)
     })
@@ -3006,6 +3009,15 @@ tfoot td{padding:9px 12px;font-weight:700}
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',flexDirection:'column',gap:16,background:'#121212'}}>
       <img src="/escudo.png" alt="Peñarol" style={{height:64,opacity:.9}} />
       <div style={{color:'#f2cb12',fontFamily:'Oswald,sans-serif',fontSize:14,letterSpacing:'.1em'}}>CARGANDO…</div>
+    </div>
+  )
+
+  if (loadError) return (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',flexDirection:'column',gap:20,background:'#121212',padding:32,textAlign:'center'}}>
+      <img src="/escudo.png" alt="Peñarol" style={{height:56,opacity:.7}} />
+      <div style={{color:'#e8a000',fontFamily:'Oswald,sans-serif',fontSize:16,letterSpacing:'.05em'}}>ERROR AL CONECTAR CON EL SERVIDOR</div>
+      <div style={{color:'#8a8a82',fontSize:13,maxWidth:320,lineHeight:1.6}}>No se pudo cargar la base de datos. Los datos no fueron modificados. Verificá tu conexión a internet o que Supabase esté activo.</div>
+      <button onClick={() => { setLoadError(false); setLoading(true); loadFromSupabase().then(data => { if (data) { if (data._maxUpdatedAt) ownSaveTimestamp = data._maxUpdatedAt; const { _maxUpdatedAt, ...rest } = data; setDb({...rest, articles: removeZeroStock(rest.articles || [])}); saveEnabled.current = true; setSaveStatus('saved'); } else { setLoadError(true); } setLoading(false); }) }} style={{background:'#f2cb12',color:'#1a1a12',border:'none',borderRadius:8,padding:'10px 28px',fontWeight:700,fontSize:14,cursor:'pointer',fontFamily:'Oswald,sans-serif',letterSpacing:'.05em'}}>REINTENTAR</button>
     </div>
   )
 
