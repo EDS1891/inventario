@@ -122,6 +122,35 @@ nav.sidebar-nav {
 }
 .topbar-spacer { flex: 1; }
 
+.save-status {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .03em;
+  padding: 3px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  transition: opacity .3s;
+}
+.save-status--saved  { color: #4a9a5a; background: rgba(74,154,90,.12); }
+.save-status--pending { color: #666660; }
+.save-status--saving  { color: #8a8a82; }
+.save-status--error   { color: #e8a000; background: rgba(232,160,0,.1); }
+.save-status--blocked { color: #e8a000; background: rgba(232,160,0,.1); }
+.save-spin {
+  width: 10px; height: 10px;
+  border: 1.5px solid #666;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  display: inline-block;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 .search-box {
   display: flex;
   align-items: center;
@@ -526,6 +555,7 @@ select.field-input { cursor: pointer; }
   .topbar img { flex-shrink: 0; }
   .search-box { flex: 1; min-width: 0; width: auto; }
   .topbar .btn-label { display: none; }
+  .save-status { display: none; }
   .topbar .btn { padding: 0 10px; flex-shrink: 0; }
 
   .content { padding: 16px; }

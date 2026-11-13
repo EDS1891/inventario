@@ -83,7 +83,7 @@ async function loadFromSupabase() {
     supabase.from('deposito_state').select('*').eq('id', 1).single(),
     supabase.from('deposito_state').select('deliveries').eq('id', 2).single(),
     supabase.from('deposito_state').select('articles,deliveries,movimientos,next_del,updated_at').eq('id', 3).single(),
-    supabase.from('deposito_state').select('deliveries,articles').eq('id', 4).single(),
+    supabase.from('deposito_state').select('deliveries,articles,updated_at').eq('id', 4).single(),
   ])
   if (error || !data) { console.error('[Supabase] Error cargando datos:', error?.message, error?.code, error?.details); return null }
   if (!utiRow) { console.error('[Supabase] Error cargando fila id=3 (plantel/reposiciones) — abortando carga para evitar sobreescribir datos'); return null }
@@ -130,15 +130,19 @@ async function loadFromSupabase() {
     plantel: utiRow?.movimientos || [],
     repoAlertas: alertasRow?.deliveries || [],
     descExtras: alertasRow?.articles || [],
-    _utiUpdatedAt: utiRow?.updated_at || null,
+    _maxUpdatedAt: Math.max(
+      data?.updated_at ? new Date(data.updated_at).getTime() : 0,
+      utiRow?.updated_at ? new Date(utiRow.updated_at).getTime() : 0,
+      alertasRow?.updated_at ? new Date(alertasRow.updated_at).getTime() : 0,
+    ) || null,
   }
 }
 
-async function saveToSupabase(db, isManualSave = false) {
+async function saveToSupabase(db, isManualSave = false, isFlush = false) {
   if (savesBlocked) return false
   if (!isManualSave && manualSaveInProgress) return true
-  // Circuit breaker: skip auto-saves while paused, but allow manual saves through
-  if (!isManualSave && cbOpenUntil > Date.now()) {
+  // Circuit breaker: skip auto-saves while paused, but allow manual saves and visibility flush through
+  if (!isManualSave && !isFlush && cbOpenUntil > Date.now()) {
     console.warn('[Save] Circuit breaker activo — guardado automático pausado hasta', new Date(cbOpenUntil).toLocaleTimeString())
     return false
   }
@@ -280,6 +284,7 @@ export default function App() {
   const [utiModal, setUtiModal] = useState(false)
   const [utiDetalle, setUtiDetalle] = useState(null)
   const [syncBanner, setSyncBanner] = useState(false)
+  const [saveStatus, setSaveStatus] = useState('idle')
   const [repForm, setRepForm] = useState({ editId:null, concepto:'', descuento:true, rows:[], extraRows:[], fechaPartido:'', observaciones:'' })
   const [repObsEdit, setRepObsEdit] = useState(null)
   const [repModal, setRepModal] = useState(false)
@@ -355,10 +360,11 @@ export default function App() {
   useEffect(() => {
     loadFromSupabase().then(data => {
       if (data) {
-        if (data._utiUpdatedAt) ownSaveTimestamp = new Date(data._utiUpdatedAt).getTime()
-        const { _utiUpdatedAt, ...rest } = data
+        if (data._maxUpdatedAt) ownSaveTimestamp = data._maxUpdatedAt
+        const { _maxUpdatedAt, ...rest } = data
         setDb({...rest, articles: removeZeroStock(rest.articles || [])})
         saveEnabled.current = true
+        setSaveStatus('saved')
       }
       setLoading(false)
     })
@@ -367,11 +373,12 @@ export default function App() {
   const doLoadSync = () => {
     loadFromSupabase().then(data => {
       if (data) {
-        if (data._utiUpdatedAt) ownSaveTimestamp = new Date(data._utiUpdatedAt).getTime()
+        if (data._maxUpdatedAt) ownSaveTimestamp = data._maxUpdatedAt
         savesBlocked = false
-        const { _utiUpdatedAt, ...rest } = data
+        const { _maxUpdatedAt, ...rest } = data
         setDb({...rest, articles: removeZeroStock(rest.articles || [])})
         showToast('Datos actualizados. Guardado reactivado.')
+        setSaveStatus('saved')
       }
       setSyncBanner(false)
     })
@@ -380,16 +387,19 @@ export default function App() {
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const { data } = await supabase.from('deposito_state').select('updated_at').eq('id', 3).single()
-        if (data?.updated_at) {
-          const remoteTs = new Date(data.updated_at).getTime()
+        const { data: rows } = await supabase.from('deposito_state').select('id,updated_at').in('id', [1, 3, 4])
+        if (rows?.length) {
+          const remoteTs = rows.reduce((max, row) => {
+            const t = row.updated_at ? new Date(row.updated_at).getTime() : 0
+            return Math.max(max, t)
+          }, 0)
           if (remoteTs > ownSaveTimestamp + 5000) {
             savesBlocked = true
             setSyncBanner(true)
           }
         }
       } catch {}
-    }, 60000)
+    }, 20000)
     return () => clearInterval(interval)
   }, [])
 
@@ -407,7 +417,7 @@ export default function App() {
     repDirtyRef.current = true
   }, [repForm])
 
-  // Save to Supabase whenever data changes (debounced 800ms).
+  // Save to Supabase whenever data changes (debounced 5s).
   // Skip the first fire right after the initial load to avoid overwriting data that
   // another session saved between our load and our first debounce tick.
   useEffect(() => {
@@ -415,11 +425,18 @@ export default function App() {
     if (!initialLoadDone.current) { initialLoadDone.current = true; return }
     clearTimeout(saveTimer.current)
     hasPendingSave.current = true
+    setSaveStatus('pending')
     saveTimer.current = setTimeout(async () => {
       hasPendingSave.current = false
       if (manualSavingRef.current) return
+      setSaveStatus('saving')
       const ok = await saveToSupabase(db)
-      if (!ok) showToast('Error al guardar. Verificá la conexión.')
+      if (ok) {
+        setSaveStatus('saved')
+      } else {
+        setSaveStatus(savesBlocked ? 'conflict' : 'error')
+        showToast('Error al guardar. Verificá la conexión.')
+      }
     }, 5000)
   }, [db, loading])
 
@@ -430,7 +447,7 @@ export default function App() {
       if (!saveEnabled.current || !hasPendingSave.current) return
       clearTimeout(saveTimer.current)
       hasPendingSave.current = false
-      saveToSupabase(dbRef.current)
+      saveToSupabase(dbRef.current, false, true)
     }
     document.addEventListener('visibilitychange', flush)
     return () => document.removeEventListener('visibilitychange', flush)
@@ -4578,6 +4595,15 @@ tfoot td{padding:9px 12px;font-weight:700}
             {{panel:'PANEL PRINCIPAL',inventario:'INVENTARIO',detalle:'DETALLE',entregas:'ENTREGAS',movimientos:'MOVIMIENTOS',receptores:'RECEPTORES','usuarios-reg':'USUARIOS REGISTRADOS',utileria:'CAMISETAS UTILERÍA',reposiciones:'REPOSICIÓN CAMISETAS','contrato-puma':'CONTRATO PUMA','prestamo-puma':'INDUMENTARIA A PRÉSTAMO'}[view]}
           </div>
           <div className="topbar-spacer" />
+          {saveStatus !== 'idle' && saveStatus !== 'conflict' && (
+            <div className={'save-status save-status--' + saveStatus}>
+              {saveStatus === 'saving' && <span className="save-spin" aria-hidden="true" />}
+              {saveStatus === 'saved' && '✓ Guardado'}
+              {saveStatus === 'pending' && 'Sin guardar'}
+              {saveStatus === 'error' && '⚠ Sin guardar'}
+              {saveStatus === 'blocked' && '⏸ Pausado'}
+            </div>
+          )}
           <div className="search-box">
             <span className="search-icon" />
             <input
