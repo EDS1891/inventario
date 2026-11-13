@@ -4607,11 +4607,10 @@ tfoot td{padding:9px 12px;font-weight:700}
             {{panel:'PANEL PRINCIPAL',inventario:'INVENTARIO',detalle:'DETALLE',entregas:'ENTREGAS',movimientos:'MOVIMIENTOS',receptores:'RECEPTORES','usuarios-reg':'USUARIOS REGISTRADOS',utileria:'CAMISETAS UTILERÍA',reposiciones:'REPOSICIÓN CAMISETAS','contrato-puma':'CONTRATO PUMA','prestamo-puma':'INDUMENTARIA A PRÉSTAMO'}[view]}
           </div>
           <div className="topbar-spacer" />
-          {saveStatus !== 'idle' && saveStatus !== 'conflict' && (
+          {saveStatus !== 'idle' && saveStatus !== 'conflict' && saveStatus !== 'pending' && (
             <div className={'save-status save-status--' + saveStatus}>
-              {saveStatus === 'saving' && <span className="save-spin" aria-hidden="true" />}
+              {saveStatus === 'saving' && <><span className="save-spin" aria-hidden="true" /> Guardando…</>}
               {saveStatus === 'saved' && '✓ Guardado'}
-              {saveStatus === 'pending' && 'Sin guardar'}
               {saveStatus === 'error' && '⚠ Sin guardar'}
               {saveStatus === 'blocked' && '⏸ Pausado'}
             </div>
