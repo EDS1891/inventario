@@ -3073,7 +3073,7 @@ tfoot td{padding:9px 12px;font-weight:700}
               </div>
             </div>
             <div style={{display:'flex',justifyContent:'flex-end',gap:2}}>
-              <button title="Sincronizar" onClick={() => saveToSupabase(db, true).then(ok => showToast(ok ? 'Datos sincronizados.' : savesBlocked ? 'Sincronizá primero — hay cambios de otro usuario.' : 'Error al sincronizar. Verificá la conexión.'))} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 6px'}}>↺</button>
+              <button title="Sincronizar" onClick={() => saveToSupabase(db, true).then(ok => { if (ok) { setSaveStatus('saved'); showToast('Datos sincronizados.') } else { showToast(savesBlocked ? 'Sincronizá primero — hay cambios de otro usuario.' : 'Error al sincronizar. Verificá la conexión.') } })} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 6px'}}>↺</button>
               <button title="Cambiar contraseña" onClick={()=>{setChangePassForm({current:'',newPass:'',newPass2:'',err:''});setModal('cambiar-pass')}} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:16,padding:'0 6px'}}>🔑</button>
               <button title="Cerrar sesión" onClick={doLogout} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 6px'}}>⏻</button>
             </div>
@@ -4589,7 +4589,7 @@ tfoot td{padding:9px 12px;font-weight:700}
             </div>
           </div>
           <div style={{display:'flex',justifyContent:'flex-end',gap:2}}>
-            <button title="Sincronizar con servidor" onClick={() => saveToSupabase(db, true).then(ok => showToast(ok ? 'Datos sincronizados.' : savesBlocked ? 'Sincronizá primero — hay cambios de otro usuario.' : 'Error al sincronizar. Verificá la conexión.'))} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 6px'}}>↺</button>
+            <button title="Sincronizar con servidor" onClick={() => saveToSupabase(db, true).then(ok => { if (ok) { setSaveStatus('saved'); showToast('Datos sincronizados.') } else { showToast(savesBlocked ? 'Sincronizá primero — hay cambios de otro usuario.' : 'Error al sincronizar. Verificá la conexión.') } })} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 6px'}}>↺</button>
             <button title="Cambiar contraseña" onClick={()=>{setChangePassForm({current:'',newPass:'',newPass2:'',err:''});setModal('cambiar-pass')}} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:16,padding:'0 6px'}}>🔑</button>
             <button title="Gestionar usuarios" onClick={openUserMgmt} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 6px'}}>⚙</button>
             <button title="Cerrar sesión" onClick={doLogout} style={{background:'none',border:'none',color:'#8a8a82',cursor:'pointer',fontSize:18,padding:'0 6px'}}>⏻</button>
