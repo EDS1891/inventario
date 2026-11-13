@@ -4,7 +4,7 @@ const clean = s => (s || '').replace(/^﻿/, '').trim()
 
 function fetchWithTimeout(url, options = {}) {
   const controller = new AbortController()
-  const id = setTimeout(() => controller.abort(), 8000)
+  const id = setTimeout(() => controller.abort(), 15000)
   return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(id))
 }
 
