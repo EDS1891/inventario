@@ -139,7 +139,7 @@ async function loadFromSupabase() {
 }
 
 async function saveToSupabase(db, isManualSave = false, isFlush = false) {
-  if (savesBlocked) return false
+  if (savesBlocked && !isManualSave) return false
   if (!isManualSave && manualSaveInProgress) return true
   // Circuit breaker: skip auto-saves while paused, but allow manual saves and visibility flush through
   if (!isManualSave && !isFlush && cbOpenUntil > Date.now()) {
@@ -170,6 +170,7 @@ async function saveToSupabase(db, isManualSave = false, isFlush = false) {
       ownSaveTimestamp = Date.now()
       cbFailures = 0
       cbOpenUntil = 0
+      if (isManualSave) savesBlocked = false
       return true
     }
     if (r1.error) console.error(`[Save] Error fila 1 (intento ${attempt}):`, r1.error.message, r1.error.code)
