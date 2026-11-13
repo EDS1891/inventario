@@ -356,7 +356,13 @@ export default function App() {
   const [mv, setMv] = useState({ qtys:{}, estante:'1', altura:'A' })
 
   // Keep dbRef current so visibilitychange flush always sees latest state
-  useEffect(() => { dbRef.current = db }, [db])
+  // Also backup to localStorage so unsaved changes survive a tab close while Supabase is down
+  useEffect(() => {
+    dbRef.current = db
+    if (saveEnabled.current) {
+      try { localStorage.setItem('penarol_inv_backup', JSON.stringify({ data: db, ts: Date.now() })) } catch {}
+    }
+  }, [db])
 
   useEffect(() => {
     loadFromSupabase().then(data => {
@@ -3012,14 +3018,20 @@ tfoot td{padding:9px 12px;font-weight:700}
     </div>
   )
 
-  if (loadError) return (
-    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',flexDirection:'column',gap:20,background:'#121212',padding:32,textAlign:'center'}}>
-      <img src="/escudo.png" alt="Peñarol" style={{height:56,opacity:.7}} />
-      <div style={{color:'#e8a000',fontFamily:'Oswald,sans-serif',fontSize:16,letterSpacing:'.05em'}}>ERROR AL CONECTAR CON EL SERVIDOR</div>
-      <div style={{color:'#8a8a82',fontSize:13,maxWidth:320,lineHeight:1.6}}>No se pudo cargar la base de datos. Los datos no fueron modificados. Verificá tu conexión a internet o que Supabase esté activo.</div>
-      <button onClick={() => { setLoadError(false); setLoading(true); loadFromSupabase().then(data => { if (data) { if (data._maxUpdatedAt) ownSaveTimestamp = data._maxUpdatedAt; const { _maxUpdatedAt, ...rest } = data; setDb({...rest, articles: removeZeroStock(rest.articles || [])}); saveEnabled.current = true; setSaveStatus('saved'); } else { setLoadError(true); } setLoading(false); }) }} style={{background:'#f2cb12',color:'#1a1a12',border:'none',borderRadius:8,padding:'10px 28px',fontWeight:700,fontSize:14,cursor:'pointer',fontFamily:'Oswald,sans-serif',letterSpacing:'.05em'}}>REINTENTAR</button>
-    </div>
-  )
+  if (loadError) {
+    const localBackup = (() => { try { return JSON.parse(localStorage.getItem('penarol_inv_backup')) } catch { return null } })()
+    return (
+      <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',flexDirection:'column',gap:16,background:'#121212',padding:32,textAlign:'center'}}>
+        <img src="/escudo.png" alt="Peñarol" style={{height:56,opacity:.7}} />
+        <div style={{color:'#e8a000',fontFamily:'Oswald,sans-serif',fontSize:16,letterSpacing:'.05em'}}>ERROR AL CONECTAR CON EL SERVIDOR</div>
+        <div style={{color:'#8a8a82',fontSize:13,maxWidth:320,lineHeight:1.6}}>No se pudo cargar la base de datos. Verificá tu conexión a internet o que Supabase esté activo.</div>
+        <button onClick={() => { setLoadError(false); setLoading(true); loadFromSupabase().then(data => { if (data) { if (data._maxUpdatedAt) ownSaveTimestamp = data._maxUpdatedAt; const { _maxUpdatedAt, ...rest } = data; setDb({...rest, articles: removeZeroStock(rest.articles || [])}); saveEnabled.current = true; setSaveStatus('saved'); } else { setLoadError(true); } setLoading(false); }) }} style={{background:'#f2cb12',color:'#1a1a12',border:'none',borderRadius:8,padding:'10px 28px',fontWeight:700,fontSize:14,cursor:'pointer',fontFamily:'Oswald,sans-serif',letterSpacing:'.05em'}}>REINTENTAR</button>
+        {localBackup && <button onClick={() => { const {data, ts} = localBackup; setDb({...data, articles: removeZeroStock(data.articles || [])}); saveEnabled.current = true; setSaveStatus('error'); setLoadError(false); setLoading(false); showToast('Datos locales restaurados. Presioná ↺ cuando vuelva la conexión.') }} style={{background:'none',color:'#8a8a82',border:'1px solid #333',borderRadius:8,padding:'8px 20px',fontSize:13,cursor:'pointer'}}>
+          USAR DATOS LOCALES ({new Date(localBackup.ts).toLocaleTimeString('es-UY', {hour:'2-digit',minute:'2-digit'})})
+        </button>}
+      </div>
+    )
+  }
 
   // ---- Vista del receptor ----
   if (isReceptor) {
