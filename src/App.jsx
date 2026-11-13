@@ -402,7 +402,7 @@ export default function App() {
           }
         }
       } catch {}
-    }, 20000)
+    }, 30000)
     return () => clearInterval(interval)
   }, [])
 
