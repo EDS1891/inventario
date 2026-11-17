@@ -381,6 +381,7 @@ export default function App() {
   }, [])
 
   const doLoadSync = () => {
+    showToast('Cargando datos del servidor…')
     loadFromSupabase().then(data => {
       if (data) {
         if (data._maxUpdatedAt) ownSaveTimestamp = data._maxUpdatedAt
@@ -389,9 +390,17 @@ export default function App() {
         setDb({...rest, articles: removeZeroStock(rest.articles || [])})
         showToast('Datos actualizados. Guardado reactivado.')
         setSaveStatus('saved')
+        setSyncBanner(false)
+      } else {
+        showToast('No se pudo conectar al servidor. Intentá de nuevo.')
       }
-      setSyncBanner(false)
     })
+  }
+
+  const dismissSyncBanner = () => {
+    ownSaveTimestamp = Date.now()
+    savesBlocked = false
+    setSyncBanner(false)
   }
 
   useEffect(() => {
@@ -3046,6 +3055,7 @@ tfoot td{padding:9px 12px;font-weight:700}
           <div style={{position:'fixed',top:0,left:0,right:0,zIndex:9999,background:'#e8a000',color:'#1a1a1a',display:'flex',alignItems:'center',justifyContent:'center',gap:12,padding:'9px 16px',fontSize:13,fontWeight:600,boxShadow:'0 2px 8px rgba(0,0,0,.3)'}}>
             <span>⚠ Otro usuario hizo cambios — tus cambios <strong>no se están guardando</strong>. Sincronizá para continuar.</span>
             <button onClick={doLoadSync} style={{background:'#1a1a1a',color:'#f2cb12',border:'none',borderRadius:6,padding:'4px 14px',cursor:'pointer',fontSize:12,fontWeight:700}}>Sincronizar ahora</button>
+            <button onClick={dismissSyncBanner} title="Ignorar y continuar guardando" style={{background:'none',border:'none',color:'#1a1a1a',cursor:'pointer',fontSize:18,lineHeight:1,padding:'0 2px'}}>✕</button>
           </div>
         )}
         <div className={`mobile-overlay${sidebarOpen?' open':''}`} onClick={() => setSidebarOpen(false)} />
@@ -4520,7 +4530,7 @@ tfoot td{padding:9px 12px;font-weight:700}
         <div style={{position:'fixed',top:0,left:0,right:0,zIndex:9999,background:'#e8a000',color:'#1a1a1a',display:'flex',alignItems:'center',justifyContent:'center',gap:12,padding:'9px 16px',fontSize:13,fontWeight:600,boxShadow:'0 2px 8px rgba(0,0,0,.3)'}}>
           <span>⚠ Hay cambios realizados por otro usuario</span>
           <button onClick={doLoadSync} style={{background:'#1a1a1a',color:'#f2cb12',border:'none',borderRadius:6,padding:'4px 14px',cursor:'pointer',fontSize:12,fontWeight:700}}>Sincronizar</button>
-          <button onClick={() => setSyncBanner(false)} style={{background:'none',border:'none',color:'#1a1a1a',cursor:'pointer',fontSize:18,lineHeight:1,padding:'0 2px'}}>✕</button>
+          <button onClick={dismissSyncBanner} style={{background:'none',border:'none',color:'#1a1a1a',cursor:'pointer',fontSize:18,lineHeight:1,padding:'0 2px'}}>✕</button>
         </div>
       )}
       {/* Mobile overlay */}
