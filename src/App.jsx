@@ -77,10 +77,27 @@ let cbFailures = 0
 let cbOpenUntil = 0
 const CB_MAX_FAILURES = 2
 const CB_BACKOFF_MS = 5 * 60 * 1000
+const CACHE_KEY = 'penarol_inv_cache'
+function getCache() { try { return JSON.parse(localStorage.getItem(CACHE_KEY)) } catch { return null } }
+function setCache(ts, data) { try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ts, data })) } catch {} }
 
 async function loadFromSupabase() {
+  // Chequeo liviano de timestamp para evitar descarga innecesaria (reduce egress)
+  let remoteTs = null
+  try {
+    const { data: tsRows } = await supabase.from('deposito_state').select('id,updated_at').in('id', [1, 3, 4])
+    if (tsRows?.length) remoteTs = tsRows.reduce((max, row) => Math.max(max, row.updated_at ? new Date(row.updated_at).getTime() : 0), 0)
+  } catch {}
+
+  const cached = getCache()
+  if (cached?.ts && cached?.data) {
+    if (remoteTs === null) { console.log('[Load] Supabase no disponible — usando caché local'); return { ...cached.data, _maxUpdatedAt: cached.ts } }
+    if (cached.ts >= remoteTs) { console.log('[Load] Caché vigente — sin descarga'); return { ...cached.data, _maxUpdatedAt: cached.ts } }
+  }
+  if (remoteTs === null && !cached) return null
+
   const [{ data, error }, { data: usersRow }, { data: utiRow }, { data: alertasRow }] = await Promise.all([
-    supabase.from('deposito_state').select('*').eq('id', 1).single(),
+    supabase.from('deposito_state').select('articles,deliveries,movimientos,next_id,next_del,next_mov,updated_at').eq('id', 1).single(),
     supabase.from('deposito_state').select('deliveries').eq('id', 2).single(),
     supabase.from('deposito_state').select('articles,deliveries,movimientos,next_del,updated_at').eq('id', 3).single(),
     supabase.from('deposito_state').select('deliveries,articles,updated_at').eq('id', 4).single(),
@@ -114,7 +131,7 @@ async function loadFromSupabase() {
     supabase.from('deposito_state').upsert({ id: 1, articles: data.articles, deliveries, movimientos: data.movimientos, next_id: data.next_id, next_del: data.next_del, next_mov: data.next_mov })
       .then(({ error }) => { if (error) console.error('Error migrando creadoPor:', error.message) })
   }
-  return {
+  const result = {
     articles: (data.articles || []).map(a => ({
       ...a, sizes: (a.sizes || []).map(s => ({ talle: s.talle, qty: Number(s.qty)||0, min: Number(s.min)||0 }))
     })),
@@ -136,6 +153,8 @@ async function loadFromSupabase() {
       alertasRow?.updated_at ? new Date(alertasRow.updated_at).getTime() : 0,
     ) || null,
   }
+  if (result._maxUpdatedAt) { const { _maxUpdatedAt, ...toCache } = result; setCache(result._maxUpdatedAt, toCache) }
+  return result
 }
 
 async function saveToSupabase(db, isManualSave = false, isFlush = false) {
@@ -171,6 +190,7 @@ async function saveToSupabase(db, isManualSave = false, isFlush = false) {
       cbFailures = 0
       cbOpenUntil = 0
       if (isManualSave) savesBlocked = false
+      setCache(ownSaveTimestamp, db)
       return true
     }
     if (r1.error) console.error(`[Save] Error fila 1 (intento ${attempt}):`, r1.error.message, r1.error.code)
