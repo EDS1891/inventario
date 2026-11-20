@@ -432,7 +432,7 @@ export default function App() {
             const t = row.updated_at ? new Date(row.updated_at).getTime() : 0
             return Math.max(max, t)
           }, 0)
-          if (remoteTs > ownSaveTimestamp + 5000) {
+          if (remoteTs > ownSaveTimestamp + 60000) {
             savesBlocked = true
             setSyncBanner(true)
           }
