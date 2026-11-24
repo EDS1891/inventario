@@ -78,6 +78,7 @@ let cbOpenUntil = 0
 const CB_MAX_FAILURES = 2
 const CB_BACKOFF_MS = 5 * 60 * 1000
 const CACHE_KEY = 'penarol_inv_cache'
+let realtimeChannel = null
 function getCache() { try { return JSON.parse(localStorage.getItem(CACHE_KEY)) } catch { return null } }
 function setCache(ts, data) { try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ts, data })) } catch {} }
 
@@ -191,6 +192,7 @@ async function saveToSupabase(db, isManualSave = false, isFlush = false) {
       cbOpenUntil = 0
       if (isManualSave) savesBlocked = false
       setCache(ownSaveTimestamp, db)
+      try { realtimeChannel?.send({ type: 'broadcast', event: 'saved', payload: { ts: ownSaveTimestamp } }) } catch {}
       return true
     }
     if (r1.error) console.error(`[Save] Error fila 1 (intento ${attempt}):`, r1.error.message, r1.error.code)
@@ -424,6 +426,20 @@ export default function App() {
   }
 
   useEffect(() => {
+    const checkConflict = (remoteTs) => {
+      if (remoteTs > ownSaveTimestamp + 60000) {
+        savesBlocked = true
+        setSyncBanner(true)
+      }
+    }
+    // Realtime broadcast — detección instantánea sin consultas a la DB
+    const channel = supabase.channel('dep-sync')
+      .on('broadcast', { event: 'saved' }, ({ payload }) => {
+        if (payload?.ts) checkConflict(payload.ts)
+      })
+      .subscribe()
+    realtimeChannel = channel
+    // Fallback cada 5 min por si se perdió algún broadcast (tab cerrada, red caída)
     const interval = setInterval(async () => {
       try {
         const { data: rows } = await supabase.from('deposito_state').select('id,updated_at').in('id', [1, 3, 4])
@@ -432,14 +448,15 @@ export default function App() {
             const t = row.updated_at ? new Date(row.updated_at).getTime() : 0
             return Math.max(max, t)
           }, 0)
-          if (remoteTs > ownSaveTimestamp + 60000) {
-            savesBlocked = true
-            setSyncBanner(true)
-          }
+          checkConflict(remoteTs)
         }
       } catch {}
-    }, 30000)
-    return () => clearInterval(interval)
+    }, 5 * 60 * 1000)
+    return () => {
+      supabase.removeChannel(channel)
+      realtimeChannel = null
+      clearInterval(interval)
+    }
   }, [])
 
   // Redirect to inventario if the selected article was deleted (reached stock 0)
@@ -456,7 +473,7 @@ export default function App() {
     repDirtyRef.current = true
   }, [repForm])
 
-  // Save to Supabase whenever data changes (debounced 5s).
+  // Save to Supabase whenever data changes (debounced 10s).
   // Skip the first fire right after the initial load to avoid overwriting data that
   // another session saved between our load and our first debounce tick.
   useEffect(() => {
@@ -476,7 +493,7 @@ export default function App() {
         setSaveStatus(savesBlocked ? 'conflict' : 'error')
         showToast('Error al guardar. Verificá la conexión.')
       }
-    }, 5000)
+    }, 10000)
   }, [db, loading])
 
   // Flush any pending save immediately when tab is hidden (mobile: switch app / close tab).
