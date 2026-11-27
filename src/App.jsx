@@ -83,19 +83,22 @@ function getCache() { try { return JSON.parse(localStorage.getItem(CACHE_KEY)) }
 function setCache(ts, data) { try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ts, data })) } catch {} }
 
 async function loadFromSupabase() {
-  // Chequeo liviano de timestamp para evitar descarga innecesaria (reduce egress)
+  // Si hay caché, devolverla inmediatamente sin esperar a Supabase.
+  // La detección de cambios externos la maneja el canal Realtime + fallback de 5min.
+  const cached = getCache()
+  if (cached?.ts && cached?.data) {
+    console.log('[Load] Caché disponible — carga instantánea sin consulta a Supabase')
+    return { ...cached.data, _maxUpdatedAt: cached.ts }
+  }
+
+  // Sin caché: carga completa desde Supabase
+  console.log('[Load] Sin caché — cargando desde Supabase')
   let remoteTs = null
   try {
     const { data: tsRows } = await supabase.from('deposito_state').select('id,updated_at').in('id', [1, 3, 4])
     if (tsRows?.length) remoteTs = tsRows.reduce((max, row) => Math.max(max, row.updated_at ? new Date(row.updated_at).getTime() : 0), 0)
   } catch {}
-
-  const cached = getCache()
-  if (cached?.ts && cached?.data) {
-    if (remoteTs === null) { console.log('[Load] Supabase no disponible — usando caché local'); return { ...cached.data, _maxUpdatedAt: cached.ts } }
-    if (cached.ts >= remoteTs) { console.log('[Load] Caché vigente — sin descarga'); return { ...cached.data, _maxUpdatedAt: cached.ts } }
-  }
-  if (remoteTs === null && !cached) return null
+  if (remoteTs === null) return null
 
   const [{ data, error }, { data: usersRow }, { data: utiRow }, { data: alertasRow }] = await Promise.all([
     supabase.from('deposito_state').select('articles,deliveries,movimientos,next_id,next_del,next_mov,updated_at').eq('id', 1).single(),
