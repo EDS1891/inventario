@@ -1492,14 +1492,19 @@ ${articlesHtml}
     const BORDER = {left:{style:'thin'},right:{style:'thin'},top:{style:'thin'},bottom:{style:'thin'}}
     const wb = new ExcelJS.Workbook()
     const ws = wb.addWorksheet('Stock por Ubicación')
-    const headers = ['UBICACIÓN','CÓDIGO','ARTÍCULO','CATEGORÍA','PRECIO',...TALLE_ORDER,'TOTAL']
-    ws.columns = headers.map((h,i) => ({header:h, width: i===2?32 : i===4?10 : i<5?14 : 7}))
+    const hasDetalle = filtered.some(a => a.detalle?.trim())
+    const headers = ['UBICACIÓN','CÓDIGO','ARTÍCULO','CATEGORÍA','PRECIO',...TALLE_ORDER,'TOTAL', ...(hasDetalle?['OBSERVACIONES']:[])]
+    ws.columns = headers.map((h,i) => {
+      if(h==='OBSERVACIONES') return {header:h, width:30}
+      return {header:h, width: i===2?32 : i===4?10 : i<5?14 : 7}
+    })
     ws.getRow(1).eachCell(cell => { cell.fill=YELLOW; cell.font=F_BOLD; cell.border=BORDER; cell.alignment={horizontal:'center',vertical:'middle'} })
     ws.getRow(1).height = 20
     filtered.forEach(a => {
       const vals = [a.ubic||'—', a.code, a.name, a.cat, a.precio||0]
       TALLE_ORDER.forEach(t => { const sz=a.sizes.find(s=>s.talle===t); vals.push(sz?sz.qty:'') })
       vals.push(a.sizes.reduce((s,z)=>s+z.qty,0))
+      if(hasDetalle) vals.push(a.detalle?.trim()||'')
       const row = ws.addRow(vals)
       row.eachCell(cell => { cell.font=F_NORM; cell.border=BORDER })
     })
